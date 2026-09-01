@@ -2,9 +2,9 @@ name: Lint & Format Check
 
 on:
   pull_request:
-    branches: [main, dev]
+    branches: [main, Dev]
   push:
-    branches: [main, dev]
+    branches: [main, Dev]
 
 jobs:
   lint:
