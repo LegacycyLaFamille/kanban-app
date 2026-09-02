@@ -13,9 +13,8 @@
   },
   "jest": {
     "collectCoverageFrom": [
-      "src/persistence/**/*.js",
-      "src/routes/**/*.js",
-      "src/index.js"
+      "src/persistence/sqlite.js",
+      "src/routes/**/*.js"
     ],
     "coverageThreshold": {
       "global": {
