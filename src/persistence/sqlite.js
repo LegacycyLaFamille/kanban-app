@@ -1,24 +1,24 @@
 const sqlite3 = require('sqlite3').verbose();
 const fs = require('fs');
-const location = process.env.SQLITE_DB_LOCATION || '/etc/todos/todo.db';
+const dbLocation = process.env.SQLITE_DB_LOCATION || '/etc/todos/todo.db';
 
-let db, dbAll, dbRun;
+let db;
 
 function init() {
-  const dirName = require('path').dirname(location);
+  const dirName = require('path').dirname(dbLocation);
   if (!fs.existsSync(dirName)) {
     fs.mkdirSync(dirName, { recursive: true });
   }
 
   return new Promise((acc, rej) => {
-    db = new sqlite3.Database(location, (err) => {
+    db = new sqlite3.Database(dbLocation, (err) => {
       if (err) return rej(err);
 
-      if (process.env.NODE_ENV !== 'test') console.log(`Using sqlite database at ${location}`);
+      if (process.env.NODE_ENV !== 'test') console.log(`Using sqlite database at ${dbLocation}`);
 
       db.run(
         'CREATE TABLE IF NOT EXISTS todo_items (id varchar(36), name varchar(255), completed boolean)',
-        (err, result) => {
+        (err) => {
           if (err) return rej(err);
           acc();
         }
