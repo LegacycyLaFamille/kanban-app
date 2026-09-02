@@ -22,7 +22,7 @@ export default defineConfig([
     plugins: { js },
     extends: ['js/recommended'],
     languageOptions: { globals: globals.node },
-    settings: { react: { version: "16.14" } },
+    settings: { react: { version: '16.14' } },
   },
   tseslint.configs.recommended,
   pluginReact.configs.flat.recommended,
