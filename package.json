@@ -8,7 +8,18 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "SQLITE_DB_LOCATION=./test.db jest"
+    "test": "SQLITE_DB_LOCATION=./test.db jest",
+    "test:coverage": "SQLITE_DB_LOCATION=./test.db jest --coverage"
+  },
+  "jest": {
+    "coverageThreshold": {
+      "global": {
+        "branches": 40,
+        "functions": 80,
+        "lines": 85,
+        "statements": 75
+      }
+    }
   },
   "dependencies": {
     "express": "^5.2.1",
