@@ -12,6 +12,11 @@
     "test:coverage": "SQLITE_DB_LOCATION=./test.db jest --coverage"
   },
   "jest": {
+    "collectCoverageFrom": [
+      "src/persistence/**/*.js",
+      "src/routes/**/*.js",
+      "src/index.js"
+    ],
     "coverageThreshold": {
       "global": {
         "branches": 40,
