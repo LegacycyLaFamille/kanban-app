@@ -1,5 +1,5 @@
-import express, { type Express, type Request, type Response } from "express";
-import dotenv from "dotenv";
+import express, { type Express, type Request, type Response } from 'express';
+import dotenv from 'dotenv';
 
 const app: Express = express();
 const port = 3000;
@@ -7,8 +7,8 @@ const port = 3000;
 dotenv.config();
 app.use(express.json());
 
-app.get("/", (_req: Request, res: Response) => {
-  res.send("Hello World!");
+app.get('/', (_req: Request, res: Response) => {
+  res.send('Hello World!');
 });
 
 app.listen(port, () => {
