@@ -15,6 +15,8 @@ export default defineConfig([
       'src/static/js/react-bootstrap.js',
       'src/static/js/react-dom.production.min.js',
       'src/static/js/react.production.min.js',
+      'docs/**',
+      '*.md',
     ],
   },
   {
