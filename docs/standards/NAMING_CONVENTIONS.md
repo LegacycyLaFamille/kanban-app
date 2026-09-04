@@ -1,62 +1,198 @@
 # Naming Conventions
 
-## General rules
+## 1. General Rules
+
 - Use English for source code, file names, API routes, database identifiers, events, branches, commits, and Pull Requests.
 - Prefer explicit names over abbreviations.
-- Use domain vocabulary consistently: `User`, `Project`, `Task`, `Notification`.
+- Use the same domain vocabulary everywhere: `User`, `Project`, `Task`, `Notification`.
+- New TypeScript code follows these conventions immediately; legacy JavaScript is aligned progressively when migrated or modified.
 
-## Frontend
-- React components: `PascalCase` — `TaskCard.tsx`
-- Hooks: `camelCase` prefixed with `use` — `useTasks.ts`
-- Functions and variables: `camelCase` — `createTask`, `projectId`
-- Global constants: `UPPER_SNAKE_CASE` — `MAX_LOGIN_ATTEMPTS`
-- Types and interfaces: `PascalCase` — `Task`, `CreateTaskInput`
-- Do not prefix interfaces with `I`.
+---
 
-## Backend
-Classes and exported types use `PascalCase`:
-- `TaskController`
-- `TaskService`
-- `TaskRepository`
+## 2. Frontend
 
-Recommended file names:
-- `task.controller.ts`
-- `task.service.ts`
-- `task.repository.ts`
-- `task.schema.ts`
-- `task.routes.ts`
+The target frontend is feature-based.
 
-Module directories use lowercase domain names:
-`auth/`, `users/`, `projects/`, `tasks/`, `notifications/`.
+```text
+src/
+├── app/
+├── features/
+│   ├── auth/
+│   ├── projects/
+│   ├── tasks/
+│   ├── kanban/
+│   ├── users/
+│   └── notifications/
+└── shared/
+```
 
-## REST API
-Use lowercase plural nouns:
-- `/api/users`
-- `/api/projects`
-- `/api/tasks`
-- `/api/notifications`
+### Components
 
-Nested resources:
-`/api/projects/:projectId/tasks`
+Use `PascalCase`:
 
-Path parameters and JSON properties use `camelCase`.
+```text
+TaskCard.tsx
+KanbanBoard.tsx
+LoginForm.tsx
+```
 
-Avoid verbs in route names:
-- Avoid `POST /api/createTask`
-- Prefer `POST /api/tasks`
+Component names must match file names.
 
-## Prisma and PostgreSQL
+### Hooks
+
+Use `camelCase` with the `use` prefix:
+
+```text
+useTasks.ts
+useProjects.ts
+useAuth.ts
+```
+
+### Feature API Files
+
+Use the domain name followed by `.api.ts`:
+
+```text
+tasks.api.ts
+projects.api.ts
+auth.api.ts
+```
+
+### Functions and Variables
+
+Use `camelCase`:
+
+```text
+createTask()
+loadProjects()
+projectId
+currentUser
+```
+
+### Constants
+
+Use `UPPER_SNAKE_CASE` for application-wide constants:
+
+```text
+MAX_LOGIN_ATTEMPTS
+DEFAULT_PAGE_SIZE
+```
+
+### Types
+
+Use `PascalCase`:
+
+```text
+Task
+Project
+CreateTaskInput
+TaskStatus
+```
+
+Do not prefix interfaces with `I`.
+
+---
+
+## 3. Backend
+
+Business modules use lowercase plural or domain names:
+
+```text
+auth/
+users/
+projects/
+tasks/
+notifications/
+```
+
+Use `PascalCase` for classes and exported types:
+
+```text
+TaskController
+TaskService
+TaskRepository
+```
+
+Use dot-separated lowercase file roles:
+
+```text
+task.routes.ts
+task.controller.ts
+task.service.ts
+task.repository.ts
+task.schema.ts
+```
+
+---
+
+## 4. REST API
+
+Use lowercase plural resources:
+
+```text
+/api/users
+/api/projects
+/api/tasks
+/api/notifications
+```
+
+Use `camelCase` for route parameters:
+
+```text
+:projectId
+:taskId
+:userId
+```
+
+JSON properties use `camelCase`.
+
+Avoid verbs in resource names.
+
+---
+
+## 5. Prisma and PostgreSQL
+
 Prisma models use singular `PascalCase`:
-`User`, `Project`, `Task`, `Notification`.
+
+```text
+User
+Project
+Task
+Notification
+```
 
 Prisma fields use `camelCase`:
-`createdAt`, `projectId`, `ownerId`.
 
-PostgreSQL tables and columns use `snake_case`:
-- tables: `users`, `projects`, `tasks`, `notifications`
-- columns: `created_at`, `project_id`, `owner_id`
+```text
+createdAt
+updatedAt
+projectId
+ownerId
+```
+
+PostgreSQL table and column names use `snake_case`.
+
+Tables use plural names:
+
+```text
+users
+projects
+tasks
+notifications
+project_members
+```
+
+Columns:
+
+```text
+created_at
+updated_at
+project_id
+owner_id
+```
 
 Recommended Prisma mapping:
+
 ```prisma
 model Project {
   id        String   @id @default(uuid())
@@ -66,43 +202,133 @@ model Project {
 }
 ```
 
-Indexes and constraints:
-- `idx_tasks_project_id`
-- `uq_users_email`
-- `fk_tasks_project_id`
+Explicit index/constraint names should be descriptive:
 
-## Events and RabbitMQ
-Domain events use `<domain>.<action>`:
-- `task.created`
-- `task.updated`
-- `task.completed`
-- `project.created`
+```text
+idx_tasks_project_id
+idx_tasks_status
+uq_users_email
+fk_tasks_project_id
+```
+
+---
+
+## 6. Events and RabbitMQ
+
+Domain events use:
+
+```text
+<domain>.<action>
+```
+
+Examples:
+
+```text
+task.created
+task.updated
+task.completed
+project.created
+user.deleted
+```
+
+Use lowercase names and avoid technical implementation details.
 
 RabbitMQ queues use descriptive lowercase names:
-- `notifications.task-created`
-- `notifications.task-completed`
 
-## Environment variables
+```text
+notifications.task-created
+notifications.task-completed
+```
+
+Suggested exchange:
+
+```text
+domain-events
+```
+
+---
+
+## 7. Environment Variables
+
 Use `UPPER_SNAKE_CASE`:
-`DATABASE_URL`, `RABBITMQ_URL`, `JWT_SECRET`, `NODE_ENV`.
 
-## Docker
-Compose services and image names remain lowercase:
-`frontend`, `backend`, `postgres`, `rabbitmq`.
+```text
+DATABASE_URL
+DATABASE_URL_TEST
+RABBITMQ_URL
+JWT_SECRET
+NODE_ENV
+PORT
+```
 
-## Tests
-- Unit: `task.service.test.ts`
-- Integration: `tasks.integration.test.ts`
-- E2E: `kanban-workflow.e2e.test.ts`
+Secrets must never be committed.
 
-Test descriptions must describe observable behaviour.
+---
 
-## GitHub Issues
-Format:
-`S1-17 — Implement login`
+## 8. Docker
 
-## Branches
-See `GIT_CONVENTIONS.md`.
+Use lowercase service names:
+
+```text
+frontend
+backend
+postgres
+rabbitmq
+```
+
+Image names remain lowercase:
+
+```text
+kanban-app-frontend
+kanban-app-backend
+```
+
+---
+
+## 9. Tests
+
+Unit:
+
+```text
+task.service.test.ts
+auth.service.test.ts
+```
+
+Integration:
+
+```text
+tasks.integration.test.ts
+events.integration.test.ts
+```
+
+E2E:
+
+```text
+authentication.e2e.test.ts
+kanban-workflow.e2e.test.ts
+```
+
+Test descriptions must describe observable behavior.
+
+---
+
+## 10. GitHub Issues
+
+Use the sprint identifier followed by an action:
+
+```text
+S1-17 — Implement login
+S2-20 — Implement Kanban status rules
+```
+
+---
+
+## 11. Branches
+
+Branch rules are defined in `GIT_CONVENTIONS.md`.
 
 Example:
-`feature/S1-17-login`
+
+```text
+feature/S1-17-login
+```
