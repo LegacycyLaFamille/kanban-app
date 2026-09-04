@@ -1,0 +1,12 @@
+node_modules/
+dist/
+build/
+package-lock.json
+src/static/js/babel.min.js
+src/static/js/react-bootstrap.js
+src/static/js/react-dom.production.min.js
+src/static/js/react.production.min.js
+src/static/css/bootstrap.min.css
+src/static/css/font-awesome/
+docs/
+*.md
