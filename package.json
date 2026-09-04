@@ -4,7 +4,26 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "dev": "nodemon -L src/index.js"
+    "dev": "nodemon -L src/index.js",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "SQLITE_DB_LOCATION=./test.db jest",
+    "test:coverage": "SQLITE_DB_LOCATION=./test.db jest --coverage"
+  },
+  "jest": {
+    "collectCoverageFrom": [
+      "src/persistence/sqlite.js",
+      "src/routes/**/*.js"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 40,
+        "functions": 80,
+        "lines": 85,
+        "statements": 75
+      }
+    }
   },
   "dependencies": {
     "express": "^5.2.1",
@@ -14,7 +33,17 @@
     "wait-port": "^1.1.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.9"
+    "@eslint/js": "^9.39.5",
+    "eslint": "^9.39.5",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.6",
+    "eslint-plugin-react": "^7.37.5",
+    "globals": "^17.12.0",
+    "jest": "^30.5.1",
+    "jiti": "^2.7.0",
+    "nodemon": "^3.1.9",
+    "prettier": "^3.9.6",
+    "typescript-eslint": "^8.69.0"
   },
   "overrides": {
     "tar": "7.5.4",
