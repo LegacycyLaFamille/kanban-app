@@ -1,20 +1,34 @@
 # Standards de qualité du code
 
-## Outils
+## 1. Objectif
+
+Ces standards s’appliquent pendant toute la migration incrémentale de l’application JavaScript legacy vers l’architecture cible TypeScript.
+
+Les règles qualité doivent améliorer progressivement la codebase sans imposer une réécriture massive.
+
+---
+
+## 2. Outils
+
 La chaîne qualité utilise :
-- **ESLint** comme linter JavaScript/TypeScript ;
-- le contrôle statique des types **TypeScript** ;
+
+- **ESLint** pour JavaScript et TypeScript ;
+- **TypeScript** pour le contrôle statique des types ;
 - les tests automatisés ;
 - la mesure de couverture ;
-- une analyse statique de qualité comme SonarQube ou SonarCloud ;
+- une analyse statique comme SonarQube ou SonarCloud ;
 - GitHub Actions pour la CI.
 
 Si Prettier est activé, il sert de formatter ; ESLint reste le linter.
 
-## ESLint
-ESLint s’exécute sur le frontend et le backend.
+---
+
+## 3. ESLint
+
+ESLint doit couvrir à la fois le JavaScript legacy et le nouveau TypeScript pendant la migration.
 
 Scripts attendus :
+
 ```json
 {
   "scripts": {
@@ -24,57 +38,62 @@ Scripts attendus :
 }
 ```
 
-Aucune erreur de lint n’est acceptée dans une Pull Request.
+Le code nouveau ou modifié ne doit introduire aucune erreur de lint.
 
-## Vérification TypeScript
-Exécuter le contrôle TypeScript séparément :
+Les exceptions temporaires sur du code legacy non touché doivent être explicites, limitées et documentées plutôt que masquées globalement.
+
+---
+
+## 4. TypeScript
+
+TypeScript est introduit progressivement.
+
+JavaScript et TypeScript peuvent temporairement coexister.
+
+Le nouveau code doit être écrit en TypeScript lorsque cela est raisonnable. Les modules migrés doivent passer le contrôle des types.
+
+Commande recommandée :
+
 ```text
 tsc --noEmit
 ```
 
-La CI échoue en cas d’erreur de type.
+Éviter `any` sauf justification technique.
 
-Éviter `any` sans justification documentée.
+---
 
-## Validation
-Valider toutes les données externes :
+## 5. Validation des entrées
+
+Valider toutes les entrées externes :
+
 - bodies HTTP ;
 - paramètres de route ;
 - query parameters ;
 - variables d’environnement ;
-- payloads d’événements.
+- payloads RabbitMQ.
 
-Une bibliothèque de validation de schémas comme Zod peut être utilisée.
+Une bibliothèque de schémas comme Zod peut être utilisée.
 
-## Tests
-Chaque fonctionnalité inclut les tests appropriés.
+---
 
-Niveaux :
-- tests unitaires ;
-- tests d’intégration ;
-- tests end-to-end.
+## 6. Tests et couverture
 
-Workflow E2E critique minimal :
-```text
-Register
-→ Login
-→ Create Project
-→ Create Task
-→ Move Task
-→ Update Task
-→ Delete Task
-```
+Toute règle métier nouvelle ou modifiée nécessite des tests appropriés.
 
-## Couverture
 Objectif initial :
+
 ```text
 >= 70 % de couverture globale
 ```
 
-Les règles métier critiques doivent rester testées même lorsque le seuil global est atteint.
+Pendant la migration, l’équipe doit également surveiller la couverture du code nouveau et modifié afin que les lacunes du legacy ne servent pas à justifier du nouveau code non testé.
 
-## Analyse statique
-L’outil qualité doit remonter :
+---
+
+## 7. Analyse statique
+
+L’analyse statique doit remonter :
+
 - bugs ;
 - vulnérabilités ;
 - security hotspots ;
@@ -85,24 +104,50 @@ L’outil qualité doit remonter :
 
 Aucun nouveau problème `blocker` ou `critical` n’est accepté.
 
-## Quality Gate initial
+Les problèmes legacy existants doivent être suivis comme dette technique et réduits progressivement selon leur priorité.
+
+---
+
+## 8. Quality Gate initial
+
 ```text
-Erreurs ESLint           = 0
+Nouvelles erreurs lint   = 0
 Erreurs TypeScript       = 0
-Tests automatisés        = PASS
-Problèmes critiques      = 0
-Problèmes bloquants      = 0
+Tests obligatoires       = PASS
+Nouveaux problèmes critical = 0
+Nouveaux problèmes blocker  = 0
 Nouvelles vulnérabilités = 0
-Couverture               >= 70 %
+Couverture               >= objectif validé
 Build                     = PASS
 ```
 
-## Règles des Pull Requests
-Ne pas merge si :
-- le lint échoue ;
-- le contrôle TypeScript échoue ;
-- les tests échouent ;
-- le quality gate échoue ;
-- la couverture requise n’est pas atteinte ;
+Le gate peut devenir plus strict à mesure que la dette legacy diminue.
+
+---
+
+## 9. Règles des Pull Requests
+
+Ne pas merge lorsque :
+
+- les contrôles lint obligatoires échouent ;
+- les contrôles TypeScript échouent sur le code nouveau/migré ;
+- les tests obligatoires échouent ;
+- le quality gate bloquant échoue ;
 - la documentation nécessaire manque ;
 - les règles de review ne sont pas respectées.
+
+Une PR de migration doit rester ciblée et ne pas mélanger plusieurs changements architecturaux sans rapport.
+
+---
+
+## 10. Definition of Done
+
+Une Issue terminée doit respecter la Definition of Done du projet, notamment :
+
+- implémentation terminée ;
+- tests appropriés ajoutés ;
+- contrôles qualité validés ;
+- CI validée ;
+- documentation mise à jour ;
+- Pull Request approuvée ;
+- artefact de build/image Docker produit lorsque nécessaire.

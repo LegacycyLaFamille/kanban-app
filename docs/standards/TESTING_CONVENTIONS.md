@@ -2,63 +2,79 @@
 
 ## 1. Purpose
 
-This document defines the testing conventions used by the Kanban rework project.
+This document defines testing conventions for the incremental migration from the legacy TodoList to the target Kanban application.
 
-The objective is to keep tests consistent, deterministic, maintainable, and useful throughout all three sprints.
-
-These conventions apply to frontend, backend, API, database, and event-driven code.
+Tests are used both to protect existing behavior during refactoring and to validate new functionality.
 
 ---
 
 ## 2. General Principles
 
-- Every new business rule must be covered by appropriate automated tests.
-- Tests must verify observable behaviour, not internal implementation details.
 - Tests must be deterministic and reproducible.
 - Tests must not depend on execution order.
-- Tests must not rely on real production data.
-- Tests must not call external production services.
-- A failing test must clearly identify the behaviour that is broken.
-- A Pull Request must not remove relevant tests only to make the CI pass.
+- Tests must never use production credentials or the production database.
+- New business rules require appropriate automated tests.
+- Tests should verify observable behavior rather than private implementation details.
+- Relevant tests must not be removed only to make CI pass.
 
 ---
 
-## 3. Test Levels
+## 3. Legacy Characterization Tests
 
-The project uses three main test levels.
+Before refactoring a legacy behavior, first protect the behavior that must remain valid.
 
-### 3.1 Unit Tests
+Typical legacy behaviors include:
 
-Unit tests verify isolated business logic.
+```text
+Create Todo
+List Todos
+Update Todo
+Delete Todo
+```
 
-Typical targets:
+Characterization tests are not an endorsement of the legacy design. They establish a baseline that detects accidental regressions during migration.
+
+Target process:
+
+```text
+Legacy behavior
+      ↓
+Characterization test
+      ↓
+Refactor / migration
+      ↓
+Test remains green
+```
+
+Obsolete behavior may be removed only when the corresponding product decision is explicit.
+
+---
+
+## 4. Test Levels
+
+### Unit Tests
+
+Use unit tests for isolated business logic:
 
 - services;
-- pure functions;
 - validation logic;
 - authorization rules;
-- status transition rules;
-- domain utilities.
+- Kanban transitions;
+- event payload creation;
+- pure functions.
 
 Examples:
 
 ```text
-auth.service.test.ts
 task.service.test.ts
-project.service.test.ts
+auth.service.test.ts
 ```
 
-Unit tests should avoid real database, network, RabbitMQ, or filesystem access.
+Unit tests should not use real PostgreSQL, RabbitMQ, network, or filesystem access.
 
-Dependencies should be replaced with test doubles only when isolation is useful.
+### Integration Tests
 
----
-
-### 3.2 Integration Tests
-
-Integration tests verify that several technical components work together.
-
-Typical targets:
+Use integration tests for technical boundaries:
 
 - REST route + controller + service + repository;
 - Prisma + PostgreSQL;
@@ -71,21 +87,14 @@ Examples:
 ```text
 projects.integration.test.ts
 tasks.integration.test.ts
-auth.integration.test.ts
 events.integration.test.ts
 ```
 
-Integration tests may use real test containers or dedicated test services when practical.
+### End-to-End Tests
 
-They must never use the production database.
+Use E2E tests for critical user workflows.
 
----
-
-### 3.3 End-to-End Tests
-
-End-to-end tests validate critical user workflows through the application.
-
-Minimum critical workflow:
+Target critical workflow:
 
 ```text
 Register
@@ -97,34 +106,21 @@ Register
 → Delete Task
 ```
 
-E2E tests should remain limited to important workflows because they are slower and more expensive to maintain.
-
-Examples:
-
-```text
-authentication.e2e.test.ts
-kanban-workflow.e2e.test.ts
-```
+Keep E2E tests focused because they are slower and more expensive to maintain.
 
 ---
 
-## 4. Frontend Testing
+## 5. Frontend Testing
 
-Frontend tests should focus on user-visible behaviour.
-
-Test:
+Frontend tests focus on user-visible behavior:
 
 - rendering;
-- user interactions;
+- user interaction;
 - loading states;
-- error states;
+- errors;
 - validation feedback;
-- navigation behaviour;
+- navigation;
 - API-driven state changes.
-
-Prefer queries based on accessible roles, labels, and visible text.
-
-Avoid tests that depend on private component implementation details.
 
 Recommended tools:
 
@@ -133,22 +129,23 @@ Vitest
 React Testing Library
 ```
 
+Prefer accessible selectors such as roles, labels, and visible text.
+
 ---
 
-## 5. Backend Testing
+## 6. Backend Testing
 
-Backend tests should focus on business rules and HTTP behaviour.
+Backend tests focus on business rules and HTTP behavior.
 
-Services should be unit-tested independently from Express when practical.
+Service unit tests should remain independent from Express where practical.
 
 API integration tests should verify:
 
-- HTTP method;
-- route;
+- method and route;
 - authentication;
 - authorization;
 - validation;
-- response status;
+- status code;
 - response body;
 - persistence side effects.
 
@@ -161,41 +158,41 @@ Supertest
 
 ---
 
-## 6. Prisma and Database Testing
+## 7. Prisma and PostgreSQL Testing
 
-Database integration tests must use a dedicated test database.
+Database integration tests use a dedicated PostgreSQL test database.
 
 Rules:
 
-- never use the development or production database for automated tests;
+- never use development or production data;
 - isolate test data;
-- reset or clean data between tests;
-- apply migrations before integration tests;
-- verify relevant database constraints and relationships.
+- clean/reset data between tests;
+- apply target migrations before integration tests;
+- verify important constraints and relationships.
 
-Recommended environment variable:
+Recommended variable:
 
 ```text
 DATABASE_URL_TEST
 ```
 
-If the project uses containerized integration tests, the PostgreSQL test instance must be disposable.
+When containerized integration tests are available, the PostgreSQL test instance should be disposable.
+
+During the migration period, legacy persistence tests may coexist with Prisma integration tests until the relevant repository has fully migrated.
 
 ---
 
-## 7. RabbitMQ and Event-Driven Testing
+## 8. RabbitMQ and Event Testing
 
-Event-driven workflows must be tested at two levels.
-
-### Unit level
+### Unit Level
 
 Verify that:
 
-- the correct event is produced;
-- the event payload contains the expected data;
+- the expected event is produced;
+- the payload is valid;
 - the consumer applies the expected business action.
 
-### Integration level
+### Integration Level
 
 Verify the complete workflow:
 
@@ -207,7 +204,7 @@ Producer
 → Side effect
 ```
 
-For the mandatory demonstrable workflow:
+Mandatory demonstrable workflow:
 
 ```text
 Task created
@@ -217,19 +214,17 @@ Task created
 → Notification persisted
 ```
 
-Tests must also cover, when implemented:
+When implemented, also test:
 
-- duplicate event handling;
+- duplicates;
 - idempotency;
-- retry behaviour;
-- consumer failure;
-- malformed event payloads.
+- retries;
+- consumer failures;
+- malformed payloads.
 
 ---
 
-## 8. Test Naming
-
-Test file names:
+## 9. Test Naming
 
 ```text
 <target>.test.ts
@@ -245,104 +240,64 @@ projects.integration.test.ts
 kanban-workflow.e2e.test.ts
 ```
 
-Test descriptions must describe expected behaviour.
-
 Prefer:
 
 ```ts
 it("rejects login when the password is invalid", ...)
 it("prevents a user from updating another user's project", ...)
-it("publishes task.created after a task is persisted", ...)
+it("publishes task.created after the task is persisted", ...)
 ```
 
-Avoid:
-
-```ts
-it("test login", ...)
-it("works", ...)
-it("case 1", ...)
-```
+Avoid vague descriptions such as `works`, `test login`, or `case 1`.
 
 ---
 
-## 9. Test Structure
+## 10. Test Structure
 
-Use a clear Arrange / Act / Assert structure.
-
-Example:
+Use Arrange / Act / Assert when it improves readability.
 
 ```ts
 it("creates a project for the authenticated user", async () => {
-  // Arrange
   const input = { name: "Project Alpha" };
 
-  // Act
   const result = await projectService.create(userId, input);
 
-  // Assert
   expect(result.name).toBe("Project Alpha");
   expect(result.ownerId).toBe(userId);
 });
 ```
 
-Comments are optional when the structure is already obvious.
+---
+
+## 11. Mocks
+
+Mocks are appropriate for unit-level isolation, for example:
+
+- repository dependency in a service unit test;
+- simulated infrastructure failure;
+- RabbitMQ publisher in a business-service unit test.
+
+Do not mock the component the test is intended to validate.
+
+Integration tests should use real boundaries where practical.
 
 ---
 
-## 10. Test Data
+## 12. Negative and Edge Cases
 
-Use explicit and minimal test data.
-
-Prefer factories/builders when many tests need similar objects.
-
-Examples:
-
-```text
-createUserFixture()
-createProjectFixture()
-createTaskFixture()
-```
-
-Do not share mutable test data between tests.
-
-Avoid random values unless the random seed is controlled.
-
----
-
-## 11. Mocking Rules
-
-Mocks are useful for isolating external dependencies, but excessive mocking is forbidden.
-
-Mock when:
-
-- testing a service independently from persistence;
-- simulating an external failure;
-- isolating RabbitMQ or infrastructure in a unit test.
-
-Do not mock the component that the test is supposed to validate.
-
-Integration tests should use real infrastructure boundaries where practical.
-
----
-
-## 12. Error and Edge-Case Testing
-
-Relevant negative cases must be tested.
-
-Examples:
+Relevant negative cases must be tested, including:
 
 - invalid credentials;
 - duplicate email;
-- invalid UUID;
 - missing resource;
 - forbidden resource access;
 - invalid task status;
 - invalid deadline;
 - duplicate event;
-- database constraint violation;
-- unavailable event broker where recovery is expected.
+- database constraint violations;
+- broker unavailability where recovery is expected.
 
-Only testing the successful path is not sufficient for business-critical functionality.
+Business-critical functionality must not be tested only on the happy path.
 
 ---
 
@@ -354,19 +309,15 @@ Initial target:
 >= 70% overall coverage
 ```
 
-Coverage must be generated automatically in CI.
+Coverage must be generated in CI.
 
-Coverage is not a substitute for meaningful tests.
-
-Critical business rules should be covered even when the global threshold has already been reached.
+During migration, coverage should be interpreted together with the amount of legacy code not yet migrated. New and modified business logic must receive meaningful coverage even when legacy code still lowers the global value.
 
 ---
 
 ## 14. CI Requirements
 
-The CI pipeline must run the appropriate automated tests for every Pull Request.
-
-At minimum:
+At minimum, every Pull Request runs:
 
 ```text
 lint
@@ -376,47 +327,19 @@ coverage
 build
 ```
 
-Integration and E2E tests should be executed in CI once their infrastructure is available.
+Integration and E2E tests are added to CI as soon as their infrastructure is operational.
 
 A failing required test blocks the Pull Request.
 
 ---
 
-## 15. Pull Request Requirements
+## 15. Definition of Done
 
-When a Pull Request changes business behaviour:
-
-- relevant tests must be added or updated;
-- existing relevant tests must continue to pass;
-- the PR description should explain how the change was tested;
-- required coverage must remain satisfied.
-
-A feature that works locally but has no appropriate tests is not considered Done.
-
----
-
-## 16. Definition of Done Alignment
-
-Testing is part of the project Definition of Done.
-
-An issue cannot move to `Done` when:
+An issue cannot be considered Done when:
 
 - required tests are missing;
-- tests are failing;
-- required coverage is not reached;
-- relevant integration behaviour has not been validated.
+- required tests fail;
+- required coverage is not met;
+- relevant integration behavior has not been validated.
 
----
-
-## 17. Forbidden Practices
-
-Do not:
-
-- disable tests to make CI pass;
-- use `.skip` or equivalent in committed code without a documented and temporary reason;
-- depend on test execution order;
-- use production credentials;
-- use the production database;
-- write tests that require manual intervention;
-- use fixed delays when a deterministic wait condition is possible;
-- test only implementation details instead of observable behaviour.
+A feature that only works locally is not Done.

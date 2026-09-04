@@ -1,62 +1,198 @@
 # Conventions de nommage
 
-## Règles générales
+## 1. Règles générales
+
 - Utiliser l’anglais pour le code source, les noms de fichiers, les routes API, les identifiants de base de données, les événements, les branches, les commits et les Pull Requests.
 - Préférer des noms explicites aux abréviations.
-- Utiliser systématiquement le vocabulaire métier : `User`, `Project`, `Task`, `Notification`.
+- Utiliser le même vocabulaire métier partout : `User`, `Project`, `Task`, `Notification`.
+- Le nouveau code TypeScript applique immédiatement ces conventions ; le JavaScript legacy est aligné progressivement lorsqu’il est migré ou modifié.
 
-## Frontend
-- Composants React : `PascalCase` — `TaskCard.tsx`
-- Hooks : `camelCase` préfixé par `use` — `useTasks.ts`
-- Fonctions et variables : `camelCase` — `createTask`, `projectId`
-- Constantes globales : `UPPER_SNAKE_CASE` — `MAX_LOGIN_ATTEMPTS`
-- Types et interfaces : `PascalCase` — `Task`, `CreateTaskInput`
-- Ne pas préfixer les interfaces avec `I`.
+---
 
-## Backend
-Les classes et types exportés utilisent `PascalCase` :
-- `TaskController`
-- `TaskService`
-- `TaskRepository`
+## 2. Frontend
 
-Noms de fichiers recommandés :
-- `task.controller.ts`
-- `task.service.ts`
-- `task.repository.ts`
-- `task.schema.ts`
-- `task.routes.ts`
+Le frontend cible est organisé par fonctionnalités.
 
-Les dossiers de modules utilisent le nom du domaine en minuscules :
-`auth/`, `users/`, `projects/`, `tasks/`, `notifications/`.
+```text
+src/
+├── app/
+├── features/
+│   ├── auth/
+│   ├── projects/
+│   ├── tasks/
+│   ├── kanban/
+│   ├── users/
+│   └── notifications/
+└── shared/
+```
 
-## API REST
-Utiliser des noms de ressources au pluriel et en minuscules :
-- `/api/users`
-- `/api/projects`
-- `/api/tasks`
-- `/api/notifications`
+### Composants
 
-Ressource imbriquée :
-`/api/projects/:projectId/tasks`
+Utiliser `PascalCase` :
 
-Les paramètres de route et les propriétés JSON utilisent `camelCase`.
+```text
+TaskCard.tsx
+KanbanBoard.tsx
+LoginForm.tsx
+```
 
-Éviter les verbes dans les routes :
-- Éviter `POST /api/createTask`
-- Préférer `POST /api/tasks`
+Le nom du composant doit correspondre au fichier.
 
-## Prisma et PostgreSQL
+### Hooks
+
+Utiliser `camelCase` avec le préfixe `use` :
+
+```text
+useTasks.ts
+useProjects.ts
+useAuth.ts
+```
+
+### Fichiers API des features
+
+Utiliser le nom du domaine suivi de `.api.ts` :
+
+```text
+tasks.api.ts
+projects.api.ts
+auth.api.ts
+```
+
+### Fonctions et variables
+
+Utiliser `camelCase` :
+
+```text
+createTask()
+loadProjects()
+projectId
+currentUser
+```
+
+### Constantes
+
+Utiliser `UPPER_SNAKE_CASE` pour les constantes globales :
+
+```text
+MAX_LOGIN_ATTEMPTS
+DEFAULT_PAGE_SIZE
+```
+
+### Types
+
+Utiliser `PascalCase` :
+
+```text
+Task
+Project
+CreateTaskInput
+TaskStatus
+```
+
+Ne pas préfixer les interfaces avec `I`.
+
+---
+
+## 3. Backend
+
+Les modules métier utilisent des noms de domaine en minuscules :
+
+```text
+auth/
+users/
+projects/
+tasks/
+notifications/
+```
+
+Utiliser `PascalCase` pour les classes et types exportés :
+
+```text
+TaskController
+TaskService
+TaskRepository
+```
+
+Utiliser des noms de fichiers en minuscules avec le rôle séparé par un point :
+
+```text
+task.routes.ts
+task.controller.ts
+task.service.ts
+task.repository.ts
+task.schema.ts
+```
+
+---
+
+## 4. API REST
+
+Utiliser des ressources au pluriel et en minuscules :
+
+```text
+/api/users
+/api/projects
+/api/tasks
+/api/notifications
+```
+
+Les paramètres de route utilisent `camelCase` :
+
+```text
+:projectId
+:taskId
+:userId
+```
+
+Les propriétés JSON utilisent `camelCase`.
+
+Éviter les verbes dans les noms de ressources.
+
+---
+
+## 5. Prisma et PostgreSQL
+
 Les modèles Prisma utilisent le singulier en `PascalCase` :
-`User`, `Project`, `Task`, `Notification`.
+
+```text
+User
+Project
+Task
+Notification
+```
 
 Les champs Prisma utilisent `camelCase` :
-`createdAt`, `projectId`, `ownerId`.
 
-Les tables et colonnes PostgreSQL utilisent `snake_case` :
-- tables : `users`, `projects`, `tasks`, `notifications`
-- colonnes : `created_at`, `project_id`, `owner_id`
+```text
+createdAt
+updatedAt
+projectId
+ownerId
+```
+
+Les tables et colonnes PostgreSQL utilisent `snake_case`.
+
+Les tables utilisent le pluriel :
+
+```text
+users
+projects
+tasks
+notifications
+project_members
+```
+
+Colonnes :
+
+```text
+created_at
+updated_at
+project_id
+owner_id
+```
 
 Mapping Prisma recommandé :
+
 ```prisma
 model Project {
   id        String   @id @default(uuid())
@@ -66,43 +202,133 @@ model Project {
 }
 ```
 
-Index et contraintes :
-- `idx_tasks_project_id`
-- `uq_users_email`
-- `fk_tasks_project_id`
+Les noms explicites d’index et de contraintes doivent être descriptifs :
 
-## Événements et RabbitMQ
-Les événements métier utilisent `<domaine>.<action>` :
-- `task.created`
-- `task.updated`
-- `task.completed`
-- `project.created`
+```text
+idx_tasks_project_id
+idx_tasks_status
+uq_users_email
+fk_tasks_project_id
+```
+
+---
+
+## 6. Événements et RabbitMQ
+
+Les événements métier utilisent :
+
+```text
+<domaine>.<action>
+```
+
+Exemples :
+
+```text
+task.created
+task.updated
+task.completed
+project.created
+user.deleted
+```
+
+Utiliser des minuscules et éviter les détails techniques d’implémentation.
 
 Les files RabbitMQ utilisent des noms explicites en minuscules :
-- `notifications.task-created`
-- `notifications.task-completed`
 
-## Variables d’environnement
+```text
+notifications.task-created
+notifications.task-completed
+```
+
+Exchange recommandé :
+
+```text
+domain-events
+```
+
+---
+
+## 7. Variables d’environnement
+
 Utiliser `UPPER_SNAKE_CASE` :
-`DATABASE_URL`, `RABBITMQ_URL`, `JWT_SECRET`, `NODE_ENV`.
 
-## Docker
-Les services Compose et noms d’images restent en minuscules :
-`frontend`, `backend`, `postgres`, `rabbitmq`.
+```text
+DATABASE_URL
+DATABASE_URL_TEST
+RABBITMQ_URL
+JWT_SECRET
+NODE_ENV
+PORT
+```
 
-## Tests
-- Unitaire : `task.service.test.ts`
-- Intégration : `tasks.integration.test.ts`
-- E2E : `kanban-workflow.e2e.test.ts`
+Ne jamais versionner de secret.
+
+---
+
+## 8. Docker
+
+Utiliser des noms de services en minuscules :
+
+```text
+frontend
+backend
+postgres
+rabbitmq
+```
+
+Les noms d’images restent en minuscules :
+
+```text
+kanban-app-frontend
+kanban-app-backend
+```
+
+---
+
+## 9. Tests
+
+Unitaires :
+
+```text
+task.service.test.ts
+auth.service.test.ts
+```
+
+Intégration :
+
+```text
+tasks.integration.test.ts
+events.integration.test.ts
+```
+
+E2E :
+
+```text
+authentication.e2e.test.ts
+kanban-workflow.e2e.test.ts
+```
 
 Les descriptions de tests doivent décrire un comportement observable.
 
-## Issues GitHub
-Format :
-`S1-17 — Implement login`
+---
 
-## Branches
-Voir `GIT_CONVENTIONS.fr.md`.
+## 10. Issues GitHub
+
+Utiliser l’identifiant de sprint suivi d’une action :
+
+```text
+S1-17 — Implement login
+S2-20 — Implement Kanban status rules
+```
+
+---
+
+## 11. Branches
+
+Les règles de branches sont définies dans `GIT_CONVENTIONS.fr.md`.
 
 Exemple :
-`feature/S1-17-login`
+
+```text
+feature/S1-17-login
+```

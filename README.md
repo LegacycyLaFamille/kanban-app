@@ -1,41 +1,108 @@
-# kanban-app — Documentation Index
+# Kanban Project Documentation
 
-**Baseline version:** 1.0.1  
-**Baseline date:** 2026-09-01  
-**Project:** TodoList → Kanban Application Rework  
-**Repository documentation:** English is the reference language. French translations use the `.fr.md` suffix.
+This directory is the entry point for the technical documentation of the incremental modernization of the legacy TodoList into the Kanban application.
 
-## Documents
+## Direction
 
-| Document | Purpose | English | French |
-|---|---|---|---|
-| Project Specification | Product vision, functional scope, requirements, MoSCoW, roles, entities and roadmap | `01-PROJECT-SPECIFICATION.md` | `01-PROJECT-SPECIFICATION.fr.md` |
-| Technical Architecture | Target architecture, modules, diagrams, stack, data, events, security, CI/CD, mirroring and deployment | `02-TECHNICAL-ARCHITECTURE.md` | `02-TECHNICAL-ARCHITECTURE.fr.md` |
-| Delivery & Governance | Scrum execution, Git/PR workflow, Definition of Done, quality policy and sprint objectives | `03-DELIVERY-GOVERNANCE.md` | `03-DELIVERY-GOVERNANCE.fr.md` |
-| Backlog & Roadmap | Implementation sequence, epics, baseline tasks, dependencies and post-MVP evolution | `04-BACKLOG-ROADMAP.md` | `04-BACKLOG-ROADMAP.fr.md` |
-| Technical Debt Register | Evidence-based legacy debt inventory, prioritization, intentional debt and remediation tracking | `05-TECHNICAL-DEBT.md` | `05-TECHNICAL-DEBT.fr.md` |
+The project is treated as an enterprise legacy modernization rather than a full rewrite:
 
-## Source of truth
+```text
+Legacy audit
+     ↓
+Baseline and characterization tests
+     ↓
+Quality / CI / safety nets
+     ↓
+Progressive JavaScript → TypeScript migration
+     ↓
+Architectural refactoring
+     ↓
+Feature-based frontend
+     ↓
+Modular-monolith backend
+     ↓
+Prisma + PostgreSQL
+     ↓
+Todo → Users / Projects / Tasks / Kanban
+     ↓
+RabbitMQ / Event-driven
+     ↓
+Docker / delivery
+```
 
-The documents define the architectural and product baseline. The GitHub Project board is the operational source of truth for the live state of tasks, assignees, estimates and sprint progress.
+Target architecture:
 
-When a significant architectural decision changes, update `02-TECHNICAL-ARCHITECTURE.md` first and record the reason in its Architecture Decision Log.
+```text
+React + TypeScript
+        │
+        │ REST / JSON
+        ▼
+Node.js + Express + TypeScript
+        │
+        ▼
+Controllers
+        │
+        ▼
+Services
+        │
+   ┌────┴────┐
+   ▼         ▼
+Repositories Events
+   │         │
+   ▼         ▼
+Prisma    RabbitMQ
+   │
+   ▼
+PostgreSQL
+```
 
-When product scope or MoSCoW priority changes, update `01-PROJECT-SPECIFICATION.md` and then align the backlog.
+The application remains a **modular monolith** and is migrated progressively.
 
-When technical debt is discovered, accepted, remediated or verified, update `05-TECHNICAL-DEBT.md` and link the corresponding GitHub issue/PR evidence.
+## Document Organization
 
-# Project Standards
+### Audit
 
-This directory contains the engineering standards used by the Kanban rework project.
+- [`audit/LEGACY_AUDIT.fr.md`](./docs/audit/LEGACY_AUDIT.fr.md)  
+  Complete technical audit of the legacy repository. The current audit is maintained in French.
 
-## Documents
-- [Naming Conventions](./docs/standards/NAMING_CONVENTIONS.md)
-- [Git Conventions](./docs/standards/GIT_CONVENTIONS.md)
-- [Code Quality](./docs/standards/CODE_QUALITY.md)
-- [API and Backend Conventions](./docs/standards/API_CONVENTIONS.md)
-- [Testing conventions](./docs/standards/TESTING_CONVENTIONS.md)
+### Architecture and Migration
 
-French versions use the `.fr.md` suffix.
+- [`architecture/FRONTEND_MIGRATION.md`](./docs/architecture/FRONTEND_MIGRATION.md)
+- [`architecture/FRONTEND_MIGRATION.fr.md`](./docs/architecture/FRONTEND_MIGRATION.fr.md)
+- [`architecture/BACKEND_MIGRATION.md`](./docs/architecture/BACKEND_MIGRATION.md)
+- [`architecture/BACKEND_MIGRATION.fr.md`](./docs/architecture/BACKEND_MIGRATION.fr.md)
 
-These standards apply to every contribution unless an ADR explicitly documents an exception.
+### Development Standards
+
+Main entry point:
+
+- [`standards/DEVELOPMENT_CONVENTIONS.md`](./docs/standards/DEVELOPMENT_CONVENTIONS.md)
+- [`standards/DEVELOPMENT_CONVENTIONS.fr.md`](./docs/standards/DEVELOPMENT_CONVENTIONS.fr.md)
+
+Detailed standards:
+
+- [`standards/NAMING_CONVENTIONS.md`](./docs/standards/NAMING_CONVENTIONS.md)
+- [`standards/NAMING_CONVENTIONS.fr.md`](./docs/standards/NAMING_CONVENTIONS.fr.md)
+- [`standards/GIT_CONVENTIONS.md`](./docs/standards/GIT_CONVENTIONS.md)
+- [`standards/GIT_CONVENTIONS.fr.md`](./docs/standards/GIT_CONVENTIONS.fr.md)
+- [`standards/CODE_QUALITY.md`](./docs/standards/CODE_QUALITY.md)
+- [`standards/CODE_QUALITY.fr.md`](./docs/standards/CODE_QUALITY.fr.md)
+- [`standards/TESTING_CONVENTIONS.md`](./docs/standards/TESTING_CONVENTIONS.md)
+- [`standards/TESTING_CONVENTIONS.fr.md`](./docs/standards/TESTING_CONVENTIONS.fr.md)
+- [`standards/API_CONVENTIONS.md`](./docs/standards/API_CONVENTIONS.md)
+- [`standards/API_CONVENTIONS.fr.md`](./docs/standards/API_CONVENTIONS.fr.md)
+
+The `standards/` directory also contains its own index README.
+
+## Current Key Decisions
+
+- React is retained and progressively migrated to TypeScript.
+- Node.js and Express are retained on the backend.
+- The application exposes a REST API.
+- The target backend uses `Controller → Service → Repository`.
+- Prisma is the target ORM.
+- PostgreSQL is the target persistence engine.
+- Existing `todo_items` records are not automatically migrated because reliable ownership cannot be established from the legacy model.
+- Users are informed before the upgrade so they can preserve relevant information and recreate still-needed tasks after account creation and authentication.
+- RabbitMQ provides the event-driven workflow.
+- Docker, GitHub Actions, ESLint, tests, coverage, and static quality analysis are part of the modernization.
