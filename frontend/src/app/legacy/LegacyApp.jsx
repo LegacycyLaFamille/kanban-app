@@ -139,7 +139,7 @@ function ItemDisplay({ item, onItemUpdate, onItemRemoval }) {
         </Col>
         <Col xs={1} className="text-center remove">
           <Button size="sm" variant="link" onClick={removeItem} aria-label="Remove Item">
-            <i className="fa fa-trash text-danger" />
+            <span className="text-danger">×</span>
           </Button>
         </Col>
       </Row>
