@@ -7,8 +7,8 @@ export default defineConfig({
 
   server: {
     proxy: {
-      "/items": {
-        target: "http://localhost:3000",
+      '/items': {
+        target: 'http://localhost:3000',
         changeOrigin: true,
       },
     },

@@ -94,11 +94,7 @@ function AddItemForm({ onNewItem }) {
           placeholder="New Item"
           aria-describedby="basic-addon1"
         />
-        <Button
-            type="submit"
-            variant="success"
-            disabled={!newItem.length || submitting}
-        >
+        <Button type="submit" variant="success" disabled={!newItem.length || submitting}>
           {submitting ? 'Adding...' : 'Add Item'}
         </Button>
       </InputGroup>
