@@ -1,4 +1,4 @@
-import "./legacy/index.js";
+import './legacy/index.js';
 
 /**
 import express, { type Express, type Request, type Response } from 'express';
