@@ -1,5 +1,5 @@
 import React from 'react';
-import { Container, Row, Col } from 'react-bootstrap';
+import { Container, Row, Col, Form, InputGroup, Button } from 'react-bootstrap';
 
 function LegacyApp() {
   return (
@@ -65,8 +65,6 @@ function TodoListCard() {
 }
 
 function AddItemForm({ onNewItem }) {
-  const { Form, InputGroup, Button } = ReactBootstrap;
-
   const [newItem, setNewItem] = React.useState('');
   const [submitting, setSubmitting] = React.useState(false);
 
@@ -112,8 +110,6 @@ function AddItemForm({ onNewItem }) {
 }
 
 function ItemDisplay({ item, onItemUpdate, onItemRemoval }) {
-  const { Container, Row, Col, Button } = ReactBootstrap;
-
   const toggleCompletion = () => {
     fetch(`/items/${item.id}`, {
       method: 'PUT',
