@@ -1,5 +1,5 @@
-import React from 'react';
-import { Container, Row, Col, Form, InputGroup, Button } from 'react-bootstrap';
+import React from "react";
+import { Container, Row, Col, Form, InputGroup, Button } from "react-bootstrap";
 
 function LegacyApp() {
   return (
@@ -18,7 +18,7 @@ function TodoListCard() {
   const [items, setItems] = React.useState(null);
 
   React.useEffect(() => {
-    fetch('/items')
+    fetch("/items")
       .then((r) => r.json())
       .then(setItems);
   }, []);
@@ -27,7 +27,7 @@ function TodoListCard() {
     (newItem) => {
       setItems([...items, newItem]);
     },
-    [items]
+    [items],
   );
 
   const onItemUpdate = React.useCallback(
@@ -35,7 +35,7 @@ function TodoListCard() {
       const index = items.findIndex((i) => i.id === item.id);
       setItems([...items.slice(0, index), item, ...items.slice(index + 1)]);
     },
-    [items]
+    [items],
   );
 
   const onItemRemoval = React.useCallback(
@@ -43,15 +43,17 @@ function TodoListCard() {
       const index = items.findIndex((i) => i.id === item.id);
       setItems([...items.slice(0, index), ...items.slice(index + 1)]);
     },
-    [items]
+    [items],
   );
 
-  if (items === null) return 'Loading...';
+  if (items === null) return "Loading...";
 
   return (
     <React.Fragment>
       <AddItemForm onNewItem={onNewItem} />
-      {items.length === 0 && <p className="text-center">No items yet! Add one above!</p>}
+      {items.length === 0 && (
+        <p className="text-center">No items yet! Add one above!</p>
+      )}
       {items.map((item) => (
         <ItemDisplay
           item={item}
@@ -65,22 +67,22 @@ function TodoListCard() {
 }
 
 function AddItemForm({ onNewItem }) {
-  const [newItem, setNewItem] = React.useState('');
+  const [newItem, setNewItem] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
 
   const submitNewItem = (e) => {
     e.preventDefault();
     setSubmitting(true);
-    fetch('/items', {
-      method: 'POST',
+    fetch("/items", {
+      method: "POST",
       body: JSON.stringify({ name: newItem }),
-      headers: { 'Content-Type': 'application/json' },
+      headers: { "Content-Type": "application/json" },
     })
       .then((r) => r.json())
       .then((item) => {
         onNewItem(item);
         setSubmitting(false);
-        setNewItem('');
+        setNewItem("");
       });
   };
 
@@ -94,16 +96,13 @@ function AddItemForm({ onNewItem }) {
           placeholder="New Item"
           aria-describedby="basic-addon1"
         />
-        <InputGroup.Append>
-          <Button
-            type="submit"
-            variant="success"
-            disabled={!newItem.length}
-            className={submitting ? 'disabled' : ''}
-          >
-            {submitting ? 'Adding...' : 'Add Item'}
-          </Button>
-        </InputGroup.Append>
+        <Button
+          type="submit"
+          variant="success"
+          disabled={!newItem.length || submitting}
+        >
+          {submitting ? "Adding..." : "Add Item"}
+        </Button>
       </InputGroup>
     </Form>
   );
@@ -112,23 +111,29 @@ function AddItemForm({ onNewItem }) {
 function ItemDisplay({ item, onItemUpdate, onItemRemoval }) {
   const toggleCompletion = () => {
     fetch(`/items/${item.id}`, {
-      method: 'PUT',
+      method: "PUT",
       body: JSON.stringify({
         name: item.name,
         completed: !item.completed,
       }),
-      headers: { 'Content-Type': 'application/json' },
+      headers: { "Content-Type": "application/json" },
     })
       .then((r) => r.json())
       .then(onItemUpdate);
   };
 
   const removeItem = () => {
-    fetch(`/items/${item.id}`, { method: 'DELETE' }).then(() => onItemRemoval(item));
+    fetch(`/items/${item.id}`, { method: "DELETE" }).then(() =>
+      onItemRemoval(item),
+    );
   };
 
   return (
-    <Container fluid className={`item ${item.completed && 'completed'}`}>
+    <Container
+      fluid
+      className={`item ${item.completed && "completed"}`}
+      style={{ color: "black" }}
+    >
       <Row>
         <Col xs={1} className="text-center">
           <Button
@@ -136,17 +141,26 @@ function ItemDisplay({ item, onItemUpdate, onItemRemoval }) {
             size="sm"
             variant="link"
             onClick={toggleCompletion}
-            aria-label={item.completed ? 'Mark item as incomplete' : 'Mark item as complete'}
+            aria-label={
+              item.completed
+                ? "Mark item as incomplete"
+                : "Mark item as complete"
+            }
           >
-            <i className={`far ${item.completed ? 'fa-check-square' : 'fa-square'}`} />
+            <span>{item.completed ? "☑" : "☐"}</span>
           </Button>
         </Col>
         <Col xs={10} className="name">
           {item.name}
         </Col>
         <Col xs={1} className="text-center remove">
-          <Button size="sm" variant="link" onClick={removeItem} aria-label="Remove Item">
-            <i className="fa fa-trash text-danger" />
+          <Button
+            size="sm"
+            variant="link"
+            onClick={removeItem}
+            aria-label="Remove Item"
+          >
+            <span className="text-danger">×</span>
           </Button>
         </Col>
       </Row>
