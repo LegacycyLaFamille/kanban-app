@@ -17,6 +17,7 @@ export default defineConfig([
       'src/static/js/react.production.min.js',
       'docs/**',
       '*.md',
+      'frontend/**',
     ],
   },
   {
