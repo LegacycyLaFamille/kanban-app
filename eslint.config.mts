@@ -61,7 +61,7 @@ export default defineConfig([
       'react/jsx-no-undef': 'off',
       'react/prop-types': 'off',
       'react/no-deprecated': 'off',
-      "react/jsx-uses-react": "off",
+      'react/jsx-uses-react': 'off',
     },
     settings: { react: { version: '16.14' } },
   },
