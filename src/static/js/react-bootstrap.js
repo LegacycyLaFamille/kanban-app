@@ -4709,7 +4709,7 @@ function parseOffset(offset, popperOffsets, referenceOffsets, basePlacement) {
   // will use the other one
 
   var useHeight = ['right', 'left'].indexOf(basePlacement) !== -1; // Split the offset string to obtain a list of values and operands
-  // The regex addresses values with the plus or minus sign in front (+10, -20, etc)
+  // The regex addresses values with the plus or minus sign in frontend (+10, -20, etc)
 
   var fragments = offset.split(/(\+|\-)/).map(function (frag) {
     return frag.trim();
@@ -6906,7 +6906,7 @@ function omitProps(props, propTypes) {
 }
 /**
  * Love them or hate them, `<Modal />` provides a solid foundation for creating dialogs, lightboxes, or whatever else.
- * The Modal component renders its `children` node in front of a backdrop component.
+ * The Modal component renders its `children` node in frontend of a backdrop component.
  *
  * The Modal offers a few helpful features over using just a `<Portal/>` component and some styles:
  *
