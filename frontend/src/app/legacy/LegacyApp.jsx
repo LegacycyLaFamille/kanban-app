@@ -1,7 +1,10 @@
+import React from 'react';
+import { Container, Row, Col } from 'react-bootstrap';
+
 function LegacyApp() {
-    const { Container, Row, Col } = ReactBootstrap;
     return (
         <Container>
+            <h1>Legacy App</h1>
             <Row>
                 <Col md={{ offset: 3, span: 6 }}>
                     <TodoListCard />
