@@ -1,3 +1,6 @@
+import './legacy/index.js';
+
+/**
 import express, { type Express, type Request, type Response } from 'express';
 import dotenv from 'dotenv';
 
@@ -14,3 +17,4 @@ app.get('/', (_req: Request, res: Response) => {
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
 });
+ **/

@@ -18,6 +18,7 @@ export default defineConfig([
       'docs/**',
       '*.md',
       'frontend/**',
+      'backend/src/**/*.ts',
     ],
   },
   {
@@ -30,10 +31,17 @@ export default defineConfig([
   tseslint.configs.recommended,
   pluginReact.configs.flat.recommended,
 
-  // Backend en CommonJS
+  // Ancien backend racine (src/) — CommonJS
   {
     files: ['src/**/*.js'],
     ignores: ['src/static/**'],
+    languageOptions: { sourceType: 'commonjs', globals: globals.node },
+    rules: { '@typescript-eslint/no-require-imports': 'off' },
+  },
+
+  // Backend legacy (backend/src/legacy/)
+  {
+    files: ['backend/src/legacy/**/*.js'],
     languageOptions: { sourceType: 'commonjs', globals: globals.node },
     rules: { '@typescript-eslint/no-require-imports': 'off' },
   },
@@ -45,7 +53,7 @@ export default defineConfig([
     rules: { '@typescript-eslint/no-require-imports': 'off' },
   },
 
-  // Frontend en React via script tags (CDN)
+  // Frontend React via script tags (CDN)
   {
     files: ['src/static/js/app.js'],
     languageOptions: {
