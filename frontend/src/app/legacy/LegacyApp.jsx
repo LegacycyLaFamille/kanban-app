@@ -94,16 +94,13 @@ function AddItemForm({ onNewItem }) {
           placeholder="New Item"
           aria-describedby="basic-addon1"
         />
-        <InputGroup.Append>
-          <Button
+        <Button
             type="submit"
             variant="success"
-            disabled={!newItem.length}
-            className={submitting ? 'disabled' : ''}
-          >
-            {submitting ? 'Adding...' : 'Add Item'}
-          </Button>
-        </InputGroup.Append>
+            disabled={!newItem.length || submitting}
+        >
+          {submitting ? 'Adding...' : 'Add Item'}
+        </Button>
       </InputGroup>
     </Form>
   );
@@ -128,7 +125,7 @@ function ItemDisplay({ item, onItemUpdate, onItemRemoval }) {
   };
 
   return (
-    <Container fluid className={`item ${item.completed && 'completed'}`}>
+    <Container fluid className={`item ${item.completed && 'completed'}`} style={{ color: 'black' }}>
       <Row>
         <Col xs={1} className="text-center">
           <Button
@@ -138,7 +135,7 @@ function ItemDisplay({ item, onItemUpdate, onItemRemoval }) {
             onClick={toggleCompletion}
             aria-label={item.completed ? 'Mark item as incomplete' : 'Mark item as complete'}
           >
-            <i className={`far ${item.completed ? 'fa-check-square' : 'fa-square'}`} />
+            <span>{item.completed ? '☑' : '☐'}</span>
           </Button>
         </Col>
         <Col xs={10} className="name">
