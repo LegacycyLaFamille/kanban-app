@@ -1,2 +1,13 @@
+.git
+.github
+.env
+.idea
+.vscode
+.env.*
+*.db
+
 node_modules
-Dockerfile
+
+npm-debug.log*
+coverage
+docs

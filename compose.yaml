@@ -1,0 +1,27 @@
+services:
+  legacy_frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend/Dockerfile
+    image: legacy:frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - legacy_backend
+    restart: unless-stopped
+
+  legacy_backend:
+    image: node:24-alpine
+    working_dir: /app
+    volumes:
+      - .:/app
+      - backend-data:/data
+    environment:
+      - SQLITE_DB_LOCATION=/data/todo.db
+    command: sh -c "npm ci && node src/index.js"
+    expose:
+      - "3000"
+    restart: unless-stopped
+
+volumes:
+  backend-data:
