@@ -1,13 +1,14 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { RouterProvider } from "react-router-dom";
 
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./styles/index.css";
 
-import LegacyApp from "./app/legacy/LegacyApp.jsx";
+import { router } from "./app/router";
 
 createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <LegacyApp />
-  </StrictMode>,
+    <StrictMode>
+        <RouterProvider router={router} />
+    </StrictMode>,
 );

@@ -1,7 +1,7 @@
 import React from "react";
 import { Container, Row, Col, Form, InputGroup, Button } from "react-bootstrap";
 
-function LegacyApp() {
+export function LegacyApp() {
   return (
     <Container>
       <h1>Legacy App</h1>
@@ -167,5 +167,3 @@ function ItemDisplay({ item, onItemUpdate, onItemRemoval }) {
     </Container>
   );
 }
-
-export default LegacyApp;
