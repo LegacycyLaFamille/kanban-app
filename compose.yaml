@@ -7,18 +7,19 @@ services:
     ports:
       - "8080:80"
     depends_on:
-      - legacy_backend
+      legacy_backend:
+        condition: service_healthy
     restart: unless-stopped
 
   legacy_backend:
-    image: node:24-alpine
-    working_dir: /app
-    volumes:
-      - .:/app
-      - backend-data:/data
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+    image: legacy:backend
     environment:
       - SQLITE_DB_LOCATION=/data/todo.db
-    command: sh -c "npm ci && node src/index.js"
+    volumes:
+      - backend-data:/data
     expose:
       - "3000"
     restart: unless-stopped
