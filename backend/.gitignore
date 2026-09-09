@@ -2,5 +2,8 @@ node_modules
 dist
 # Keep environment variables out of version control
 .env
-
+# Ignorer les données SQLite du legacy
+**/legacy/persistence/data/
+*.sqlite
+*.db
 /src/generated/prisma

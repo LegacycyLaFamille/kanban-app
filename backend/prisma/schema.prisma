@@ -11,5 +11,38 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  name         String
+  passwordHash String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  Project      Project[]
+}
+
+model Project {
+  id          String   @id @default(uuid())
+  name        String
+  description String
+  ownerId     String
+  owner       User     @relation(fields: [ownerId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  Task        Task[]
+}
+
+model Task {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id])
+  status      String
+  priority    String
+  deadline    DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
