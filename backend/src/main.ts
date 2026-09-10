@@ -1,19 +1,38 @@
 import express, { type Express, type Request, type Response } from "express";
 import dotenv from "dotenv";
 import legacy from "./legacy/index.js";
+import { prisma } from "./shared/database/prisma.js";
+
+dotenv.config();
 
 const app: Express = express();
 const port = process.env.PORT || 3000;
 
-dotenv.config();
 app.use(express.json());
 
-app.use("/api/legacy", legacy as any);
+app.use("/api/legacy", legacy as unknown as express.RequestHandler);
 
 app.get("/", (_req: Request, res: Response) => {
   res.send("Hello from ts backend");
 });
 
-app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`);
-});
+async function main() {
+  try {
+    await prisma.$connect();
+    console.log("Connexion à PostgreSQL établie avec succès.");
+
+    app.listen(port, () => {
+      console.log(`Example app listening on port ${port}`);
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error(
+      "Échec critique de connexion à la base de données :",
+      message,
+      { cause: error },
+    );
+    process.exit(1);
+  }
+}
+
+main();

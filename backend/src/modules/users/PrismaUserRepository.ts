@@ -1,4 +1,3 @@
-// src/users/PrismaUserRepository.ts
 import {
   PrismaClient,
   Prisma,
@@ -47,9 +46,14 @@ export class PrismaUserRepository implements UserRepository {
       ) {
         throw new Error(
           "Conflit de données : L'identifiant ou l'email existe déjà.",
+          {
+            cause: error,
+          },
         );
       }
-      throw error;
+      throw new Error("Erreur interne lors de la création de l'utilisateur", {
+        cause: error,
+      });
     }
   }
 
@@ -69,9 +73,14 @@ export class PrismaUserRepository implements UserRepository {
       ) {
         throw new Error(
           "Conflit de données : Cet email est déjà utilisé par un autre compte.",
+          {
+            cause: error,
+          },
         );
       }
-      throw error;
+      throw new Error("Erreur interne lors de la mise à jour du profil", {
+        cause: error,
+      });
     }
   }
 }
