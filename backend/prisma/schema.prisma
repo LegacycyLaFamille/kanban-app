@@ -18,6 +18,7 @@ model User {
   email        String    @unique
   name         String
   passwordHash String
+  refreshToken String?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   Project      Project[]

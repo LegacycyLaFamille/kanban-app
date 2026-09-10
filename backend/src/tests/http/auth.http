@@ -1,0 +1,29 @@
+### Création d'un nouvel utilisateur (Register)
+POST http://localhost:3000/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "email": "john.doe@example.com",
+  "name": "John Doe",
+  "password": "SuperSecurePassword123"
+}
+
+### Connexion (Login)
+POST http://localhost:3000/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "john.doe@example.com",
+  "password": "SuperSecurePassword123"
+}
+
+
+
+### Récupérer le profil (Route protégée)
+GET http://localhost:3000/api/v1/auth/me
+
+### Rafraîchissement de la session (Refresh)
+POST http://localhost:3000/api/v1/auth/refresh
+
+### Déconnexion (Logout)
+POST http://localhost:3000/api/v1/auth/logout
