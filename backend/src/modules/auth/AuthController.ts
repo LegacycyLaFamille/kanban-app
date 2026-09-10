@@ -106,7 +106,7 @@ export class AuthController {
       res
         .status(200)
         .json({ message: "Session rafraîchie", user: session.user });
-    } catch (error) {
+    } catch {
       res
         .status(401)
         .json({ error: "Session expirée, veuillez vous reconnecter" });
