@@ -8,7 +8,12 @@ export class User {
     public readonly createdAt: Date,
   ) {}
 
-  static create(email: string, name: string): User {
-    return new User(randomUUID(), email, name, new Date());
+  static create(
+    email: string,
+    name: string,
+    id?: string,
+    createdAt?: Date,
+  ): User {
+    return new User(id ?? randomUUID(), email, name, createdAt ?? new Date());
   }
 }
