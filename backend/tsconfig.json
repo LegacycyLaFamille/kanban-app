@@ -21,7 +21,10 @@
     "isolatedModules": true,
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
-    "skipLibCheck": true
+    "skipLibCheck": true,
+
+    "allowJs": true,
+    "checkJs": false
   },
   "include": ["src/**/*"]
 }
