@@ -20,7 +20,6 @@ L’approche retenue est donc une migration incrémentale, adaptée à un projet
 frontend/
 ├── src/
 │   ├── app/
-│   │   ├── App.tsx
 │   │   ├── router.tsx
 │   │   ├── providers/
 │   │   └── layouts/
