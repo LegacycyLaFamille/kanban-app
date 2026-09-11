@@ -3,6 +3,7 @@ import { createBrowserRouter } from "react-router-dom";
 import { AppProviders } from "./providers/AppProviders";
 import { LegacyApp } from "./legacy/LegacyApp";
 import { LoginPage } from "../features/auth/pages/LoginPage.tsx";
+import { KanbanPage } from "../features/auth/pages/kanban/pages/KanbanPage";
 import { WaitTemplate } from "../shared/components/WaitTemplate.tsx";
 import { KanbanPage } from "../features/kanban/KanbanPage.tsx";
 

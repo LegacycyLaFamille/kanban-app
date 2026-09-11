@@ -83,4 +83,32 @@ export class PrismaUserRepository implements UserRepository {
       });
     }
   }
+
+  async getCredentials(
+    email: string,
+  ): Promise<{ user: User; passwordHash: string } | null> {
+    const record = await this.prisma.user.findUnique({ where: { email } });
+    if (!record) return null;
+
+    const user = User.create(record.email, record.name, record.id);
+    return { user, passwordHash: record.passwordHash };
+  }
+
+  async updateRefreshToken(
+    userId: string,
+    token: string | null,
+  ): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { refreshToken: token },
+    });
+  }
+
+  async findByRefreshToken(token: string): Promise<User | null> {
+    const record = await this.prisma.user.findFirst({
+      where: { refreshToken: token },
+    });
+    if (!record) return null;
+    return User.create(record.email, record.name, record.id, record.createdAt);
+  }
 }
