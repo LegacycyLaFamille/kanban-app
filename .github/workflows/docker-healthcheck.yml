@@ -1,0 +1,50 @@
+name: Docker Healthcheck
+
+on:
+  pull_request:
+    branches: [Dev, main]
+  push:
+    branches: [Dev, main]
+  workflow_dispatch:
+
+concurrency:
+  group: docker-healthcheck-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  docker-healthcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build & wait for healthcehecks
+        run: |
+          docker compose build
+          docker compose up -d --wait --wait-timeout 180
+
+      - name: Show status
+        run: docker compose ps
+
+      - name: Smoke test through the nginx proxy
+        run: |
+          set -euo pipefail
+          curl -fsS http://localhost:8080/ -o /dev/null
+          curl -fsS http://localhost:8080/api/legacy/items -o /dev/null
+          curl -fsS -X POST http://localhost:8080/api/legacy/items \
+            -H 'Content-Type: application/json' \
+            -d '{"name":"ci smoke test"}' -o /dev/null
+          curl -fsS http://localhost:8080/api/legacy/items | grep -q 'ci smoke test'
+
+      - name: Dump logs on failure
+        if: failure()
+        run: |
+          docker compose ps
+          docker compose logs --no-color
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v --remove-orphans

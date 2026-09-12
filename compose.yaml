@@ -1,27 +1,52 @@
 services:
-  legacy_frontend:
+  frontend:
     build:
       context: .
       dockerfile: docker/frontend/Dockerfile
-    image: legacy:frontend
+    image: kanban:frontend
     ports:
       - "8080:80"
     depends_on:
-      - legacy_backend
+      backend:
+        condition: service_healthy
     restart: unless-stopped
 
-  legacy_backend:
-    image: node:24-alpine
-    working_dir: /app
-    volumes:
-      - .:/app
-      - backend-data:/data
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+    image: kanban:backend
     environment:
+      - DATABASE_URL=postgresql://kanban_user:kanban_password@postgres:5432/kanban_db
+      - JWT_SECRET=ci-only-secret-change-me
+      - PORT=3000
       - SQLITE_DB_LOCATION=/data/todo.db
-    command: sh -c "npm ci && node src/index.js"
+    volumes:
+      - backend-data:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
     expose:
       - "3000"
     restart: unless-stopped
 
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=kanban_user
+      - POSTGRES_PASSWORD=kanban_password
+      - POSTGRES_DB=kanban_db
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kanban_user -d kanban_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    expose:
+      - "5432"
+    restart: unless-stopped
+
 volumes:
   backend-data:
+  postgres-data:
