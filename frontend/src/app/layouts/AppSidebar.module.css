@@ -1,122 +1,118 @@
 .sidebar {
-    position: sticky;
-    top: 0;
+  position: sticky;
+  top: 0;
 
-    width: 260px;
-    min-width: 260px;
-    height: 100vh;
+  width: 260px;
+  min-width: 260px;
+  height: 100vh;
 
-    padding: 24px 16px;
+  padding: 24px 16px;
 
-    color: var(--color-sidebar-text);
-    background:
-            linear-gradient(
-                    180deg,
-                    rgba(255, 255, 255, 0.025) 0%,
-                    rgba(255, 255, 255, 0) 30%
-            ),
-            var(--color-sidebar);
+  color: var(--color-sidebar-text);
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.025) 0%,
+      rgba(255, 255, 255, 0) 30%
+    ),
+    var(--color-sidebar);
 
-    border-right: 1px solid rgba(255, 255, 255, 0.06);
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .brand {
-    display: flex;
-    align-items: center;
-    gap: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 
-    min-height: 44px;
-    padding: 0 8px;
+  min-height: 44px;
+  padding: 0 8px;
 }
 
 .brandName {
-    color: #ffffff;
-    font-size: 15px;
-    white-space: nowrap;
+  color: #ffffff;
+  font-size: 15px;
+  white-space: nowrap;
 }
 
 .navigation {
-    width: 100%;
+  width: 100%;
 }
 
 .navigationLabel {
-    white-space: nowrap;
+  white-space: nowrap;
 }
 
 .icon {
-    display: block;
+  display: block;
 
-    width: 18px;
-    height: 18px;
+  width: 18px;
+  height: 18px;
 
-    flex-shrink: 0;
+  flex-shrink: 0;
 }
 
 .user {
-    display: flex;
-    align-items: center;
-    gap: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 
-    min-height: 58px;
+  min-height: 58px;
 
-    padding: 12px 8px 0;
+  padding: 12px 8px 0;
 
-    border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .avatar {
-    display: grid;
-    place-items: center;
+  display: grid;
+  place-items: center;
 
-    width: 36px;
-    height: 36px;
+  width: 36px;
+  height: 36px;
 
-    flex-shrink: 0;
+  flex-shrink: 0;
 
-    border-radius: 10px;
+  border-radius: 10px;
 
-    color: #ffffff;
+  color: #ffffff;
 
-    font-size: 13px;
-    font-weight: 700;
+  font-size: 13px;
+  font-weight: 700;
 
-    background: linear-gradient(
-            135deg,
-            #4f46e5,
-            #8b5cf6
-    );
+  background: linear-gradient(135deg, #4f46e5, #8b5cf6);
 }
 
 .userInformation {
-    display: flex;
-    flex-direction: column;
+  display: flex;
+  flex-direction: column;
 
-    min-width: 0;
+  min-width: 0;
 }
 
 .userInformation strong {
-    overflow: hidden;
+  overflow: hidden;
 
-    color: #ffffff;
+  color: #ffffff;
 
-    font-size: 13px;
-    font-weight: 600;
+  font-size: 13px;
+  font-weight: 600;
 
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .userInformation span {
-    overflow: hidden;
+  overflow: hidden;
 
-    margin-top: 2px;
+  margin-top: 2px;
 
-    color: var(--color-text-muted);
+  color: var(--color-text-muted);
 
-    font-size: 11px;
+  font-size: 11px;
 
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /*
@@ -124,26 +120,26 @@
  * A mobile drawer can be implemented later if required.
  */
 @media (max-width: 900px) {
-    .sidebar {
-        width: 76px;
-        min-width: 76px;
+  .sidebar {
+    width: 76px;
+    min-width: 76px;
 
-        padding-inline: 10px;
-    }
+    padding-inline: 10px;
+  }
 
-    .brand {
-        justify-content: center;
-        padding-inline: 0;
-    }
+  .brand {
+    justify-content: center;
+    padding-inline: 0;
+  }
 
-    .brandName,
-    .navigationLabel,
-    .userInformation {
-        display: none;
-    }
+  .brandName,
+  .navigationLabel,
+  .userInformation {
+    display: none;
+  }
 
-    .user {
-        justify-content: center;
-        padding-inline: 0;
-    }
+  .user {
+    justify-content: center;
+    padding-inline: 0;
+  }
 }
