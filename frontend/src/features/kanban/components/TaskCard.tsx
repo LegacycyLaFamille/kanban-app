@@ -1,36 +1,47 @@
-import { useRef, useEffect } from "react";
-import { useDrag } from "react-dnd";
-import { Card, Text } from "reshaped";
+import { Card, Text, View } from "reshaped";
 
-import { DND_ITEM_TYPE, type DragItem, type Task } from "../types";
+import type { Task } from "../types";
 
 type TaskCardProps = {
   task: Task;
 };
 
+const PRIORITY_LABELS: Record<NonNullable<Task["priority"]>, string> = {
+  low: "Low",
+  medium: "Medium",
+  high: "High",
+};
+
 export function TaskCard({ task }: TaskCardProps) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [{ isDragging }, dragRef] = useDrag<
-    DragItem,
-    void,
-    { isDragging: boolean }
-  >(() => ({
-    type: DND_ITEM_TYPE,
-    item: { id: task.id, sourceColumnId: task.columnId },
-    collect: (monitor) => ({
-      isDragging: monitor.isDragging(),
-    }),
-  }));
-
-  useEffect(() => {
-    dragRef(ref);
-  }, [dragRef]);
-
   return (
-    <div ref={ref} style={{ opacity: isDragging ? 0.5 : 1, cursor: "grab" }}>
-      <Card padding={3}>
-        <Text>{task.title}</Text>
-      </Card>
-    </div>
+    <Card padding={3}>
+      <View gap={1}>
+        <Text variant="body-2-bold">{task.title}</Text>
+
+        {task.description && (
+          <Text variant="caption-1" color="neutral-faded">
+            {task.description}
+          </Text>
+        )}
+
+        {task.priority && (
+          <Text variant="caption-1" color="neutral-faded">
+            Priority: {PRIORITY_LABELS[task.priority]}
+          </Text>
+        )}
+
+        {task.deadline && (
+          <Text variant="caption-1" color="neutral-faded">
+            Due: {new Date(task.deadline).toLocaleDateString()}
+          </Text>
+        )}
+
+        {task.assignee && (
+          <Text variant="caption-1" color="neutral-faded">
+            {task.assignee.name}
+          </Text>
+        )}
+      </View>
+    </Card>
   );
 }

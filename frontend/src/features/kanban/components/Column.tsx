@@ -8,7 +8,7 @@ import {
   type DragItem,
   type Task,
 } from "../types";
-import { TaskCard } from "./TaskCard";
+import { DraggableTaskCard } from "./DraggableTaskCard";
 
 type ColumnProps = {
   columnId: ColumnId;
@@ -49,7 +49,7 @@ export function Column({ columnId, title, tasks, onDropTask }: ColumnProps) {
         <Text variant="body-2-bold">{title}</Text>
         <View gap={2} paddingTop={2}>
           {tasks.map((task) => (
-            <TaskCard key={task.id} task={task} />
+            <DraggableTaskCard key={task.id} task={task} />
           ))}
         </View>
       </View>
