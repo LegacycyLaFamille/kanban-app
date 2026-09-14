@@ -1,0 +1,39 @@
+.logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+
+    width: 36px;
+    height: 36px;
+
+    flex-shrink: 0;
+
+    border-radius: 10px;
+
+    background: linear-gradient(
+            135deg,
+            #4f46e5 0%,
+            #8b5cf6 100%
+    );
+
+    box-shadow:
+            0 8px 24px rgba(79, 70, 229, 0.25),
+            inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.logo span {
+    display: block;
+
+    width: 5px;
+    height: 15px;
+
+    border-radius: 2px;
+
+    background-color: #ffffff;
+}
+
+.logo span:last-child {
+    height: 10px;
+    opacity: 0.7;
+}
