@@ -5,51 +5,82 @@ import { LegacyApp } from "./legacy/LegacyApp";
 import { LoginPage } from "../features/auth/pages/LoginPage.tsx";
 import { KanbanPage } from "../features/auth/pages/kanban/pages/KanbanPage";
 import { WaitTemplate } from "../shared/components/WaitTemplate.tsx";
-import { KanbanPage } from "../features/kanban/KanbanPage.tsx";
+import { MainLayout } from "./layouts/MainLayout.tsx";
+import { ProjectsPage } from "../features/projects/pages/ProjectsPage.tsx";
+import { ProjectDetailsPage } from "../features/projects/pages/ProjectDetailsPage";
 
 export const router = createBrowserRouter([
   {
-    path: "/",
-    element: <LegacyApp />,
-  },
-  {
-    path: "/login",
-    element: (
-      <AppProviders>
-        <LoginPage />
-      </AppProviders>
-    ),
-  },
-  {
-    path: "/register",
-    element: (
-      <AppProviders>
-        <WaitTemplate template="REGISTER" />
-      </AppProviders>
-    ),
-  },
-  {
-    path: "/projects",
-    element: (
-      <AppProviders>
-        <WaitTemplate template="PROJECTS" />
-      </AppProviders>
-    ),
-  },
-  {
-    path: "/project/:projectId/kanban",
-    element: (
-      <AppProviders>
-        <KanbanPage />
-      </AppProviders>
-    ),
-  },
-  {
-    path: "/profile",
-    element: (
-      <AppProviders>
-        <WaitTemplate template="PROFILE" />
-      </AppProviders>
-    ),
+    element: <MainLayout />,
+    children: [
+      {
+        path: "/",
+        element: <LegacyApp />,
+      },
+      {
+        path: "/login",
+        element: (
+          <AppProviders>
+            <LoginPage />
+          </AppProviders>
+        ),
+      },
+      {
+        path: "/register",
+        element: (
+          <AppProviders>
+            <WaitTemplate template="REGISTER" />
+          </AppProviders>
+        ),
+      },
+      {
+        path: "/projects",
+        element: (
+          <AppProviders>
+            <ProjectsPage />
+          </AppProviders>
+        ),
+      },
+      {
+        path: "/projects/:projectId",
+        element: (
+          <AppProviders>
+            <ProjectDetailsPage />
+          </AppProviders>
+        ),
+      },
+      {
+        path: "/projects/:projectId/kanban",
+        element: (
+          <AppProviders>
+            <KanbanPage />
+          </AppProviders>
+        ),
+      },
+      {
+        path: "/profile",
+        element: (
+          <AppProviders>
+            <WaitTemplate template="PROFILE" />
+          </AppProviders>
+        ),
+      },
+      {
+        path: "/tasks",
+        element: (
+          <AppProviders>
+            <WaitTemplate template="TASKS" />
+          </AppProviders>
+        ),
+      },
+      {
+        path: "/notifications",
+        element: (
+          <AppProviders>
+            <WaitTemplate template="TASKS" />
+          </AppProviders>
+        ),
+      },
+    ],
   },
 ]);
