@@ -4,7 +4,8 @@ export const initialTasks: Task[] = [
   {
     id: "1",
     title: "Design the login page",
-    description: "Create wireframes and high-fidelity mockups for the login flow.",
+    description:
+      "Create wireframes and high-fidelity mockups for the login flow.",
     projectId: "1",
     columnId: "todo",
     priority: "high",

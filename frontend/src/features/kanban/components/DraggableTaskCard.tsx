@@ -10,7 +10,11 @@ type DraggableTaskCardProps = {
 
 export function DraggableTaskCard({ task }: DraggableTaskCardProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const [{ isDragging }, dragRef] = useDrag<DragItem, void, { isDragging: boolean }>(() => ({
+  const [{ isDragging }, dragRef] = useDrag<
+    DragItem,
+    void,
+    { isDragging: boolean }
+  >(() => ({
     type: DND_ITEM_TYPE,
     item: { id: task.id, sourceColumnId: task.columnId },
     collect: (monitor) => ({
