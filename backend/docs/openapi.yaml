@@ -1,0 +1,245 @@
+openapi: 3.0.3
+info:
+  title: Kanban API
+  version: 1.0.0
+  description: Documentation of the kanban backend API.
+
+paths:
+  /api/v1/auth/register:
+    post:
+      summary: Registering a new user
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Utilisateur créé avec succès.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterSuccessResponse'
+        '400':
+          description: Données invalides (Erreur de validation Zod).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Conflit (L'email existe déjà).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/login:
+    post:
+      summary: Connexion d'un utilisateur
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Connexion réussie, tokens injectés dans les cookies (HttpOnly).
+          headers:
+            Set-Cookie:
+              description: accessToken (15m) et refreshToken (7j)
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSuccessResponse'
+        '400':
+          description: Format des données invalide.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Identifiants invalides.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/refresh:
+    post:
+      summary: Rafraîchir les tokens de session
+      description: Nécessite le cookie refreshToken valide.
+      tags:
+        - Auth
+      responses:
+        '200':
+          description: Session rafraîchie, nouveaux tokens injectés.
+          headers:
+            Set-Cookie:
+              description: Nouveaux accessToken et refreshToken
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSuccessResponse'
+        '401':
+          description: Session inexistante ou expirée.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/auth/me:
+    get:
+      summary: Récupérer le profil de l'utilisateur connecté
+      description: Nécessite un cookie accessToken valide.
+      tags:
+        - Auth
+      security:
+        - CookieAuth: []
+      responses:
+        '200':
+          description: Profil récupéré avec succès.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  email:
+                    type: string
+                    format: email
+                  name:
+                    type: string
+        '401':
+          description: Non authentifié (Token manquant ou expiré).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/auth/logout:
+    post:
+      summary: Déconnexion de l'utilisateur
+      description: Invalide le refresh token en base et efface les cookies de session.
+      tags:
+        - Auth
+      security:
+        - CookieAuth: []
+      responses:
+        '200':
+          description: Déconnexion réussie, cookies effacés.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Déconnexion réussie
+        '401':
+          description: Non authentifié.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    CookieAuth:
+      type: apiKey
+      in: cookie
+      name: accessToken
+  schemas:
+    RegisterRequest:
+      type: object
+      required:
+        - email
+        - name
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: john.doe@example.com
+        name:
+          type: string
+          minLength: 2
+          example: John Doe
+        password:
+          type: string
+          minLength: 8
+          example: SuperSecurePassword123
+
+    RegisterSuccessResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Compte créé avec succès
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            email:
+              type: string
+            name:
+              type: string
+            createdAt:
+              type: string
+              format: date-time
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: john.doe@example.com
+        password:
+          type: string
+          example: SuperSecurePassword123
+
+    AuthSuccessResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Opération réussie
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            email:
+              type: string
+              format: email
+            name:
+              type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: Message d'erreur
+        details:
+          type: array
+          items:
+            type: object
+          description: Présent uniquement pour les erreurs 400 (Zod).

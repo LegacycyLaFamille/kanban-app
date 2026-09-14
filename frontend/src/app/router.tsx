@@ -3,6 +3,7 @@ import { createBrowserRouter } from "react-router-dom";
 import { AppProviders } from "./providers/AppProviders";
 import { LegacyApp } from "./legacy/LegacyApp";
 import { LoginPage } from "../features/auth/pages/LoginPage.tsx";
+import { KanbanPage } from "../features/auth/pages/kanban/pages/KanbanPage";
 import { WaitTemplate } from "../shared/components/WaitTemplate.tsx";
 import { MainLayout } from "./layouts/MainLayout.tsx";
 import { ProjectsPage } from "../features/projects/pages/ProjectsPage.tsx";
@@ -42,13 +43,17 @@ export const router = createBrowserRouter([
       },
       {
         path: "/projects/:projectId",
-        element: <ProjectDetailsPage />,
-      },
-      {
-        path: "/project/:projectId/kanban",
         element: (
           <AppProviders>
-            <WaitTemplate template="KANBAN" />
+            <ProjectDetailsPage />
+          </AppProviders>
+        ),
+      },
+      {
+        path: "/projects/:projectId/kanban",
+        element: (
+          <AppProviders>
+            <KanbanPage />
           </AppProviders>
         ),
       },
