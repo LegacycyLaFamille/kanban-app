@@ -6,19 +6,54 @@ import type { ProjectDetails } from "../types/project.types";
 
 export function useProjectDetails(projectId: string | undefined) {
   const [project, setProject] = useState<ProjectDetails | null>(null);
-
   const [isLoading, setIsLoading] = useState(true);
-
   const [notFound, setNotFound] = useState(false);
-
   const [error, setError] = useState<string | null>(null);
 
-  const loadProject = useCallback(async () => {
+  useEffect(() => {
     if (!projectId) {
-      setProject(null);
-      setNotFound(true);
-      setIsLoading(false);
+      return;
+    }
 
+    let cancelled = false;
+
+    getProjectById(projectId)
+      .then((response) => {
+        if (cancelled) {
+          return;
+        }
+
+        if (!response) {
+          setProject(null);
+          setNotFound(true);
+
+          return;
+        }
+
+        setProject(response);
+        setNotFound(false);
+        setError(null);
+      })
+      .catch(() => {
+        if (cancelled) {
+          return;
+        }
+
+        setError("Unable to load this project.");
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId]);
+
+  const reload = useCallback(async () => {
+    if (!projectId) {
       return;
     }
 
@@ -44,15 +79,11 @@ export function useProjectDetails(projectId: string | undefined) {
     }
   }, [projectId]);
 
-  useEffect(() => {
-    void loadProject();
-  }, [loadProject]);
-
   return {
     project,
     isLoading,
-    notFound,
+    notFound: !projectId || notFound,
     error,
-    reload: loadProject,
+    reload,
   };
 }

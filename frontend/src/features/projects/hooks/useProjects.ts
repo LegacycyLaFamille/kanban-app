@@ -13,7 +13,37 @@ export function useProjects() {
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadProjects = useCallback(async () => {
+  useEffect(() => {
+    let cancelled = false;
+
+    getProjects()
+      .then((response) => {
+        if (cancelled) {
+          return;
+        }
+
+        setProjects(response);
+        setError(null);
+      })
+      .catch(() => {
+        if (cancelled) {
+          return;
+        }
+
+        setError("Unable to load projects.");
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const reload = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -47,16 +77,12 @@ export function useProjects() {
     }
   }, []);
 
-  useEffect(() => {
-    void loadProjects();
-  }, [loadProjects]);
-
   return {
     projects,
     isLoading,
     isCreating,
     error,
-    reload: loadProjects,
+    reload,
     createProject,
   };
 }
