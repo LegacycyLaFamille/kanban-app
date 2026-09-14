@@ -1,11 +1,12 @@
 import { Button, Card, Text, TextField, View } from "reshaped";
+import { AppLogo } from "./AppLogo/AppLogo.tsx";
 
 export function LoginForm() {
   return (
     <Card padding={8}>
       <View gap={6}>
         <View align="center" gap={2}>
-          <div className="auth-logo">K</div>
+          <AppLogo />
 
           <Text variant="featured-3" weight="bold">
             Kanban App
