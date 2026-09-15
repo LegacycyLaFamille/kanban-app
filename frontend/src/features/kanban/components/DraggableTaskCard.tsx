@@ -14,20 +14,31 @@ export function DraggableTaskCard({ task }: DraggableTaskCardProps) {
     DragItem,
     void,
     { isDragging: boolean }
-  >(() => ({
-    type: DND_ITEM_TYPE,
-    item: { id: task.id, sourceColumnId: task.columnId },
-    collect: (monitor) => ({
-      isDragging: monitor.isDragging(),
+  >(
+    () => ({
+      type: DND_ITEM_TYPE,
+      item: { id: task.id, sourceColumnId: task.columnId },
+      collect: (monitor) => ({
+        isDragging: monitor.isDragging(),
+      }),
     }),
-  }));
+    [task.id, task.columnId],
+  );
 
   useEffect(() => {
     dragRef(ref);
   }, [dragRef]);
 
   return (
-    <div ref={ref} style={{ opacity: isDragging ? 0.5 : 1, cursor: "grab" }}>
+    <div
+      ref={ref}
+      data-task-id={task.id}
+      style={{
+        opacity: isDragging ? 0.4 : 1,
+        cursor: "grab",
+        transition: "opacity 0.15s ease",
+      }}
+    >
       <TaskCard task={task} />
     </div>
   );
