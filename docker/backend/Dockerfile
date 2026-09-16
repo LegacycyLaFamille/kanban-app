@@ -7,7 +7,7 @@ COPY backend/package.json backend/package-lock.json ./
 RUN npm ci
 COPY backend/ ./
 RUN DATABASE_URL="postgresql://build:build@localhost:5432/build" npm run build \
- && cp src/legacy/package.json dist/legacy/package.json \
+ && cp src/legacy/package.json dist/legacy/package.json
     
 FROM node:24-slim AS runtime
 ENV NODE_ENV=production
