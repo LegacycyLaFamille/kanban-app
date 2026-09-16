@@ -7,6 +7,8 @@ import swaggerUi from "swagger-ui-express";
 import YAML from "yamljs";
 import path from "path";
 import cookieParser from "cookie-parser";
+import { projectRouter } from "./modules/projects/project.routes.js";
+import { taskRouter } from "./modules/tasks/task.routes.js";
 
 dotenv.config();
 
@@ -16,13 +18,24 @@ const port = process.env.PORT || 3000;
 const swaggerDocument = YAML.load(
   path.join(process.cwd(), "docs", "openapi.yaml"),
 );
+const swaggerOptions = {
+  swaggerOptions: {
+    withCredentials: true,
+  },
+};
 
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+app.use(
+  "/api-docs",
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerDocument, swaggerOptions),
+);
 app.use(express.json());
 app.use(cookieParser());
 
 app.use("/api/legacy", legacy as unknown as express.RequestHandler);
 app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1", projectRouter);
+app.use("/api/v1", taskRouter);
 
 app.get("/", (_req: Request, res: Response) => {
   res.send("Hello from ts backend");

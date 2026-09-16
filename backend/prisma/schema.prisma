@@ -43,7 +43,7 @@ model Task {
   project     Project  @relation(fields: [projectId], references: [id])
   status      String
   priority    String
-  deadline    DateTime
+  deadline    DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
