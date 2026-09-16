@@ -10,7 +10,14 @@ export default defineConfig({
       include: ["src/**/*.ts"],
       // src/legacy is CommonJS pre-migration code kept as-is; it is excluded
       // from the TypeScript test suite entirely (see docs/quality-gate.md).
-      exclude: ["src/legacy/**", "src/tests/**", "**/*.d.ts"],
+      // src/generated is Prisma's generated client, not source we write
+      // or test; it isn't committed either (see .gitignore).
+      exclude: [
+        "src/legacy/**",
+        "src/tests/**",
+        "src/generated/**",
+        "**/*.d.ts",
+      ],
       reporter: ["text", "lcov"],
       // Honest baseline for a backend that is early in its TypeScript rewrite
       // (~23% coverage today, see docs/quality-gate.md). Raise these numbers
