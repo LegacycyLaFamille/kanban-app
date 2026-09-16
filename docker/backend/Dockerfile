@@ -1,7 +1,7 @@
 FROM node:24-slim AS build
 WORKDIR /app
 RUN apt-get update \
- && apt-get install -y --no-install-recommends python3 make g++ \
+ && apt-get install -y --no-install-recommends python3 make g++ openssl \
  && rm -rf /var/lib/apt/lists/*
 COPY backend/package.json backend/package-lock.json ./
 RUN npm ci
@@ -11,9 +11,13 @@ RUN DATABASE_URL="postgresql://build:build@localhost:5432/build" npm run build
 FROM node:24-slim AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends openssl \
+ && rm -rf /var/lib/apt/lists/*
 RUN mkdir -p /data && chown node:node /data
 
 COPY --from=build /app /app
+RUN chown -R node:node /app
 
 ENV PORT=3000
 ENV SQLITE_DB_LOCATION=/data/todo.db
