@@ -4,7 +4,7 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends python3 make g++ openssl \
  && rm -rf /var/lib/apt/lists/*
 COPY backend/package.json backend/package-lock.json ./
-RUN npm ci
+RUN npm ci --build-from-source
 COPY backend/ ./
 RUN DATABASE_URL="postgresql://build:build@localhost:5432/build" npm run build \
  && cp src/legacy/package.json dist/legacy/package.json
