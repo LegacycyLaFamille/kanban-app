@@ -130,14 +130,14 @@ jobs:
       - run: npm run test:coverage
         working-directory: backend
       - name: SonarQube Cloud Scan
-        uses: sonarsource/sonarqube-scan-action@v5
+        uses: SonarSource/sonarqube-scan-action@v5
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       # Fails the job (and therefore the PR check) when the Quality Gate,
       # configured in SonarQube Cloud to evaluate New Code only, does not
       # pass. See docs/quality-gate.md for the gate configuration.
       - name: SonarQube Quality Gate check
-        uses: sonarsource/sonarqube-quality-gate-action@master
+        uses: SonarSource/sonarqube-quality-gate-action@master
         timeout-minutes: 5
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
