@@ -1,0 +1,52 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend/Dockerfile
+    image: kanban:frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+    image: kanban:backend
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-kanban_user}:${POSTGRES_PASSWORD:-kanban_password}@postgres:5432/${POSTGRES_DB:-kanban_db}
+      - JWT_SECRET=${JWT_SECRET}
+      - PORT=3000
+      - SQLITE_DB_LOCATION=/data/todo.db
+    volumes:
+      - backend-data:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    expose:
+      - "3000"
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-kanban_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-kanban_password}
+      - POSTGRES_DB=${POSTGRES_DB:-kanban_db}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-kanban_user} -d ${POSTGRES_DB:-kanban_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    expose:
+      - "5432"
+    restart: unless-stopped
+
+volumes:
+  backend-data:
+  postgres-data:
