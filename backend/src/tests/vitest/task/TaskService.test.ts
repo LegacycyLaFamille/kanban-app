@@ -67,6 +67,9 @@ describe("TaskService", () => {
 
       const result = await taskService.create("proj-1", "user-1", {
         title: "Test",
+        description: "",
+        priority: "",
+        status: "",
       });
 
       expect(result.title).toBe("Test");
