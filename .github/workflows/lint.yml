@@ -61,6 +61,42 @@ jobs:
       - run: npm run format:check
         working-directory: backend
 
+  typecheck-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      - run: npm run typecheck
+        working-directory: frontend
+
+  typecheck-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+        working-directory: backend
+      # Prisma client types are generated, not committed (see .gitignore),
+      # so type-checking needs a client to check against. `prisma generate`
+      # only reads the schema and does not connect to a database, so a
+      # placeholder DATABASE_URL is enough to satisfy prisma.config.ts.
+      - run: npx prisma generate
+        working-directory: backend
+        env:
+          DATABASE_URL: 'postgresql://user:password@localhost:5432/kanban_ci'
+      - run: npm run typecheck
+        working-directory: backend
+
   test-backend:
     runs-on: ubuntu-latest
     steps:
