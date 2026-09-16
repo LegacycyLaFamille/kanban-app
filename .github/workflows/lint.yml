@@ -110,3 +110,34 @@ jobs:
         working-directory: backend
       - run: npm run test:coverage
         working-directory: backend
+
+  sonarqube:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # SonarQube needs the full git history for PR/blame analysis.
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+        working-directory: backend
+      # Regenerate the backend coverage report so Sonar can pick up
+      # sonar.javascript.lcov.reportPaths from sonar-project.properties.
+      - run: npm run test:coverage
+        working-directory: backend
+      - name: SonarQube Cloud Scan
+        uses: sonarsource/sonarqube-scan-action@v5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      # Fails the job (and therefore the PR check) when the Quality Gate,
+      # configured in SonarQube Cloud to evaluate New Code only, does not
+      # pass. See docs/quality-gate.md for the gate configuration.
+      - name: SonarQube Quality Gate check
+        uses: sonarsource/sonarqube-quality-gate-action@master
+        timeout-minutes: 5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
