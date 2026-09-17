@@ -28,6 +28,7 @@ const EMPTY_TASK: Task = {
 export function Board() {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [activeTask, setActiveTask] = useState<Task>(EMPTY_TASK);
   const [isEditing, setIsEditing] = useState(false);
 
@@ -68,6 +69,12 @@ export function Board() {
     } else {
       setTasks((prev) => [...prev, activeTask]);
     }
+    setIsModalOpen(false);
+  };
+
+  const handleDelete = () => {
+    setTasks((prev) => prev.filter((t) => t.id !== activeTask.id));
+    setIsDeleteModalOpen(false);
     setIsModalOpen(false);
   };
 
@@ -285,16 +292,65 @@ export function Board() {
               </View>
 
               {/* Bottom Actions */}
+              <View direction="row" justify="space-between" align="center">
+                <div>
+                  {isEditing && (
+                    <Button
+                      variant="outline"
+                      color="critical"
+                      onClick={() => setIsDeleteModalOpen(true)}
+                    >
+                      Delete Task
+                    </Button>
+                  )}
+                </div>
+
+                <View direction="row" gap={3}>
+                  <Button
+                    variant="outline"
+                    color="neutral"
+                    onClick={() => setIsModalOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button color="primary" onClick={handleSave}>
+                    {isEditing ? "Save Changes" : "Create Task"}
+                  </Button>
+                </View>
+              </View>
+            </View>
+          </Card>
+        </Modal>
+
+        {/* Modal: Delete Confirmation */}
+        <Modal
+          active={isDeleteModalOpen}
+          onClose={() => setIsDeleteModalOpen(false)}
+          size="420px"
+        >
+          <Card padding={6}>
+            <View gap={4}>
+              <View gap={2}>
+                <Text variant="featured-3" weight="bold">
+                  Delete Task
+                </Text>
+                <Text color="neutral-faded">
+                  Are you sure you want to delete{" "}
+                  <strong>"{activeTask.title}"</strong>? This action cannot be
+                  undone.
+                </Text>
+              </View>
+
               <View direction="row" justify="end" gap={3}>
                 <Button
                   variant="outline"
                   color="neutral"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => setIsDeleteModalOpen(false)}
                 >
                   Cancel
                 </Button>
-                <Button color="primary" onClick={handleSave}>
-                  {isEditing ? "Save Changes" : "Create Task"}
+                <Button color="critical" onClick={handleDelete}>
+                  Confirm Delete
                 </Button>
               </View>
             </View>
