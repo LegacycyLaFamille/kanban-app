@@ -6,7 +6,7 @@ export class Task {
     public readonly projectId: string,
     public readonly status: string,
     public readonly priority: string,
-    public readonly deadline: Date,
+    public readonly deadline: Date | null,
     public readonly createdAt: Date,
   ) {}
 }

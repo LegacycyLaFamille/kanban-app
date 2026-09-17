@@ -5,6 +5,9 @@ info:
   description: Documentation of the kanban backend API.
 
 paths:
+  # ==========================================
+  # MODULE AUTH
+  # ==========================================
   /api/v1/auth/register:
     post:
       summary: Registering a new user
@@ -36,7 +39,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /api/auth/login:
+  /api/v1/auth/login:
     post:
       summary: Connexion d'un utilisateur
       tags:
@@ -72,7 +75,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /api/auth/refresh:
+  /api/v1/auth/refresh:
     post:
       summary: Rafraîchir les tokens de session
       description: Nécessite le cookie refreshToken valide.
@@ -96,6 +99,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+
   /api/v1/auth/me:
     get:
       summary: Récupérer le profil de l'utilisateur connecté
@@ -153,13 +157,259 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  # ==========================================
+  # MODULE PROJECTS
+  # ==========================================
+  /api/v1/projects:
+    get:
+      summary: Liste tous les projets de l'utilisateur connecté
+      tags:
+        - Projects
+      security:
+        - CookieAuth: []
+      responses:
+        '200':
+          description: Liste des projets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Project'
+    post:
+      summary: Crée un nouveau projet
+      tags:
+        - Projects
+      security:
+        - CookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProjectDto'
+      responses:
+        '201':
+          description: Projet créé avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '400':
+          description: Données invalides (Zod)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/projects/{projectId}:
+    get:
+      summary: Récupère un projet spécifique
+      tags:
+        - Projects
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Projet trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    patch:
+      summary: Met à jour un projet
+      tags:
+        - Projects
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProjectDto'
+      responses:
+        '200':
+          description: Projet mis à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '400':
+          description: Données invalides (Zod)
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    delete:
+      summary: Supprime un projet
+      tags:
+        - Projects
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Projet supprimé avec succès
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  # ==========================================
+  # MODULE TASKS
+  # ==========================================
+  /api/v1/projects/{projectId}/tasks:
+    get:
+      summary: Récupère toutes les tâches d'un projet
+      tags:
+        - Tasks
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Liste des tâches
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Task'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    post:
+      summary: Crée une tâche dans un projet
+      tags:
+        - Tasks
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaskDto'
+      responses:
+        '201':
+          description: Tâche créée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          description: Données invalides (Zod)
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/tasks/{taskId}:
+    patch:
+      summary: Met à jour une tâche (statut, titre...)
+      tags:
+        - Tasks
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTaskDto'
+      responses:
+        '200':
+          description: Tâche mise à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          description: Données invalides (Zod)
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    delete:
+      summary: Supprime une tâche
+      tags:
+        - Tasks
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Tâche supprimée
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
 components:
   securitySchemes:
     CookieAuth:
       type: apiKey
       in: cookie
       name: accessToken
+
   schemas:
+    # --- AUTHENTICATION SCHEMAS ---
     RegisterRequest:
       type: object
       required:
@@ -232,6 +482,104 @@ components:
             name:
               type: string
 
+    # --- DOMAIN ENTITIES ---
+    Project:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        ownerId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+
+    Task:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        projectId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        status:
+          type: string
+          enum: [TODO, IN_PROGRESS, DONE]
+        priority:
+          type: string
+          enum: [LOW, NORMAL, HIGH]
+        description:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        deadline:
+          type: string
+          format: date-time
+          nullable: true
+
+    # --- DTOs ---
+    CreateProjectDto:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+
+    UpdateProjectDto:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+
+    CreateTaskDto:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        priority:
+          type: string
+          enum: [LOW, NORMAL, HIGH]
+        deadline:
+          type: string
+          format: date-time
+          nullable: true
+
+    UpdateTaskDto:
+      type: object
+      properties:
+        title:
+          type: string
+        status:
+          type: string
+          enum: [TODO, IN_PROGRESS, DONE]
+        priority:
+          type: string
+          enum: [LOW, NORMAL, HIGH]
+        description:
+          type: string
+        deadline:
+          type: string
+          format: date-time
+          nullable: true
+
+    # --- ERRORS ---
     ErrorResponse:
       type: object
       properties:
@@ -243,3 +591,37 @@ components:
           items:
             type: object
           description: Présent uniquement pour les erreurs 400 (Zod).
+
+    StandardError:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+
+  responses:
+    ForbiddenError:
+      description: Accès refusé (Droits insuffisants pour ce projet/tâche)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/StandardError'
+          example:
+            error:
+              code: "FORBIDDEN"
+              message: "You are not authorized to access this resource."
+
+    NotFoundError:
+      description: Ressource introuvable
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/StandardError'
+          example:
+            error:
+              code: "NOT_FOUND"
+              message: "The requested resource could not be found."

@@ -91,7 +91,7 @@ Controllers handle HTTP-specific concerns:
 - HTTP responses.
 
 Controllers must not contain SQL, Prisma queries, or business rules.
-
+  
 ### Services
 
 Services contain application and business logic:
