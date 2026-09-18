@@ -19,7 +19,10 @@ export class PrismaProjectRepository implements ProjectRepository {
   }
 
   async findById(id: string): Promise<Project | null> {
-    const project = await this.prisma.project.findUnique({ where: { id } });
+    const project = await this.prisma.project.findUnique({
+      where: { id },
+      include: { Board: true },
+    });
     return project ? this.toDomain(project) : null;
   }
 
@@ -27,6 +30,7 @@ export class PrismaProjectRepository implements ProjectRepository {
     const projects = await this.prisma.project.findMany({
       where: { ownerId },
       orderBy: { createdAt: "desc" },
+      include: { Board: true },
     });
     return projects.map((project) => this.toDomain(project));
   }

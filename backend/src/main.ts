@@ -9,6 +9,7 @@ import path from "path";
 import cookieParser from "cookie-parser";
 import { projectRouter } from "./modules/projects/project.routes.js";
 import { taskRouter } from "./modules/tasks/task.routes.js";
+import { boardRouter } from "./modules/boards/board.routes.js";
 
 dotenv.config();
 
@@ -36,6 +37,7 @@ app.use("/api/legacy", legacy as unknown as express.RequestHandler);
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1", projectRouter);
 app.use("/api/v1", taskRouter);
+app.use("/api/v1", boardRouter);
 
 app.get("/", (_req: Request, res: Response) => {
   res.send("Hello from ts backend");

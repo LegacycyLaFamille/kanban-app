@@ -19,6 +19,7 @@ export class PrismaTaskRepository implements TaskRepository {
       prismaTask.priority,
       prismaTask.deadline,
       prismaTask.createdAt,
+      prismaTask.boardId,
     );
   }
 
@@ -45,6 +46,7 @@ export class PrismaTaskRepository implements TaskRepository {
         priority: task.priority,
         deadline: task.deadline,
         projectId: task.projectId,
+        boardId: task.boardId,
       },
       create: {
         id: task.id,
@@ -55,6 +57,7 @@ export class PrismaTaskRepository implements TaskRepository {
         deadline: task.deadline,
         projectId: task.projectId,
         createdAt: task.createdAt,
+        boardId: task.boardId,
       },
     });
   }
