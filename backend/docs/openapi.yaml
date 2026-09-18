@@ -283,6 +283,125 @@ paths:
           $ref: '#/components/responses/NotFoundError'
 
   # ==========================================
+  # MODULE BOARDS
+  # ==========================================
+  /api/v1/projects/{projectId}/boards:
+    get:
+      summary: Liste tous les tableaux (boards) d'un projet
+      tags:
+        - Boards
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Liste des boards du projet
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Board'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    post:
+      summary: Crée un tableau (board) dans un projet
+      tags:
+        - Boards
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBoardDto'
+      responses:
+        '201':
+          description: Board créé avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Board'
+        '400':
+          description: Données invalides (Zod)
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/boards/{boardId}:
+    patch:
+      summary: Met à jour un tableau (board)
+      tags:
+        - Boards
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: boardId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBoardDto'
+      responses:
+        '200':
+          description: Board mis à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Board'
+        '400':
+          description: Données invalides (Zod)
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    delete:
+      summary: Supprime un tableau (board)
+      tags:
+        - Boards
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: boardId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Board supprimé avec succès
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  # ==========================================
   # MODULE TASKS
   # ==========================================
   /api/v1/projects/{projectId}/tasks:
@@ -348,7 +467,7 @@ paths:
 
   /api/v1/tasks/{taskId}:
     patch:
-      summary: Met à jour une tâche (statut, titre...)
+      summary: Met à jour une tâche (statut, titre, boardId...)
       tags:
         - Tasks
       security:
@@ -499,6 +618,26 @@ components:
         createdAt:
           type: string
           format: date-time
+        boards:
+          type: array
+          items:
+            $ref: '#/components/schemas/Board'
+          description: Liste des tableaux liés (peut être omis si non peuplé)
+
+    Board:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        projectId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
 
     Task:
       type: object
@@ -509,6 +648,10 @@ components:
         projectId:
           type: string
           format: uuid
+        boardId:
+          type: string
+          format: uuid
+          nullable: true
         title:
           type: string
         status:
@@ -545,6 +688,19 @@ components:
         description:
           type: string
 
+    CreateBoardDto:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+
+    UpdateBoardDto:
+      type: object
+      properties:
+        name:
+          type: string
+
     CreateTaskDto:
       type: object
       required: [title]
@@ -559,6 +715,10 @@ components:
         deadline:
           type: string
           format: date-time
+          nullable: true
+        boardId:
+          type: string
+          format: uuid
           nullable: true
 
     UpdateTaskDto:
@@ -577,6 +737,10 @@ components:
         deadline:
           type: string
           format: date-time
+          nullable: true
+        boardId:
+          type: string
+          format: uuid
           nullable: true
 
     # --- ERRORS ---
@@ -605,7 +769,7 @@ components:
 
   responses:
     ForbiddenError:
-      description: Accès refusé (Droits insuffisants pour ce projet/tâche)
+      description: Accès refusé (Droits insuffisants)
       content:
         application/json:
           schema:

@@ -24,7 +24,7 @@ export class BoardService {
       data.projectId,
       new Date(),
     );
-    this.checkOwnerShip(userId, data.projectId);
+    await this.checkOwnerShip(userId, data.projectId);
     await this.boardRepository.save(boardToCreate);
     return boardToCreate;
   }
@@ -33,11 +33,11 @@ export class BoardService {
     if (!board) {
       throw new Error("Board not found");
     }
-    this.checkOwnerShip(userid, board.projectId);
+    await this.checkOwnerShip(userid, board.projectId);
     return board;
   }
   async getProjectBoards(userId: string, projectId: string): Promise<Board[]> {
-    this.checkOwnerShip(userId, projectId);
+    await this.checkOwnerShip(userId, projectId);
     const boards = await this.boardRepository.findByProject(projectId);
     if (!boards) {
       throw new Error("Project Not found");
@@ -49,7 +49,7 @@ export class BoardService {
     if (!oldBoard) {
       throw new Error("Board not found");
     }
-    this.checkOwnerShip(userId, oldBoard.projectId);
+    await this.checkOwnerShip(userId, oldBoard.projectId);
     const newBoard = new Board(
       data.id,
       data.name ?? oldBoard.name,
@@ -65,7 +65,7 @@ export class BoardService {
     if (!board) {
       throw new Error("Board not found");
     }
-    this.checkOwnerShip(userid, board.projectId);
+    await this.checkOwnerShip(userid, board.projectId);
     await this.boardRepository.delete(board);
   }
 
