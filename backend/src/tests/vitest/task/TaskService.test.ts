@@ -62,6 +62,7 @@ describe("TaskService", () => {
         "",
         null,
         new Date(),
+        null,
       );
       mockTaskRepository.save.mockResolvedValue(expectedTask);
 

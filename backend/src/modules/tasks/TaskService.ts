@@ -9,6 +9,7 @@ export interface CreateTaskDto {
   priority: string;
   status: string;
   deadline?: string | null;
+  boardId?: string | null;
 }
 
 export interface updateTaskDto {
@@ -17,6 +18,7 @@ export interface updateTaskDto {
   priority?: string;
   status?: string;
   deadline?: string | null;
+  boardId?: string | null;
 }
 
 export class TaskService {
@@ -70,6 +72,7 @@ export class TaskService {
       data.priority ?? data.priority,
       data.deadline ? new Date(data.deadline) : null,
       new Date(),
+      data.boardId ? data.boardId : null,
     );
     const res = await this.taskRepository.save(newTask);
     if (!res) {
@@ -97,6 +100,7 @@ export class TaskService {
       data.priority ?? task.priority,
       data.deadline ? new Date(data.deadline) : task.deadline,
       task.createdAt,
+      data.boardId !== undefined ? data.boardId : task.boardId,
     );
 
     await this.taskRepository.save(updatedTask);
