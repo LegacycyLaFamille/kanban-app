@@ -1,5 +1,6 @@
 import { createBrowserRouter } from "react-router-dom";
 
+import { ProtectedRoute } from "../features/auth/components/ProtectedRoute";
 import { LoginPage } from "../features/auth/pages/LoginPage";
 import { RegisterPage } from "../features/auth/pages/RegisterPage";
 
@@ -10,7 +11,6 @@ import { WaitTemplate } from "../shared/components/WaitTemplate";
 
 import { LegacyApp } from "./legacy/LegacyApp";
 import { MainLayout } from "./layouts/MainLayout";
-import { AppProviders } from "./providers/AppProviders";
 
 export const router = createBrowserRouter([
   {
@@ -20,58 +20,53 @@ export const router = createBrowserRouter([
 
   {
     path: "/login",
-    element: (
-      <AppProviders>
-        <LoginPage />
-      </AppProviders>
-    ),
+    element: <LoginPage />,
   },
 
   {
     path: "/register",
-    element: (
-      <AppProviders>
-        <RegisterPage />
-      </AppProviders>
-    ),
+    element: <RegisterPage />,
   },
 
   {
-    element: (
-      <AppProviders>
-        <MainLayout />
-      </AppProviders>
-    ),
+    element: <ProtectedRoute />,
 
     children: [
       {
-        path: "/projects",
-        element: <ProjectsPage />,
-      },
+        element: <MainLayout />,
 
-      {
-        path: "/projects/:projectId",
-        element: <ProjectDetailsPage />,
-      },
+        children: [
+          {
+            path: "/projects",
+            element: <ProjectsPage />,
+          },
 
-      {
-        path: "/projects/:projectId/kanban",
-        element: <WaitTemplate template="KANBAN" />,
-      },
+          {
+            path: "/projects/:projectId",
+            element: <ProjectDetailsPage />,
+          },
 
-      {
-        path: "/profile",
-        element: <WaitTemplate template="PROFILE" />,
-      },
+          {
+            path: "/projects/:projectId/kanban",
 
-      {
-        path: "/tasks",
-        element: <WaitTemplate template="TASKS" />,
-      },
+            element: <WaitTemplate template="KANBAN" />,
+          },
 
-      {
-        path: "/notifications",
-        element: <WaitTemplate template="NOTIFICATIONS" />,
+          {
+            path: "/profile",
+            element: <WaitTemplate template="PROFILE" />,
+          },
+
+          {
+            path: "/tasks",
+            element: <WaitTemplate template="TASKS" />,
+          },
+
+          {
+            path: "/notifications",
+            element: <WaitTemplate template="NOTIFICATIONS" />,
+          },
+        ],
       },
     ],
   },

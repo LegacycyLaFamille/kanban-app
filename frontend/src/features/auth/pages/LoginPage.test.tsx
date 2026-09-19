@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { render, screen, waitFor } from "@testing-library/react";
 
@@ -8,38 +8,51 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 
 import { Reshaped } from "reshaped";
 
-import { login } from "../api/auth.api";
+import { useLogin } from "../hooks/useLogin";
+
 import { LoginPage } from "./LoginPage";
 
-vi.mock("../api/auth.api", () => ({
-  login: vi.fn(),
+vi.mock("../hooks/useLogin", () => ({
+  useLogin: vi.fn(),
 }));
 
-function renderPage() {
-  return render(
-    <Reshaped theme="slate">
-      <MemoryRouter initialEntries={["/login"]}>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-
-          <Route path="/projects" element={<div>Projects target</div>} />
-        </Routes>
-      </MemoryRouter>
-    </Reshaped>,
-  );
-}
-
 describe("LoginPage", () => {
+  const submit = vi.fn();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    vi.mocked(useLogin).mockReturnValue({
+      submit,
+      isSubmitting: false,
+      error: null,
+    });
+  });
+
   afterEach(() => {
     vi.clearAllMocks();
   });
 
+  function renderPage() {
+    return render(
+      <Reshaped theme="slate" defaultColorMode="dark">
+        <MemoryRouter initialEntries={["/login"]}>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+
+            <Route path="/projects" element={<div>Projects target</div>} />
+
+            <Route path="/register" element={<div>Register target</div>} />
+          </Routes>
+        </MemoryRouter>
+      </Reshaped>,
+    );
+  }
+
   it("submits valid credentials and redirects to projects", async () => {
     const user = userEvent.setup();
 
-    vi.mocked(login).mockResolvedValue({
-      message: "Logged in.",
-    });
+    submit.mockResolvedValue(true);
 
     renderPage();
 
@@ -54,7 +67,7 @@ describe("LoginPage", () => {
     );
 
     await waitFor(() => {
-      expect(login).toHaveBeenCalledWith({
+      expect(submit).toHaveBeenCalledWith({
         email: "user@example.com",
         password: "password123",
       });
@@ -63,7 +76,7 @@ describe("LoginPage", () => {
     expect(await screen.findByText("Projects target")).toBeTruthy();
   });
 
-  it("does not call the API when email is invalid", async () => {
+  it("does not call the login hook when email is invalid", async () => {
     const user = userEvent.setup();
 
     renderPage();
@@ -78,10 +91,48 @@ describe("LoginPage", () => {
       }),
     );
 
-    expect(login).not.toHaveBeenCalled();
+    expect(submit).not.toHaveBeenCalled();
 
     expect(
       screen.getByText("Please enter a valid email address."),
     ).toBeTruthy();
+  });
+
+  it("does not redirect when login fails", async () => {
+    const user = userEvent.setup();
+
+    submit.mockResolvedValue(false);
+
+    renderPage();
+
+    await user.type(screen.getByLabelText("Email"), "user@example.com");
+
+    await user.type(screen.getByLabelText("Password"), "wrong-password");
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Sign in",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(submit).toHaveBeenCalled();
+    });
+
+    expect(screen.queryByText("Projects target")).toBeNull();
+  });
+
+  it("displays authentication errors", () => {
+    vi.mocked(useLogin).mockReturnValue({
+      submit,
+      isSubmitting: false,
+      error: "Invalid credentials.",
+    });
+
+    renderPage();
+
+    expect(screen.getByRole("alert").textContent).toContain(
+      "Invalid credentials.",
+    );
   });
 });

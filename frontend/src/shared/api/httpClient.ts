@@ -1,29 +1,72 @@
 import { ApiError } from "./ApiError";
+
 import type { ApiErrorResponse, RequestOptions } from "./api.types";
 
-const API_URL = import.meta.env.VITE_API_URL ?? "/api";
+const API_URL = import.meta.env.VITE_API_URL ?? "/api/v1";
 
 interface RequestConfig extends RequestOptions {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
 }
 
+let refreshPromise: Promise<boolean> | null = null;
+
+async function refreshSession(): Promise<boolean> {
+  if (refreshPromise) {
+    return refreshPromise;
+  }
+
+  refreshPromise = fetch(`${API_URL}/auth/refresh`, {
+    method: "POST",
+    credentials: "include",
+  })
+    .then((response) => response.ok)
+    .catch(() => false)
+    .finally(() => {
+      refreshPromise = null;
+    });
+
+  return refreshPromise;
+}
+
+async function executeRequest(
+  endpoint: string,
+  config: RequestConfig,
+): Promise<Response> {
+  const { method = "GET", body, signal, headers } = config;
+
+  return fetch(`${API_URL}${endpoint}`, {
+    method,
+    signal,
+    credentials: "include",
+
+    headers: {
+      ...(body !== undefined
+        ? {
+            "Content-Type": "application/json",
+          }
+        : {}),
+
+      ...headers,
+    },
+
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+}
+
 async function request<T>(
   endpoint: string,
   config: RequestConfig = {},
 ): Promise<T> {
-  const { method = "GET", body, signal, headers } = config;
+  let response = await executeRequest(endpoint, config);
 
-  const response = await fetch(`${API_URL}${endpoint}`, {
-    method,
-    signal,
-    credentials: "include",
-    headers: {
-      ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
-      ...headers,
-    },
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
+  if (response.status === 401 && !config.skipAuthRefresh) {
+    const refreshed = await refreshSession();
+
+    if (refreshed) {
+      response = await executeRequest(endpoint, config);
+    }
+  }
 
   if (!response.ok) {
     throw await createApiError(response);
@@ -49,7 +92,9 @@ async function createApiError(response: Response): Promise<ApiError> {
     return new ApiError(
       response.status,
       payload.error?.code ?? "UNKNOWN_ERROR",
-      payload.error?.message ?? response.statusText,
+      payload.error?.message ??
+        response.statusText ??
+        "An unexpected API error occurred.",
     );
   } catch {
     return new ApiError(

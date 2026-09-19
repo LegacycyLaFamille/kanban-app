@@ -4,10 +4,9 @@ import { Button, Card, FormControl, Text, TextField, View } from "reshaped";
 
 import { Link, useNavigate } from "react-router-dom";
 
-import { ApiError } from "../../../shared/api";
 import { AppLogo } from "../../../shared/components/AppLogo/AppLogo";
 
-import { register } from "../api/auth.api";
+import { useRegister } from "../hooks/useRegister";
 
 import type { AuthFieldErrors, RegisterFormValues } from "../types/auth.types";
 
@@ -18,6 +17,8 @@ import styles from "./AuthPage.module.css";
 export function RegisterPage() {
   const navigate = useNavigate();
 
+  const { submit, isSubmitting, error: requestError } = useRegister();
+
   const [values, setValues] = useState<RegisterFormValues>({
     name: "",
     email: "",
@@ -26,8 +27,6 @@ export function RegisterPage() {
   });
 
   const [errors, setErrors] = useState<AuthFieldErrors>({});
-  const [requestError, setRequestError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -35,38 +34,27 @@ export function RegisterPage() {
     const validationErrors = validateRegister(values);
 
     setErrors(validationErrors);
-    setRequestError(null);
 
     if (hasAuthErrors(validationErrors)) {
       return;
     }
 
-    try {
-      setIsSubmitting(true);
+    const success = await submit({
+      name: values.name.trim(),
+      email: values.email.trim(),
+      password: values.password,
+    });
 
-      await register({
-        name: values.name.trim(),
-        email: values.email.trim(),
-        password: values.password,
-      });
-
-      navigate("/login", {
-        replace: true,
-        state: {
-          registered: true,
-        },
-      });
-    } catch (error) {
-      if (error instanceof ApiError) {
-        setRequestError(error.message);
-
-        return;
-      }
-
-      setRequestError("Unable to create your account. Please try again.");
-    } finally {
-      setIsSubmitting(false);
+    if (!success) {
+      return;
     }
+
+    navigate("/login", {
+      replace: true,
+      state: {
+        registered: true,
+      },
+    });
   }
 
   return (

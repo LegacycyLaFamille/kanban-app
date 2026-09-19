@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { render, screen, waitFor } from "@testing-library/react";
 
@@ -8,38 +8,45 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 
 import { Reshaped } from "reshaped";
 
-import { register } from "../api/auth.api";
+import { useRegister } from "../hooks/useRegister";
+
 import { RegisterPage } from "./RegisterPage";
 
-vi.mock("../api/auth.api", () => ({
-  register: vi.fn(),
+vi.mock("../hooks/useRegister", () => ({
+  useRegister: vi.fn(),
 }));
 
-function renderPage() {
-  return render(
-    <Reshaped theme="slate">
-      <MemoryRouter initialEntries={["/register"]}>
-        <Routes>
-          <Route path="/register" element={<RegisterPage />} />
-
-          <Route path="/login" element={<div>Login target</div>} />
-        </Routes>
-      </MemoryRouter>
-    </Reshaped>,
-  );
-}
-
 describe("RegisterPage", () => {
-  afterEach(() => {
+  const submit = vi.fn();
+
+  beforeEach(() => {
     vi.clearAllMocks();
+
+    vi.mocked(useRegister).mockReturnValue({
+      submit,
+      isSubmitting: false,
+      error: null,
+    });
   });
+
+  function renderPage() {
+    return render(
+      <Reshaped theme="slate" defaultColorMode="dark">
+        <MemoryRouter initialEntries={["/register"]}>
+          <Routes>
+            <Route path="/register" element={<RegisterPage />} />
+
+            <Route path="/login" element={<div>Login target</div>} />
+          </Routes>
+        </MemoryRouter>
+      </Reshaped>,
+    );
+  }
 
   it("registers a valid user and redirects to login", async () => {
     const user = userEvent.setup();
 
-    vi.mocked(register).mockResolvedValue({
-      message: "Account created.",
-    });
+    submit.mockResolvedValue(true);
 
     renderPage();
 
@@ -58,7 +65,7 @@ describe("RegisterPage", () => {
     );
 
     await waitFor(() => {
-      expect(register).toHaveBeenCalledWith({
+      expect(submit).toHaveBeenCalledWith({
         name: "Mathis",
         email: "mathis@example.com",
         password: "password123",
@@ -87,8 +94,50 @@ describe("RegisterPage", () => {
       }),
     );
 
-    expect(register).not.toHaveBeenCalled();
+    expect(submit).not.toHaveBeenCalled();
 
     expect(screen.getByText("Passwords do not match.")).toBeTruthy();
+  });
+
+  it("does not redirect when registration fails", async () => {
+    const user = userEvent.setup();
+
+    submit.mockResolvedValue(false);
+
+    renderPage();
+
+    await user.type(screen.getByLabelText("Name"), "Mathis");
+
+    await user.type(screen.getByLabelText("Email"), "mathis@example.com");
+
+    await user.type(screen.getByLabelText("Password"), "password123");
+
+    await user.type(screen.getByLabelText("Confirm password"), "password123");
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Create account",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(submit).toHaveBeenCalled();
+    });
+
+    expect(screen.queryByText("Login target")).toBeNull();
+  });
+
+  it("displays backend registration errors", () => {
+    vi.mocked(useRegister).mockReturnValue({
+      submit,
+      isSubmitting: false,
+      error: "Email already exists.",
+    });
+
+    renderPage();
+
+    expect(screen.getByRole("alert").textContent).toContain(
+      "Email already exists.",
+    );
   });
 });

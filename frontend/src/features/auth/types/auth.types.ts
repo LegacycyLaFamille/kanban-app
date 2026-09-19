@@ -2,6 +2,7 @@ export interface AuthUser {
   id: string;
   name: string;
   email: string;
+  createdAt?: string;
 }
 
 export interface LoginPayload {
@@ -17,11 +18,6 @@ export interface RegisterPayload {
 
 export interface RegisterFormValues extends RegisterPayload {
   confirmPassword: string;
-}
-
-export interface AuthResponse {
-  message?: string;
-  user?: AuthUser;
 }
 
 export type AuthFieldErrors = Partial<

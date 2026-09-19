@@ -4,10 +4,10 @@ import { Button, Card, FormControl, Text, TextField, View } from "reshaped";
 
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
-import { ApiError } from "../../../shared/api";
 import { AppLogo } from "../../../shared/components/AppLogo/AppLogo";
 
-import { login } from "../api/auth.api";
+import { useLogin } from "../hooks/useLogin";
+
 import type { AuthFieldErrors, LoginPayload } from "../types/auth.types";
 
 import { hasAuthErrors, validateLogin } from "../validation/auth.validation";
@@ -16,11 +16,17 @@ import styles from "./AuthPage.module.css";
 
 interface LoginLocationState {
   registered?: boolean;
+
+  from?: {
+    pathname?: string;
+  };
 }
 
 export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
+
+  const { submit, isSubmitting, error: requestError } = useLogin();
 
   const locationState = location.state as LoginLocationState | null;
 
@@ -30,8 +36,6 @@ export function LoginPage() {
   });
 
   const [errors, setErrors] = useState<AuthFieldErrors>({});
-  const [requestError, setRequestError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -39,34 +43,25 @@ export function LoginPage() {
     const validationErrors = validateLogin(values);
 
     setErrors(validationErrors);
-    setRequestError(null);
 
     if (hasAuthErrors(validationErrors)) {
       return;
     }
 
-    try {
-      setIsSubmitting(true);
+    const success = await submit({
+      email: values.email.trim(),
+      password: values.password,
+    });
 
-      await login({
-        email: values.email.trim(),
-        password: values.password,
-      });
-
-      navigate("/projects", {
-        replace: true,
-      });
-    } catch (error) {
-      if (error instanceof ApiError) {
-        setRequestError(error.message);
-
-        return;
-      }
-
-      setRequestError("Unable to sign in. Please try again.");
-    } finally {
-      setIsSubmitting(false);
+    if (!success) {
+      return;
     }
+
+    const redirectTo = locationState?.from?.pathname ?? "/projects";
+
+    navigate(redirectTo, {
+      replace: true,
+    });
   }
 
   return (

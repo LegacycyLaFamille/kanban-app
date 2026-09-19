@@ -2,53 +2,77 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { httpClient } from "../../../shared/api";
 
-import { login, register } from "./auth.api";
+import { getCurrentUser, login, logout, refresh, register } from "./auth.api";
 
 describe("auth.api", () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("sends login credentials to the login endpoint", async () => {
+  it("calls register endpoint", async () => {
+    const postSpy = vi.spyOn(httpClient, "post").mockResolvedValue(undefined);
+
     const payload = {
-      email: "user@example.com",
+      name: "Mathis",
+      email: "mathis@example.com",
       password: "password123",
     };
 
-    const response = {
-      user: {
-        id: "user-1",
-        name: "User",
-        email: "user@example.com",
-      },
-    };
+    await register(payload);
 
-    const postSpy = vi.spyOn(httpClient, "post").mockResolvedValue(response);
-
-    const result = await login(payload);
-
-    expect(postSpy).toHaveBeenCalledWith("/auth/login", payload);
-
-    expect(result).toEqual(response);
+    expect(postSpy).toHaveBeenCalledWith("/auth/register", payload, {
+      skipAuthRefresh: true,
+    });
   });
 
-  it("sends registration data to the register endpoint", async () => {
+  it("calls login endpoint", async () => {
+    const postSpy = vi.spyOn(httpClient, "post").mockResolvedValue(undefined);
+
     const payload = {
-      name: "New User",
-      email: "new@example.com",
+      email: "mathis@example.com",
       password: "password123",
     };
 
-    const response = {
-      message: "Account created.",
+    await login(payload);
+
+    expect(postSpy).toHaveBeenCalledWith("/auth/login", payload, {
+      skipAuthRefresh: true,
+    });
+  });
+
+  it("retrieves the current user", async () => {
+    const user = {
+      id: "user-1",
+      name: "Mathis",
+      email: "mathis@example.com",
     };
 
-    const postSpy = vi.spyOn(httpClient, "post").mockResolvedValue(response);
+    const getSpy = vi.spyOn(httpClient, "get").mockResolvedValue(user);
 
-    const result = await register(payload);
+    const result = await getCurrentUser();
 
-    expect(postSpy).toHaveBeenCalledWith("/auth/register", payload);
+    expect(getSpy).toHaveBeenCalledWith("/auth/me");
 
-    expect(result).toEqual(response);
+    expect(result).toEqual(user);
+  });
+
+  it("calls refresh endpoint", async () => {
+    const postSpy = vi.spyOn(httpClient, "post").mockResolvedValue(undefined);
+
+    await refresh();
+
+    expect(postSpy).toHaveBeenCalledWith("/auth/refresh", undefined, {
+      skipAuthRefresh: true,
+    });
+  });
+
+  it("calls logout endpoint", async () => {
+    const postSpy = vi.spyOn(httpClient, "post").mockResolvedValue(undefined);
+
+    await logout();
+
+    expect(postSpy).toHaveBeenCalledWith("/auth/logout", undefined, {
+      skipAuthRefresh: true,
+    });
   });
 });
