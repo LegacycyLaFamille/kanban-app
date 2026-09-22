@@ -135,6 +135,16 @@ export class AuthController {
 
   logout = async (req: Request, res: Response): Promise<void> => {
     await this.authService.logout(req.userId!);
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+    });
+    res.clearCookie("accessToken", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+    });
     res.status(200).json({ message: "Déconnexion réussie" });
   };
 
