@@ -2,37 +2,28 @@ import { type FormEvent, useState } from "react";
 
 import { Button, Card, FormControl, Text, TextField, View } from "reshaped";
 
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import { AppLogo } from "../../../shared/components/AppLogo/AppLogo";
 
-import { useLogin } from "../hooks/useLogin";
+import { useRegister } from "../hooks/useRegister";
 
-import type { AuthFieldErrors, LoginPayload } from "../types/auth.types";
+import type { AuthFieldErrors, RegisterFormValues } from "../types/auth.types";
 
-import { hasAuthErrors, validateLogin } from "../validation/auth.validation";
+import { hasAuthErrors, validateRegister } from "../validation/auth.validation";
 
 import styles from "./AuthPage.module.css";
 
-interface LoginLocationState {
-  registered?: boolean;
-
-  from?: {
-    pathname?: string;
-  };
-}
-
-export function LoginPage() {
+export function RegisterPage() {
   const navigate = useNavigate();
-  const location = useLocation();
 
-  const { submit, isSubmitting, error: requestError } = useLogin();
+  const { submit, isSubmitting, error: requestError } = useRegister();
 
-  const locationState = location.state as LoginLocationState | null;
-
-  const [values, setValues] = useState<LoginPayload>({
+  const [values, setValues] = useState<RegisterFormValues>({
+    name: "",
     email: "",
     password: "",
+    confirmPassword: "",
   });
 
   const [errors, setErrors] = useState<AuthFieldErrors>({});
@@ -40,7 +31,7 @@ export function LoginPage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const validationErrors = validateLogin(values);
+    const validationErrors = validateRegister(values);
 
     setErrors(validationErrors);
 
@@ -49,6 +40,7 @@ export function LoginPage() {
     }
 
     const success = await submit({
+      name: values.name.trim(),
       email: values.email.trim(),
       password: values.password,
     });
@@ -57,10 +49,11 @@ export function LoginPage() {
       return;
     }
 
-    const redirectTo = locationState?.from?.pathname ?? "/projects";
-
-    navigate(redirectTo, {
+    navigate("/login", {
       replace: true,
+      state: {
+        registered: true,
+      },
     });
   }
 
@@ -74,20 +67,14 @@ export function LoginPage() {
 
               <View gap={1}>
                 <Text variant="featured-3" weight="bold">
-                  Welcome back
+                  Create your account
                 </Text>
 
                 <Text color="neutral-faded">
-                  Sign in to continue to your workspace.
+                  Create an account to start managing your projects.
                 </Text>
               </View>
             </div>
-
-            {locationState?.registered && (
-              <div className={styles.successMessage}>
-                Your account has been created. You can now sign in.
-              </div>
-            )}
 
             {requestError && (
               <div className={styles.errorMessage} role="alert">
@@ -96,6 +83,34 @@ export function LoginPage() {
             )}
 
             <form className={styles.form} onSubmit={handleSubmit} noValidate>
+              <FormControl hasError={Boolean(errors.name)}>
+                <FormControl.Label>Name</FormControl.Label>
+
+                <TextField
+                  name="name"
+                  value={values.name}
+                  placeholder="Your name"
+                  inputAttributes={{
+                    autoComplete: "name",
+                  }}
+                  onChange={({ value }) => {
+                    setValues((current) => ({
+                      ...current,
+                      name: value,
+                    }));
+
+                    setErrors((current) => ({
+                      ...current,
+                      name: undefined,
+                    }));
+                  }}
+                />
+
+                {errors.name && (
+                  <FormControl.Error>{errors.name}</FormControl.Error>
+                )}
+              </FormControl>
+
               <FormControl hasError={Boolean(errors.email)}>
                 <FormControl.Label>Email</FormControl.Label>
 
@@ -131,10 +146,10 @@ export function LoginPage() {
                 <TextField
                   name="password"
                   value={values.password}
-                  placeholder="Enter your password"
+                  placeholder="Minimum 8 characters"
                   inputAttributes={{
                     type: "password",
-                    autoComplete: "current-password",
+                    autoComplete: "new-password",
                   }}
                   onChange={({ value }) => {
                     setValues((current) => ({
@@ -154,25 +169,56 @@ export function LoginPage() {
                 )}
               </FormControl>
 
+              <FormControl hasError={Boolean(errors.confirmPassword)}>
+                <FormControl.Label>Confirm password</FormControl.Label>
+
+                <TextField
+                  name="confirmPassword"
+                  value={values.confirmPassword}
+                  placeholder="Repeat your password"
+                  inputAttributes={{
+                    type: "password",
+                    autoComplete: "new-password",
+                  }}
+                  onChange={({ value }) => {
+                    setValues((current) => ({
+                      ...current,
+                      confirmPassword: value,
+                    }));
+
+                    setErrors((current) => ({
+                      ...current,
+                      confirmPassword: undefined,
+                    }));
+                  }}
+                />
+
+                {errors.confirmPassword && (
+                  <FormControl.Error>
+                    {errors.confirmPassword}
+                  </FormControl.Error>
+                )}
+              </FormControl>
+
               <Button
                 color="primary"
                 fullWidth
                 loading={isSubmitting}
-                loadingAriaLabel="Signing in"
+                loadingAriaLabel="Creating account"
                 onClick={() => {}}
                 attributes={{
                   type: "submit",
                 }}
               >
-                Sign in
+                Create account
               </Button>
             </form>
 
             <div className={styles.footer}>
               <Text color="neutral-faded">
-                Don't have an account?{" "}
-                <Link to="/register" className={styles.link}>
-                  Create an account
+                Already have an account?{" "}
+                <Link to="/login" className={styles.link}>
+                  Sign in
                 </Link>
               </Text>
             </div>

@@ -8,6 +8,7 @@ describe("httpClient", () => {
 
   beforeEach(() => {
     fetchMock = vi.fn();
+
     vi.stubGlobal("fetch", fetchMock);
   });
 
@@ -26,6 +27,7 @@ describe("httpClient", () => {
     fetchMock.mockResolvedValue(
       new Response(JSON.stringify(responseBody), {
         status: 200,
+
         headers: {
           "Content-Type": "application/json",
         },
@@ -35,7 +37,7 @@ describe("httpClient", () => {
     const result = await httpClient.get<typeof responseBody>("/projects");
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/projects",
+      "/api/v1/projects",
       expect.objectContaining({
         method: "GET",
         credentials: "include",
@@ -59,6 +61,7 @@ describe("httpClient", () => {
     fetchMock.mockResolvedValue(
       new Response(JSON.stringify(responseBody), {
         status: 201,
+
         headers: {
           "Content-Type": "application/json",
         },
@@ -71,13 +74,16 @@ describe("httpClient", () => {
     );
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/projects",
+      "/api/v1/projects",
+
       expect.objectContaining({
         method: "POST",
         credentials: "include",
+
         headers: expect.objectContaining({
           "Content-Type": "application/json",
         }),
+
         body: JSON.stringify(payload),
       }),
     );
@@ -98,6 +104,7 @@ describe("httpClient", () => {
     fetchMock.mockResolvedValue(
       new Response(JSON.stringify(responseBody), {
         status: 200,
+
         headers: {
           "Content-Type": "application/json",
         },
@@ -110,10 +117,12 @@ describe("httpClient", () => {
     );
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/projects/project-1",
+      "/api/v1/projects/project-1",
+
       expect.objectContaining({
         method: "PATCH",
         credentials: "include",
+
         body: JSON.stringify(payload),
       }),
     );
@@ -131,7 +140,8 @@ describe("httpClient", () => {
     const result = await httpClient.delete("/projects/project-1");
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/projects/project-1",
+      "/api/v1/projects/project-1",
+
       expect.objectContaining({
         method: "DELETE",
         credentials: "include",
@@ -143,18 +153,25 @@ describe("httpClient", () => {
 
   it("sends authentication credentials with requests", async () => {
     fetchMock.mockResolvedValue(
-      new Response(JSON.stringify({ success: true }), {
-        status: 200,
-        headers: {
-          "Content-Type": "application/json",
+      new Response(
+        JSON.stringify({
+          success: true,
+        }),
+        {
+          status: 200,
+
+          headers: {
+            "Content-Type": "application/json",
+          },
         },
-      }),
+      ),
     );
 
     await httpClient.get("/test");
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/test",
+      "/api/v1/test",
+
       expect.objectContaining({
         credentials: "include",
       }),
@@ -163,18 +180,25 @@ describe("httpClient", () => {
 
   it("does not add Content-Type when no body is provided", async () => {
     fetchMock.mockResolvedValue(
-      new Response(JSON.stringify({ success: true }), {
-        status: 200,
-        headers: {
-          "Content-Type": "application/json",
+      new Response(
+        JSON.stringify({
+          success: true,
+        }),
+        {
+          status: 200,
+
+          headers: {
+            "Content-Type": "application/json",
+          },
         },
-      }),
+      ),
     );
 
     await httpClient.get("/test");
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/test",
+      "/api/v1/test",
+
       expect.objectContaining({
         headers: {},
       }),
@@ -193,6 +217,7 @@ describe("httpClient", () => {
         {
           status: 404,
           statusText: "Not Found",
+
           headers: {
             "Content-Type": "application/json",
           },
@@ -220,6 +245,7 @@ describe("httpClient", () => {
       new Response("Internal Server Error", {
         status: 500,
         statusText: "Internal Server Error",
+
         headers: {
           "Content-Type": "text/plain",
         },
@@ -243,12 +269,18 @@ describe("httpClient", () => {
 
   it("supports custom request headers", async () => {
     fetchMock.mockResolvedValue(
-      new Response(JSON.stringify({ success: true }), {
-        status: 200,
-        headers: {
-          "Content-Type": "application/json",
+      new Response(
+        JSON.stringify({
+          success: true,
+        }),
+        {
+          status: 200,
+
+          headers: {
+            "Content-Type": "application/json",
+          },
         },
-      }),
+      ),
     );
 
     await httpClient.get("/test", {
@@ -258,7 +290,8 @@ describe("httpClient", () => {
     });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/test",
+      "/api/v1/test",
+
       expect.objectContaining({
         headers: expect.objectContaining({
           "X-Test-Header": "test-value",
@@ -271,12 +304,18 @@ describe("httpClient", () => {
     const controller = new AbortController();
 
     fetchMock.mockResolvedValue(
-      new Response(JSON.stringify({ success: true }), {
-        status: 200,
-        headers: {
-          "Content-Type": "application/json",
+      new Response(
+        JSON.stringify({
+          success: true,
+        }),
+        {
+          status: 200,
+
+          headers: {
+            "Content-Type": "application/json",
+          },
         },
-      }),
+      ),
     );
 
     await httpClient.get("/test", {
@@ -284,10 +323,93 @@ describe("httpClient", () => {
     });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/test",
+      "/api/v1/test",
+
       expect.objectContaining({
         signal: controller.signal,
       }),
     );
+  });
+
+  it("refreshes the session and retries after a 401", async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            error: {
+              code: "UNAUTHORIZED",
+              message: "Unauthorized",
+            },
+          }),
+          {
+            status: 401,
+
+            headers: {
+              "Content-Type": "application/json",
+            },
+          },
+        ),
+      )
+
+      .mockResolvedValueOnce(
+        new Response(null, {
+          status: 204,
+        }),
+      )
+
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            id: "user-1",
+          }),
+          {
+            status: 200,
+
+            headers: {
+              "Content-Type": "application/json",
+            },
+          },
+        ),
+      );
+
+    const result = await httpClient.get<{
+      id: string;
+    }>("/auth/me");
+
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      "/api/v1/auth/me",
+
+      expect.objectContaining({
+        method: "GET",
+        credentials: "include",
+      }),
+    );
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      "/api/v1/auth/refresh",
+
+      {
+        method: "POST",
+        credentials: "include",
+      },
+    );
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      3,
+      "/api/v1/auth/me",
+
+      expect.objectContaining({
+        method: "GET",
+        credentials: "include",
+      }),
+    );
+
+    expect(result).toEqual({
+      id: "user-1",
+    });
   });
 });
