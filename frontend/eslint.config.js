@@ -8,7 +8,8 @@ import eslintConfigPrettier from "eslint-config-prettier";
 import { defineConfig, globalIgnores } from "eslint/config";
 
 export default defineConfig([
-  globalIgnores(["dist"]),
+  globalIgnores(["dist", "coverage"]),
+
   {
     files: ["**/*.{ts,tsx}"],
     extends: [
@@ -44,7 +45,11 @@ export default defineConfig([
       "react/prop-types": "off",
       "react/no-deprecated": "off",
     },
-    settings: { react: { version: "16.14" } },
+    settings: {
+      react: {
+        version: "16.14",
+      },
+    },
   },
 
   eslintConfigPrettier,
