@@ -11,6 +11,7 @@ import { WaitTemplate } from "../shared/components/WaitTemplate";
 
 import { LegacyApp } from "./legacy/LegacyApp";
 import { MainLayout } from "./layouts/MainLayout";
+import { KanbanPage } from "../features/kanban/pages/KanbanPage.tsx";
 
 export const router = createBrowserRouter([
   {
@@ -49,7 +50,7 @@ export const router = createBrowserRouter([
           {
             path: "/projects/:projectId/kanban",
 
-            element: <WaitTemplate template="KANBAN" />,
+            element: <KanbanPage />,
           },
 
           {
