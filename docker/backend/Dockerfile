@@ -1,0 +1,31 @@
+FROM node:24-slim AS build
+WORKDIR /app
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends python3 make g++ openssl \
+ && rm -rf /var/lib/apt/lists/*
+COPY backend/package.json backend/package-lock.json ./
+RUN npm ci --build-from-source
+COPY backend/ ./
+RUN DATABASE_URL="postgresql://build:build@localhost:5432/build" npm run build \
+ && cp src/legacy/package.json dist/legacy/package.json
+    
+FROM node:24-slim AS runtime
+ENV NODE_ENV=production
+WORKDIR /app
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends openssl \
+ && rm -rf /var/lib/apt/lists/*
+RUN mkdir -p /data && chown node:node /data
+
+COPY --from=build /app /app
+RUN chown -R node:node /app
+
+ENV PORT=3000
+ENV SQLITE_DB_LOCATION=/data/todo.db
+EXPOSE 3000
+USER node
+
+HEALTHCHECK --interval=10s --timeout=5s --start-period=15s --retries=5 \
+  CMD node -e "require('http').get('http://127.0.0.1:3000/',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
+
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main.js"]

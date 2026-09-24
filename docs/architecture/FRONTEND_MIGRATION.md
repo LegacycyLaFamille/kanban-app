@@ -22,7 +22,6 @@ The selected approach is therefore an **incremental migration**, suitable for a 
 frontend/
 ├── src/
 │   ├── app/
-│   │   ├── App.tsx
 │   │   ├── router.tsx
 │   │   ├── providers/
 │   │   └── layouts/

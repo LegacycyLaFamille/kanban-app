@@ -1,0 +1,791 @@
+openapi: 3.0.3
+info:
+  title: Kanban API
+  version: 1.0.0
+  description: Documentation of the kanban backend API.
+
+paths:
+  # ==========================================
+  # MODULE AUTH
+  # ==========================================
+  /api/v1/auth/register:
+    post:
+      summary: Registering a new user
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Utilisateur créé avec succès.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterSuccessResponse'
+        '400':
+          description: Données invalides (Erreur de validation Zod).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Conflit (L'email existe déjà).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/auth/login:
+    post:
+      summary: Connexion d'un utilisateur
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Connexion réussie, tokens injectés dans les cookies (HttpOnly).
+          headers:
+            Set-Cookie:
+              description: accessToken (15m) et refreshToken (7j)
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSuccessResponse'
+        '400':
+          description: Format des données invalide.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Identifiants invalides.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/auth/refresh:
+    post:
+      summary: Rafraîchir les tokens de session
+      description: Nécessite le cookie refreshToken valide.
+      tags:
+        - Auth
+      responses:
+        '200':
+          description: Session rafraîchie, nouveaux tokens injectés.
+          headers:
+            Set-Cookie:
+              description: Nouveaux accessToken et refreshToken
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSuccessResponse'
+        '401':
+          description: Session inexistante ou expirée.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/auth/me:
+    get:
+      summary: Récupérer le profil de l'utilisateur connecté
+      description: Nécessite un cookie accessToken valide.
+      tags:
+        - Auth
+      security:
+        - CookieAuth: []
+      responses:
+        '200':
+          description: Profil récupéré avec succès.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  email:
+                    type: string
+                    format: email
+                  name:
+                    type: string
+        '401':
+          description: Non authentifié (Token manquant ou expiré).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/auth/logout:
+    post:
+      summary: Déconnexion de l'utilisateur
+      description: Invalide le refresh token en base et efface les cookies de session.
+      tags:
+        - Auth
+      security:
+        - CookieAuth: []
+      responses:
+        '200':
+          description: Déconnexion réussie, cookies effacés.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Déconnexion réussie
+        '401':
+          description: Non authentifié.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ==========================================
+  # MODULE PROJECTS
+  # ==========================================
+  /api/v1/projects:
+    get:
+      summary: Liste tous les projets de l'utilisateur connecté
+      tags:
+        - Projects
+      security:
+        - CookieAuth: []
+      responses:
+        '200':
+          description: Liste des projets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Project'
+    post:
+      summary: Crée un nouveau projet
+      tags:
+        - Projects
+      security:
+        - CookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProjectDto'
+      responses:
+        '201':
+          description: Projet créé avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '400':
+          description: Données invalides (Zod)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/projects/{projectId}:
+    get:
+      summary: Récupère un projet spécifique
+      tags:
+        - Projects
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Projet trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    patch:
+      summary: Met à jour un projet
+      tags:
+        - Projects
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProjectDto'
+      responses:
+        '200':
+          description: Projet mis à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '400':
+          description: Données invalides (Zod)
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    delete:
+      summary: Supprime un projet
+      tags:
+        - Projects
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Projet supprimé avec succès
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  # ==========================================
+  # MODULE BOARDS
+  # ==========================================
+  /api/v1/projects/{projectId}/boards:
+    get:
+      summary: Liste tous les tableaux (boards) d'un projet
+      tags:
+        - Boards
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Liste des boards du projet
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Board'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    post:
+      summary: Crée un tableau (board) dans un projet
+      tags:
+        - Boards
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBoardDto'
+      responses:
+        '201':
+          description: Board créé avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Board'
+        '400':
+          description: Données invalides (Zod)
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/boards/{boardId}:
+    patch:
+      summary: Met à jour un tableau (board)
+      tags:
+        - Boards
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: boardId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBoardDto'
+      responses:
+        '200':
+          description: Board mis à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Board'
+        '400':
+          description: Données invalides (Zod)
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    delete:
+      summary: Supprime un tableau (board)
+      tags:
+        - Boards
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: boardId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Board supprimé avec succès
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  # ==========================================
+  # MODULE TASKS
+  # ==========================================
+  /api/v1/projects/{projectId}/tasks:
+    get:
+      summary: Récupère toutes les tâches d'un projet
+      tags:
+        - Tasks
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Liste des tâches
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Task'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    post:
+      summary: Crée une tâche dans un projet
+      tags:
+        - Tasks
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaskDto'
+      responses:
+        '201':
+          description: Tâche créée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          description: Données invalides (Zod)
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/tasks/{taskId}:
+    patch:
+      summary: Met à jour une tâche (statut, titre, boardId...)
+      tags:
+        - Tasks
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTaskDto'
+      responses:
+        '200':
+          description: Tâche mise à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          description: Données invalides (Zod)
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    delete:
+      summary: Supprime une tâche
+      tags:
+        - Tasks
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Tâche supprimée
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+components:
+  securitySchemes:
+    CookieAuth:
+      type: apiKey
+      in: cookie
+      name: accessToken
+
+  schemas:
+    # --- AUTHENTICATION SCHEMAS ---
+    RegisterRequest:
+      type: object
+      required:
+        - email
+        - name
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: john.doe@example.com
+        name:
+          type: string
+          minLength: 2
+          example: John Doe
+        password:
+          type: string
+          minLength: 8
+          example: SuperSecurePassword123
+
+    RegisterSuccessResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Compte créé avec succès
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            email:
+              type: string
+            name:
+              type: string
+            createdAt:
+              type: string
+              format: date-time
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: john.doe@example.com
+        password:
+          type: string
+          example: SuperSecurePassword123
+
+    AuthSuccessResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Opération réussie
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            email:
+              type: string
+              format: email
+            name:
+              type: string
+
+    # --- DOMAIN ENTITIES ---
+    Project:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        ownerId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        boards:
+          type: array
+          items:
+            $ref: '#/components/schemas/Board'
+          description: Liste des tableaux liés (peut être omis si non peuplé)
+
+    Board:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        projectId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+
+    Task:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        projectId:
+          type: string
+          format: uuid
+        boardId:
+          type: string
+          format: uuid
+          nullable: true
+        title:
+          type: string
+        status:
+          type: string
+          enum: [TODO, IN_PROGRESS, DONE]
+        priority:
+          type: string
+          enum: [LOW, NORMAL, HIGH]
+        description:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        deadline:
+          type: string
+          format: date-time
+          nullable: true
+
+    # --- DTOs ---
+    CreateProjectDto:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+
+    UpdateProjectDto:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+
+    CreateBoardDto:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+
+    UpdateBoardDto:
+      type: object
+      properties:
+        name:
+          type: string
+
+    CreateTaskDto:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        priority:
+          type: string
+          enum: [LOW, NORMAL, HIGH]
+        deadline:
+          type: string
+          format: date-time
+          nullable: true
+        boardId:
+          type: string
+          format: uuid
+          nullable: true
+
+    UpdateTaskDto:
+      type: object
+      properties:
+        title:
+          type: string
+        status:
+          type: string
+          enum: [TODO, IN_PROGRESS, DONE]
+        priority:
+          type: string
+          enum: [LOW, NORMAL, HIGH]
+        description:
+          type: string
+        deadline:
+          type: string
+          format: date-time
+          nullable: true
+        boardId:
+          type: string
+          format: uuid
+          nullable: true
+
+    # --- ERRORS ---
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: Message d'erreur
+        details:
+          type: array
+          items:
+            type: object
+          description: Présent uniquement pour les erreurs 400 (Zod).
+
+    StandardError:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+
+  responses:
+    ForbiddenError:
+      description: Accès refusé (Droits insuffisants)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/StandardError'
+          example:
+            error:
+              code: "FORBIDDEN"
+              message: "You are not authorized to access this resource."
+
+    NotFoundError:
+      description: Ressource introuvable
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/StandardError'
+          example:
+            error:
+              code: "NOT_FOUND"
+              message: "The requested resource could not be found."
