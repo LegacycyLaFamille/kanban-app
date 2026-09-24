@@ -19,6 +19,7 @@ describe("task.api", () => {
     id: "task-uuid-1",
     title: "Implement Swagger UI",
     description: "Setup OpenAPI specification endpoints",
+    priority: "Low",
     status: "IN_PROGRESS",
     projectId: "project-uuid-1",
     boardId: "board-uuid-1",
