@@ -5,12 +5,19 @@ import { TaskService } from "./TaskService.js";
 import { PrismaTaskRepository } from "./PrismaTaskRepository.js";
 import { prisma } from "../../shared/database/prisma.js";
 import { PrismaProjectRepository } from "../projects/PrismaProjectRepository.js";
+import { PrismaProjectMemberRepository } from "../projects/PrismaProjectMemberRepository.js";
+import { ProjectAccessGuard } from "../../shared/security/ProjectAccessGuard.js";
 
 export const taskRouter = Router();
 
 const taskRepository = new PrismaTaskRepository(prisma);
 const projectRepository = new PrismaProjectRepository(prisma);
-const taskService = new TaskService(taskRepository, projectRepository);
+const projectMemberRepository = new PrismaProjectMemberRepository(prisma);
+const projectAccessGuard = new ProjectAccessGuard(
+  projectRepository,
+  projectMemberRepository,
+);
+const taskService = new TaskService(taskRepository, projectAccessGuard);
 const taskController = new TaskController(taskService);
 
 taskRouter.post(

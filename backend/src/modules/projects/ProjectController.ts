@@ -67,6 +67,50 @@ export class ProjectController {
     }
   }
 
+  async getMembers(req: Request<{ projectId: string }>, res: Response) {
+    try {
+      const { projectId } = req.params;
+      const userId = req.userId!;
+
+      const members = await this.projectService.listMembers(projectId, userId);
+      return res.status(200).json(members);
+    } catch (error: unknown) {
+      return this.handleServiceError(error, res);
+    }
+  }
+
+  async addMember(req: Request<{ projectId: string }>, res: Response) {
+    try {
+      const { projectId } = req.params;
+      const userId = req.userId!;
+      const { email } = req.body;
+
+      const member = await this.projectService.addMember(
+        projectId,
+        userId,
+        email,
+      );
+      return res.status(201).json(member);
+    } catch (error: unknown) {
+      return this.handleServiceError(error, res);
+    }
+  }
+
+  async removeMember(
+    req: Request<{ projectId: string; memberUserId: string }>,
+    res: Response,
+  ) {
+    try {
+      const { projectId, memberUserId } = req.params;
+      const userId = req.userId!;
+
+      await this.projectService.removeMember(projectId, userId, memberUserId);
+      return res.status(204).send();
+    } catch (error: unknown) {
+      return this.handleServiceError(error, res);
+    }
+  }
+
   private handleServiceError(error: unknown, res: Response) {
     const message = error instanceof Error ? error.message : error;
 
@@ -84,6 +128,18 @@ export class ProjectController {
         error: {
           code: "NOT_FOUND",
           message: "The requested project could not be found.",
+        },
+      });
+    }
+
+    if (
+      message === "User is already the project owner" ||
+      message === "User is already a project member"
+    ) {
+      return res.status(409).json({
+        error: {
+          code: "CONFLICT",
+          message,
         },
       });
     }
