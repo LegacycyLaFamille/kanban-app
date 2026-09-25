@@ -453,6 +453,28 @@ Tasks A
 
 User A must not be able to read or modify private resources belonging to User B.
 
+Every project has exactly one owner (`Project.ownerId`), who has full
+read/write/delete rights and controls membership. A `ProjectMember` join
+table grants additional users read-only access to a project without making
+them owners:
+
+```text
+Project
+ ├── owner        (User, required — full access, manages membership)
+ └── ProjectMember (User, read-only access)
+```
+
+Task access is never checked independently: it is always derived from the
+requesting user's access to the task's parent project (owner or member can
+read; only the owner can create/update/delete). This is enforced through a
+single shared `ProjectAccessGuard` (`backend/src/shared/security/`) used by
+both the projects and tasks modules, so the rule lives in one place.
+
+Per [ADR-007](../adr/ADR-007-no-legacy-data-migration.md), legacy Todo
+records are never migrated into this domain, so `ProjectMember` and
+`Project.ownerId` are both required, non-nullable relations — there is no
+legacy data gap to account for here.
+
 ### Step 9 — Introduce Event-Driven Communication
 
 Once the Task domain is stable:
