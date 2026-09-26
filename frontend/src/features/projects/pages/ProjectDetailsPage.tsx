@@ -1,14 +1,19 @@
+import { useState } from "react";
+
 import { Button, Card, Text, View } from "reshaped";
 
 import { useNavigate, useParams } from "react-router-dom";
 
+import { useAuth } from "../../auth/hooks/useAuth";
+
+import { ProjectForm } from "../components/ProjectForm";
 import { useProjectDetails } from "../hooks/useProjectDetails";
 
-import type { TaskPriority, TaskStatus } from "../types/project.types";
+import type { CreateProjectPayload } from "../types/project-api.types";
 
 import styles from "./ProjectDetailsPage.module.css";
 
-function formatDate(date: string) {
+function formatDate(date: string): string {
   return new Intl.DateTimeFormat("en-GB", {
     day: "2-digit",
     month: "short",
@@ -16,36 +21,35 @@ function formatDate(date: string) {
   }).format(new Date(date));
 }
 
-function getStatusLabel(status: TaskStatus) {
-  switch (status) {
-    case "IN_PROGRESS":
-      return "In progress";
-
-    case "DONE":
-      return "Done";
-
-    case "TODO":
-    default:
-      return "Todo";
-  }
-}
-
-function getPriorityLabel(priority: TaskPriority) {
-  return priority.charAt(0) + priority.slice(1).toLowerCase();
-}
-
 export function ProjectDetailsPage() {
   const navigate = useNavigate();
-
   const { projectId } = useParams<{ projectId: string }>();
 
-  const { project, isLoading, notFound, error, reload } =
-    useProjectDetails(projectId);
+  const { user } = useAuth();
+
+  const {
+    project,
+    isLoading,
+    notFound,
+    error,
+    isSaving,
+    isDeleting,
+    mutationError,
+    reload,
+    saveProject,
+    removeProject,
+    resetMutationError,
+  } = useProjectDetails(projectId);
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
 
   if (isLoading) {
     return (
       <section className={styles.page}>
-        <div className={styles.state}>Loading project...</div>
+        <div className={styles.state} role="status">
+          Loading project...
+        </div>
       </section>
     );
   }
@@ -72,7 +76,7 @@ export function ProjectDetailsPage() {
         <div className={styles.state}>
           <h1>Unable to load project</h1>
 
-          <p>{error}</p>
+          <p role="alert">{error || "The project could not be loaded."}</p>
 
           <Button
             variant="outline"
@@ -87,10 +91,39 @@ export function ProjectDetailsPage() {
     );
   }
 
-  const totalTasks =
-    project.taskSummary.todo +
-    project.taskSummary.inProgress +
-    project.taskSummary.done;
+  const isOwner = user?.id === project.ownerId;
+
+  function openEditForm() {
+    resetMutationError();
+    setIsConfirmingDelete(false);
+    setIsEditing(true);
+  }
+
+  function openDeleteConfirmation() {
+    resetMutationError();
+    setIsEditing(false);
+    setIsConfirmingDelete(true);
+  }
+
+  async function handleSave(payload: CreateProjectPayload): Promise<boolean> {
+    const updatedProject = await saveProject(payload);
+
+    if (!updatedProject) {
+      return false;
+    }
+
+    setIsEditing(false);
+
+    return true;
+  }
+
+  async function handleDelete(): Promise<void> {
+    const deleted = await removeProject();
+
+    if (deleted) {
+      navigate("/projects", { replace: true });
+    }
+  }
 
   return (
     <section className={styles.page}>
@@ -105,7 +138,7 @@ export function ProjectDetailsPage() {
 
         <header className={styles.header}>
           <div className={styles.projectHeading}>
-            <div className={styles.projectIcon}>
+            <div className={styles.projectIcon} aria-hidden="true">
               <span />
               <span />
             </div>
@@ -113,149 +146,149 @@ export function ProjectDetailsPage() {
             <div>
               <div className={styles.titleLine}>
                 <h1>{project.name}</h1>
-
-                <span
-                  className={
-                    project.status === "ACTIVE"
-                      ? styles.statusActive
-                      : styles.statusArchived
-                  }
-                >
-                  {project.status === "ACTIVE" ? "Active" : "Archived"}
-                </span>
               </div>
 
-              <p className={styles.description}>{project.description}</p>
+              <p className={styles.description}>
+                {project.description || "No description provided."}
+              </p>
             </div>
           </div>
 
           <div className={styles.actions}>
-            <Button variant="outline">Edit project</Button>
+            {isOwner && (
+              <>
+                <Button
+                  variant="outline"
+                  disabled={isSaving || isDeleting}
+                  onClick={openEditForm}
+                >
+                  Edit project
+                </Button>
 
-            <Button
-              color="primary"
-              onClick={() => navigate(`/projects/${project.id}/kanban`)}
-            >
-              Open board
-            </Button>
+                <Button
+                  variant="outline"
+                  disabled={isSaving || isDeleting}
+                  onClick={openDeleteConfirmation}
+                >
+                  Delete project
+                </Button>
+              </>
+            )}
+
+            {project.boards.length > 0 && (
+              <Button
+                color="primary"
+                onClick={() => navigate(`/projects/${project.id}/kanban`)}
+              >
+                Open board
+              </Button>
+            )}
           </div>
         </header>
 
-        <div className={styles.statsGrid}>
-          <Card padding={4}>
-            <div className={styles.stat}>
-              <span>Total tasks</span>
-              <strong>{totalTasks}</strong>
-            </div>
+        {isEditing && isOwner && (
+          <Card padding={5}>
+            <ProjectForm
+              key={project.id}
+              title="Edit project"
+              submitLabel="Save changes"
+              initialValues={{
+                name: project.name,
+                description: project.description,
+              }}
+              isSubmitting={isSaving}
+              serverError={mutationError}
+              onSubmit={handleSave}
+              onCancel={() => {
+                resetMutationError();
+                setIsEditing(false);
+              }}
+            />
           </Card>
+        )}
 
-          <Card padding={4}>
-            <div className={styles.stat}>
-              <span>Todo</span>
-              <strong>{project.taskSummary.todo}</strong>
-            </div>
-          </Card>
+        {isConfirmingDelete && isOwner && (
+          <Card padding={5}>
+            <View gap={3}>
+              <div role="group" aria-label={`Delete project ${project.name}`}>
+                <Text weight="bold">Delete project?</Text>
 
-          <Card padding={4}>
-            <div className={styles.stat}>
-              <span>In progress</span>
-              <strong>{project.taskSummary.inProgress}</strong>
-            </div>
-          </Card>
+                <p className={styles.description}>
+                  Are you sure you want to delete "{project.name}"? This action
+                  cannot be undone.
+                </p>
+              </div>
 
-          <Card padding={4}>
-            <div className={styles.stat}>
-              <span>Done</span>
-              <strong>{project.taskSummary.done}</strong>
-            </div>
+              {mutationError && (
+                <p role="alert" className={styles.description}>
+                  {mutationError}
+                </p>
+              )}
+
+              <div className={styles.actions}>
+                <Button
+                  variant="outline"
+                  disabled={isDeleting}
+                  onClick={() => {
+                    resetMutationError();
+                    setIsConfirmingDelete(false);
+                  }}
+                >
+                  Cancel
+                </Button>
+
+                <Button
+                  color="critical"
+                  loading={isDeleting}
+                  loadingAriaLabel="Deleting project"
+                  onClick={() => {
+                    void handleDelete();
+                  }}
+                >
+                  Confirm deletion
+                </Button>
+              </div>
+            </View>
           </Card>
-        </div>
+        )}
 
         <div className={styles.mainGrid}>
           <div className={styles.mainColumn}>
             <Card padding={5}>
               <View gap={4}>
-                <div className={styles.sectionHeader}>
-                  <div>
-                    <Text weight="bold">Project progress</Text>
+                <Text weight="bold">Project overview</Text>
 
-                    <Text color="neutral-faded">Overall task completion</Text>
-                  </div>
-
-                  <strong className={styles.progressPercent}>
-                    {project.progress}%
-                  </strong>
-                </div>
-
-                <div
-                  className={styles.progressTrack}
-                  aria-label={`${project.progress}% completed`}
-                >
-                  <div
-                    className={styles.progressValue}
-                    style={{
-                      width: `${project.progress}%`,
-                    }}
-                  />
-                </div>
-
-                <div className={styles.progressLegend}>
-                  <span>{project.taskSummary.done} completed</span>
-
-                  <span>{totalTasks - project.taskSummary.done} remaining</span>
-                </div>
+                <p className={styles.description}>
+                  {project.description || "No description provided."}
+                </p>
               </View>
             </Card>
 
             <Card padding={5}>
               <View gap={4}>
                 <div className={styles.sectionHeader}>
-                  <div>
-                    <Text weight="bold">Recent tasks</Text>
+                  <Text weight="bold">Boards</Text>
 
-                    <Text color="neutral-faded">
-                      Latest tasks from this project
-                    </Text>
-                  </div>
-
-                  <Button
-                    variant="ghost"
-                    onClick={() => navigate(`/projects/${project.id}/kanban`)}
-                  >
-                    View board
-                  </Button>
+                  <Text color="neutral-faded">
+                    {project.boards.length}{" "}
+                    {project.boards.length === 1 ? "board" : "boards"}
+                  </Text>
                 </div>
 
-                {project.recentTasks.length === 0 ? (
-                  <div className={styles.empty}>No tasks yet.</div>
+                {project.boards.length === 0 ? (
+                  <div className={styles.empty}>No boards yet.</div>
                 ) : (
-                  <div className={styles.taskList}>
-                    {project.recentTasks.map((task) => (
-                      <div key={task.id} className={styles.task}>
-                        <div className={styles.taskMain}>
-                          <strong>{task.title}</strong>
-
-                          {task.deadline && (
-                            <span>Due {formatDate(task.deadline)}</span>
-                          )}
+                  <div className={styles.memberList}>
+                    {project.boards.map((board) => (
+                      <div key={board.id} className={styles.member}>
+                        <div className={styles.avatar} aria-hidden="true">
+                          {board.name.charAt(0).toUpperCase()}
                         </div>
 
-                        <div className={styles.taskMetadata}>
-                          <span
-                            className={`${styles.priority} ${
-                              styles[`priority${task.priority}`]
-                            }`}
-                          >
-                            {getPriorityLabel(task.priority)}
-                          </span>
+                        <div>
+                          <strong>{board.name}</strong>
 
-                          <span
-                            className={`${styles.taskStatus} ${
-                              styles[`status${task.status}`]
-                            }`}
-                          >
-                            {getStatusLabel(task.status)}
-                          </span>
+                          <span>Created {formatDate(board.createdAt)}</span>
                         </div>
                       </div>
                     ))}
@@ -273,58 +306,21 @@ export function ProjectDetailsPage() {
                 <div className={styles.information}>
                   <div>
                     <span>Owner</span>
-                    <strong>{project.owner.name}</strong>
+
+                    <strong>{isOwner ? user?.name : project.ownerId}</strong>
                   </div>
 
                   <div>
                     <span>Created</span>
+
                     <strong>{formatDate(project.createdAt)}</strong>
                   </div>
 
                   <div>
-                    <span>Last updated</span>
-                    <strong>{formatDate(project.updatedAt)}</strong>
+                    <span>Project ID</span>
+
+                    <strong>{project.id}</strong>
                   </div>
-
-                  {project.deadline && (
-                    <div>
-                      <span>Deadline</span>
-                      <strong>{formatDate(project.deadline)}</strong>
-                    </div>
-                  )}
-                </div>
-              </View>
-            </Card>
-
-            <Card padding={5}>
-              <View gap={4}>
-                <div className={styles.sectionHeader}>
-                  <div>
-                    <Text weight="bold">Members</Text>
-
-                    <Text color="neutral-faded">
-                      {project.members.length}{" "}
-                      {project.members.length === 1 ? "member" : "members"}
-                    </Text>
-                  </div>
-
-                  <Button variant="ghost">Manage</Button>
-                </div>
-
-                <div className={styles.memberList}>
-                  {project.members.map((member) => (
-                    <div key={member.id} className={styles.member}>
-                      <div className={styles.avatar}>{member.initials}</div>
-
-                      <div>
-                        <strong>{member.name}</strong>
-
-                        <span>
-                          {member.id === project.owner.id ? "Owner" : "Member"}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
                 </div>
               </View>
             </Card>
