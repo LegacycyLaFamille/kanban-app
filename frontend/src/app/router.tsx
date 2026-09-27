@@ -7,6 +7,8 @@ import { RegisterPage } from "../features/auth/pages/RegisterPage";
 import { ProjectDetailsPage } from "../features/projects/pages/ProjectDetailsPage";
 import { ProjectsPage } from "../features/projects/pages/ProjectsPage";
 
+import { ProfilePage } from "../features/profile/pages/ProfilePage";
+
 import { WaitTemplate } from "../shared/components/WaitTemplate";
 
 import { LegacyApp } from "./legacy/LegacyApp";
@@ -55,7 +57,7 @@ export const router = createBrowserRouter([
 
           {
             path: "/profile",
-            element: <WaitTemplate template="PROFILE" />,
+            element: <ProfilePage />,
           },
 
           {
