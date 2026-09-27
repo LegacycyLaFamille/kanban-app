@@ -10,10 +10,6 @@ interface UnsavedChangesGuardProps {
   when: boolean;
 }
 
-/**
- * Asks for confirmation before leaving the page with unsaved edits,
- * both for in-app navigation and for closing/reloading the tab.
- */
 export function UnsavedChangesGuard({ when }: UnsavedChangesGuardProps) {
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>

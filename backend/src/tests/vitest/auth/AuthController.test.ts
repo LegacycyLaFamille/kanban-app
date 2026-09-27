@@ -26,7 +26,6 @@ describe("AuthController - current user", () => {
       mockAuthService as unknown as AuthService,
     );
 
-    // Stands in for requireAuth: the authenticated user id is already resolved.
     const fakeAuth = (
       req: express.Request,
       _res: unknown,

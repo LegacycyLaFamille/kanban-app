@@ -20,7 +20,6 @@ export function DeleteAccountModal({
   const [confirmation, setConfirmation] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Email addresses are case-insensitive, so the confirmation is too.
   const isConfirmed =
     confirmation.trim().toLowerCase() === email.trim().toLowerCase();
 

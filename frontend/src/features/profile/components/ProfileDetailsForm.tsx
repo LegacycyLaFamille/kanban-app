@@ -86,7 +86,6 @@ export function ProfileDetailsForm({ user }: ProfileDetailsFormProps) {
     }
   }
 
-  // Server-side field errors arrive asynchronously: move focus to them too.
   useEffect(() => {
     focusFirstInvalidField(serverErrors);
   }, [serverErrors]);
@@ -139,7 +138,6 @@ export function ProfileDetailsForm({ user }: ProfileDetailsFormProps) {
     const saved = await submit(changes);
 
     if (saved) {
-      // Match what the API stored (trimmed), so the form is no longer dirty.
       setValues({ name: values.name.trim(), email: values.email.trim() });
     }
 
