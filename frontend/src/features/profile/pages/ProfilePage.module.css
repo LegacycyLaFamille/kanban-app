@@ -76,17 +76,9 @@
   overflow-wrap: anywhere;
 }
 
-/*
- * Desktop: details and danger zone stacked on the left, overview on the right.
- * Narrow screens: a single column in reading order, with the danger zone last.
- */
 .grid {
   display: grid;
   grid-template-columns: minmax(0, 3fr) minmax(280px, 2fr);
-  grid-template-areas:
-    "details overview"
-    "danger overview";
-  grid-template-rows: auto 1fr;
   align-items: start;
 
   gap: 20px;
@@ -94,18 +86,18 @@
   max-width: 1120px;
 }
 
-.details {
-  grid-area: details;
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+
   min-width: 0;
 }
 
-.overview {
-  grid-area: overview;
-  min-width: 0;
-}
-
+.details,
+.overview,
+.data,
 .danger {
-  grid-area: danger;
   min-width: 0;
 }
 
@@ -115,12 +107,28 @@
   }
 
   .grid {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas:
-      "details"
-      "overview"
-      "danger";
-    grid-template-rows: none;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .column {
+    display: contents;
+  }
+
+  .details {
+    order: 1;
+  }
+
+  .overview {
+    order: 2;
+  }
+
+  .data {
+    order: 3;
+  }
+
+  .danger {
+    order: 4;
   }
 }
 
