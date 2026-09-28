@@ -1,16 +1,15 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ApiError, httpClient } from "../../../shared/api";
+import { ApiError } from "../../../shared/api";
+
+import { getProject } from "./projects.api";
+import { getProjectById } from "./project-details.api";
 
 import type { ProjectResponse } from "../types/project-api.types";
 
-import {
-  createProject,
-  deleteProject,
-  getProject,
-  getProjects,
-  updateProject,
-} from "./projects.api";
+vi.mock("./projects.api", () => ({
+  getProject: vi.fn(),
+}));
 
 const project: ProjectResponse = {
   id: "project-1",
@@ -21,94 +20,51 @@ const project: ProjectResponse = {
   boards: [],
 };
 
-describe("projects.api", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
+describe("project-details.api", () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
   });
 
-  it("loads projects", async () => {
-    const getSpy = vi.spyOn(httpClient, "get").mockResolvedValue([project]);
+  it("retrieves the requested project", async () => {
+    vi.mocked(getProject).mockResolvedValue(project);
 
-    const result = await getProjects();
+    const result = await getProjectById("project-1");
 
-    expect(getSpy).toHaveBeenCalledWith("/projects");
-    expect(result).toEqual([project]);
-  });
-
-  it("loads a project by ID", async () => {
-    const getSpy = vi.spyOn(httpClient, "get").mockResolvedValue(project);
-
-    const result = await getProject(project.id);
-
-    expect(getSpy).toHaveBeenCalledWith("/projects/project-1");
+    expect(getProject).toHaveBeenCalledExactlyOnceWith("project-1");
     expect(result).toEqual(project);
   });
 
-  it("creates a project", async () => {
-    const payload = {
-      name: "Kanban",
-      description: "Project management",
-    };
+  it("preserves an empty boards list", async () => {
+    vi.mocked(getProject).mockResolvedValue(project);
 
-    const postSpy = vi.spyOn(httpClient, "post").mockResolvedValue(project);
+    const result = await getProjectById("project-1");
 
-    const result = await createProject(payload);
-
-    expect(postSpy).toHaveBeenCalledWith("/projects", payload);
-    expect(result).toEqual(project);
+    expect(result?.boards).toEqual([]);
   });
 
-  it("updates a project", async () => {
-    const payload = {
-      name: "Updated Kanban",
-    };
+  it("returns null when the project does not exist", async () => {
+    vi.mocked(getProject).mockRejectedValue(
+      new ApiError(404, "NOT_FOUND", "Project not found."),
+    );
 
-    const updatedProject = {
-      ...project,
-      ...payload,
-    };
+    const result = await getProjectById("missing-project");
 
-    const patchSpy = vi
-      .spyOn(httpClient, "patch")
-      .mockResolvedValue(updatedProject);
-
-    const result = await updateProject(project.id, payload);
-
-    expect(patchSpy).toHaveBeenCalledWith("/projects/project-1", payload);
-    expect(result).toEqual(updatedProject);
-  });
-
-  it("deletes a project", async () => {
-    const deleteSpy = vi
-      .spyOn(httpClient, "delete")
-      .mockResolvedValue(undefined);
-
-    await deleteProject(project.id);
-
-    expect(deleteSpy).toHaveBeenCalledWith("/projects/project-1");
-  });
-
-  it("encodes project IDs", async () => {
-    const getSpy = vi.spyOn(httpClient, "get").mockResolvedValue(project);
-
-    await getProject("project/with spaces");
-
-    expect(getSpy).toHaveBeenCalledWith("/projects/project%2Fwith%20spaces");
+    expect(result).toBeNull();
   });
 
   it("propagates forbidden errors", async () => {
     const error = new ApiError(403, "FORBIDDEN", "Access denied.");
 
-    vi.spyOn(httpClient, "delete").mockRejectedValue(error);
+    vi.mocked(getProject).mockRejectedValue(error);
 
-    await expect(deleteProject(project.id)).rejects.toBe(error);
+    await expect(getProjectById("project-1")).rejects.toBe(error);
   });
 
-  it("propagates not-found errors", async () => {
-    const error = new ApiError(404, "NOT_FOUND", "Project not found.");
+  it("propagates unexpected errors", async () => {
+    const error = new Error("Network unavailable");
 
-    vi.spyOn(httpClient, "get").mockRejectedValue(error);
+    vi.mocked(getProject).mockRejectedValue(error);
 
-    await expect(getProject("missing")).rejects.toBe(error);
+    await expect(getProjectById("project-1")).rejects.toBe(error);
   });
 });
