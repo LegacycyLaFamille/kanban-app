@@ -18,51 +18,40 @@ export const router = createBrowserRouter([
     path: "/",
     element: <LegacyApp />,
   },
-
   {
     path: "/login",
     element: <LoginPage />,
   },
-
   {
     path: "/register",
     element: <RegisterPage />,
   },
-
   {
     element: <ProtectedRoute />,
-
     children: [
       {
         element: <MainLayout />,
-
         children: [
           {
             path: "/projects",
             element: <ProjectsPage />,
           },
-
           {
             path: "/projects/:projectId",
             element: <ProjectDetailsPage />,
           },
-
           {
             path: "/projects/:projectId/kanban",
-
             element: <KanbanPage />,
           },
-
           {
             path: "/profile",
             element: <WaitTemplate template="PROFILE" />,
           },
-
           {
             path: "/tasks",
             element: <WaitTemplate template="TASKS" />,
           },
-
           {
             path: "/notifications",
             element: <WaitTemplate template="NOTIFICATIONS" />,

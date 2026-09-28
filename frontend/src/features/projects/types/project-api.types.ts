@@ -20,3 +20,11 @@ export type CreateProjectPayload = {
 };
 
 export type UpdateProjectPayload = Partial<CreateProjectPayload>;
+
+export type CreateBoardPayload = {
+  name: string;
+};
+
+export type UpdateBoardPayload = {
+  name: string;
+};

@@ -14,7 +14,11 @@ const projectRepository = new PrismaProjectRepository(prisma);
 const boardService = new BoardService(boardRepository, projectRepository);
 const boardController = new BoardController(boardService);
 
-projectRouter.post("/boards", requireAuth, boardController.createBoard);
+projectRouter.post(
+  "/projects/:projectId/boards",
+  requireAuth,
+  boardController.createBoard,
+);
 
 projectRouter.get(
   "/projects/:projectId/boards",
