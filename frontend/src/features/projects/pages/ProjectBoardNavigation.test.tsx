@@ -12,12 +12,19 @@ import {
 } from "vitest";
 
 import { Reshaped } from "reshaped";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import {
+  MemoryRouter,
+  Route,
+  Routes,
+  useLocation,
+  useParams,
+} from "react-router-dom";
 
 import { useAuth } from "../../auth/hooks/useAuth";
 
 import { useBoards } from "../hooks/useBoards";
 import { useProjectDetails } from "../hooks/useProjectDetails";
+
 import type { ProjectBoard, ProjectResponse } from "../types/project-api.types";
 
 import { ProjectDetailsPage } from "./ProjectDetailsPage";
@@ -56,6 +63,20 @@ const project: ProjectResponse = {
   createdAt: "2026-09-26T15:00:00.000Z",
   boards: [boardA, boardB],
 };
+
+function SelectedBoardRoute() {
+  const { projectId } = useParams<{ projectId: string }>();
+  const location = useLocation();
+
+  const boardId = new URLSearchParams(location.search).get("boardId");
+
+  return (
+    <div>
+      <span>Selected project: {projectId}</span>
+      <span>Selected board: {boardId}</span>
+    </div>
+  );
+}
 
 describe("Project board navigation", () => {
   beforeAll(() => {
@@ -129,9 +150,10 @@ describe("Project board navigation", () => {
               path="/projects/:projectId"
               element={<ProjectDetailsPage />}
             />
+
             <Route
-              path="/projects/:projectId/boards/:boardId/kanban"
-              element={<div>Selected board route</div>}
+              path="/projects/:projectId/kanban"
+              element={<SelectedBoardRoute />}
             />
           </Routes>
         </MemoryRouter>
@@ -139,34 +161,44 @@ describe("Project board navigation", () => {
     );
   }
 
-  it("opens exactly the clicked board and removes the global Open board button", async () => {
+  it("navigates to the Kanban with the selected board ID", async () => {
     const user = userEvent.setup();
 
     renderPage();
 
     expect(screen.getByText("2 boards")).toBeTruthy();
+
     expect(screen.queryByRole("button", { name: "Open board" })).toBeNull();
 
-    const link = screen.getByRole("link", { name: "Open board Planning" });
+    const link = screen.getByRole("link", {
+      name: "Open board Planning",
+    });
 
     expect(link.getAttribute("href")).toBe(
-      "/projects/project-1/boards/board-b/kanban",
+      "/projects/project-1/kanban?boardId=board-b",
     );
 
     await user.click(link);
 
-    expect(screen.getByText("Selected board route")).toBeTruthy();
+    expect(screen.getByText("Selected project: project-1")).toBeTruthy();
+
+    expect(screen.getByText("Selected board: board-b")).toBeTruthy();
   });
+
   it("does not navigate when using a board management action", async () => {
     const user = userEvent.setup();
+
     renderPage();
 
     await user.click(
-      screen.getByRole("button", { name: /^Rename\s*Development$/ }),
+      screen.getByRole("button", {
+        name: /^Rename\s*Development$/,
+      }),
     );
 
     expect(screen.getByRole("textbox", { name: "Board name" })).toBeTruthy();
-    expect(screen.queryByText("Selected board route")).toBeNull();
+
+    expect(screen.queryByText(/Selected board:/)).toBeNull();
   });
 
   it("allows an empty project to have no board links", () => {
@@ -178,6 +210,7 @@ describe("Project board navigation", () => {
     renderPage();
 
     expect(screen.getByText("No boards yet.")).toBeTruthy();
+
     expect(screen.queryByRole("link", { name: /^Open board / })).toBeNull();
   });
 });
