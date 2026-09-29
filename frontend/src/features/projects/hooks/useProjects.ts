@@ -5,76 +5,91 @@ import {
   getProjects,
 } from "../api/projects.api";
 
-import type { CreateProjectPayload, Project } from "../types/project.types";
+import type {
+  CreateProjectPayload,
+  ProjectResponse,
+} from "../types/project-api.types";
+
+import { projectErrorMessage } from "../utils/projectError";
 
 export function useProjects() {
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [projects, setProjects] = useState<ProjectResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mutationError, setMutationError] = useState<string | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
+    let active = true;
 
     getProjects()
       .then((response) => {
-        if (cancelled) {
+        if (!active) {
           return;
         }
 
         setProjects(response);
         setError(null);
       })
-      .catch(() => {
-        if (cancelled) {
+      .catch((requestError: unknown) => {
+        if (!active) {
           return;
         }
 
-        setError("Unable to load projects.");
+        setError(projectErrorMessage(requestError, "Unable to load projects."));
       })
       .finally(() => {
-        if (!cancelled) {
+        if (active) {
           setIsLoading(false);
         }
       });
 
     return () => {
-      cancelled = true;
+      active = false;
     };
   }, []);
 
-  const reload = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
+  const reload = useCallback(async (): Promise<void> => {
+    setIsLoading(true);
+    setError(null);
 
+    try {
       const response = await getProjects();
 
       setProjects(response);
-    } catch {
-      setError("Unable to load projects.");
+    } catch (requestError) {
+      setError(projectErrorMessage(requestError, "Unable to load projects."));
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  const createProject = useCallback(async (payload: CreateProjectPayload) => {
-    try {
+  const createProject = useCallback(
+    async (payload: CreateProjectPayload): Promise<ProjectResponse | null> => {
       setIsCreating(true);
-      setError(null);
+      setMutationError(null);
 
-      const project = await createProjectRequest(payload);
+      try {
+        const createdProject = await createProjectRequest(payload);
 
-      setProjects((currentProjects) => [project, ...currentProjects]);
+        setProjects((current) => [createdProject, ...current]);
 
-      return project;
-    } catch {
-      setError("Unable to create project.");
+        return createdProject;
+      } catch (requestError) {
+        setMutationError(
+          projectErrorMessage(requestError, "Unable to create project."),
+        );
 
-      return null;
-    } finally {
-      setIsCreating(false);
-    }
+        return null;
+      } finally {
+        setIsCreating(false);
+      }
+    },
+    [],
+  );
+
+  const resetMutationError = useCallback(() => {
+    setMutationError(null);
   }, []);
 
   return {
@@ -82,7 +97,9 @@ export function useProjects() {
     isLoading,
     isCreating,
     error,
+    mutationError,
     reload,
     createProject,
+    resetMutationError,
   };
 }
