@@ -34,7 +34,7 @@ describe("task.api", () => {
     const projectId = "project-uuid-1";
     const result = await getTasksByProject(projectId);
 
-    expect(getSpy).toHaveBeenCalledWith(`/api/v1/projects/${projectId}/tasks`);
+    expect(getSpy).toHaveBeenCalledWith(`/projects/${projectId}/tasks`);
     expect(result).toEqual(tasks);
   });
 
@@ -51,7 +51,7 @@ describe("task.api", () => {
     const result = await createTask(projectId, payload);
 
     expect(postSpy).toHaveBeenCalledWith(
-      `/api/v1/projects/${projectId}/tasks`,
+      `/projects/${projectId}/tasks`,
       payload,
     );
     expect(result).toEqual(mockTask);
@@ -75,7 +75,7 @@ describe("task.api", () => {
 
     const result = await updateTask(taskId, payload);
 
-    expect(patchSpy).toHaveBeenCalledWith(`/api/v1/tasks/${taskId}`, payload);
+    expect(patchSpy).toHaveBeenCalledWith(`/tasks/${taskId}`, payload);
     expect(result).toEqual(updatedTask);
   });
 
@@ -87,6 +87,6 @@ describe("task.api", () => {
     const taskId = "task-uuid-1";
     await deleteTask(taskId);
 
-    expect(deleteSpy).toHaveBeenCalledWith(`/api/v1/tasks/${taskId}`);
+    expect(deleteSpy).toHaveBeenCalledWith(`/tasks/${taskId}`);
   });
 });
