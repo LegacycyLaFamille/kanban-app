@@ -135,6 +135,7 @@ export function Board({ projectId }: BoardProps) {
   } = useDeleteTask();
   const {
     getEffectiveStatus,
+    isPending: isTaskPending,
     moveTask,
     error: dragError,
   } = useTaskDragAndDrop({
@@ -305,6 +306,7 @@ export function Board({ projectId }: BoardProps) {
                 tasks={tasks.filter((task) => task.columnId === column.id)}
                 onDropTask={handleDropTask}
                 onAddTask={() => handleOpenCreate(column.id)}
+                isTaskPending={isTaskPending}
               />
             </div>
           ))}
