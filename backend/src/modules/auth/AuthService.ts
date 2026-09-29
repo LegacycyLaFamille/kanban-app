@@ -1,6 +1,9 @@
 import bcrypt from "bcrypt";
 import { User } from "../users/User.js";
-import type { UserRepository } from "../users/UserRepository.js";
+import type {
+  UserActivityStats,
+  UserRepository,
+} from "../users/UserRepository.js";
 import jwt from "jsonwebtoken";
 
 export class AuthService {
@@ -56,6 +59,29 @@ export class AuthService {
 
   async getUserById(userId: string): Promise<User | null> {
     return this.userRepository.findById(userId);
+  }
+
+  async updateProfile(
+    userId: string,
+    changes: { name?: string | undefined; email?: string | undefined },
+  ): Promise<User> {
+    const current = await this.userRepository.findById(userId);
+    if (!current) throw new Error("Utilisateur introuvable");
+
+    const updated = new User(
+      current.id,
+      changes.email ?? current.email,
+      changes.name ?? current.name,
+      current.createdAt,
+    );
+
+    await this.userRepository.updateProfile(updated);
+
+    return updated;
+  }
+
+  async getActivityStats(userId: string): Promise<UserActivityStats> {
+    return this.userRepository.getActivityStats(userId);
   }
 
   private async generateAuthTokens(
