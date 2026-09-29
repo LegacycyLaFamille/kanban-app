@@ -1,0 +1,42 @@
+.link {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 10px 8px;
+  border-radius: 8px;
+  color: inherit;
+  text-decoration: none;
+  transition: background-color 150ms ease;
+}
+
+.link:hover {
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+.link:focus-visible {
+  outline: 2px solid #a78bfa;
+  outline-offset: 2px;
+}
+
+.details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.details strong {
+  color: #f8fafc;
+  overflow-wrap: anywhere;
+}
+
+.details span {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.link:hover .details strong {
+  color: #c4b5fd;
+}

@@ -95,6 +95,7 @@ async function createApiError(response: Response): Promise<ApiError> {
       payload.error?.message ??
         response.statusText ??
         "An unexpected API error occurred.",
+      payload.error?.details,
     );
   } catch {
     return new ApiError(
