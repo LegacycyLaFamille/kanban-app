@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "./ApiError";
-import { httpClient } from "./httpClient";
+import { httpClient, setSessionExpiredHandler } from "./httpClient";
 
 describe("httpClient", () => {
   let fetchMock: ReturnType<typeof vi.fn>;
@@ -14,6 +14,7 @@ describe("httpClient", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    setSessionExpiredHandler(null);
   });
 
   it("performs a GET request and deserializes JSON", async () => {
@@ -411,6 +412,106 @@ describe("httpClient", () => {
     expect(result).toEqual({
       id: "user-1",
     });
+  });
+
+  it("notifies the session-expired handler when a refresh attempt fails", async () => {
+    const onSessionExpired = vi.fn();
+    setSessionExpiredHandler(onSessionExpired);
+
+    fetchMock
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            error: { code: "UNAUTHENTICATED", message: "Invalid or expired session." },
+          }),
+          { status: 401, headers: { "Content-Type": "application/json" } },
+        ),
+      )
+      .mockResolvedValueOnce(new Response(null, { status: 401 }));
+
+    await expect(httpClient.get("/auth/me")).rejects.toBeInstanceOf(ApiError);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(onSessionExpired).toHaveBeenCalledTimes(1);
+  });
+
+  it("notifies the session-expired handler when a 401 from an arbitrary endpoint survives a successful-looking refresh retry", async () => {
+    const onSessionExpired = vi.fn();
+    setSessionExpiredHandler(onSessionExpired);
+
+    fetchMock
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            error: { code: "UNAUTHENTICATED", message: "Invalid or expired session." },
+          }),
+          { status: 401, headers: { "Content-Type": "application/json" } },
+        ),
+      )
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            error: { code: "UNAUTHENTICATED", message: "Invalid or expired session." },
+          }),
+          { status: 401, headers: { "Content-Type": "application/json" } },
+        ),
+      );
+
+    await expect(httpClient.get("/projects")).rejects.toBeInstanceOf(ApiError);
+
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(onSessionExpired).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not notify the session-expired handler when a refresh succeeds and the retry resolves", async () => {
+    const onSessionExpired = vi.fn();
+    setSessionExpiredHandler(onSessionExpired);
+
+    fetchMock
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            error: { code: "UNAUTHENTICATED", message: "Invalid or expired session." },
+          }),
+          { status: 401, headers: { "Content-Type": "application/json" } },
+        ),
+      )
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ id: "project-1" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+
+    const result = await httpClient.get("/projects");
+
+    expect(result).toEqual({ id: "project-1" });
+    expect(onSessionExpired).not.toHaveBeenCalled();
+  });
+
+  it("does not notify the session-expired handler for public auth endpoints (skipAuthRefresh)", async () => {
+    const onSessionExpired = vi.fn();
+    setSessionExpiredHandler(onSessionExpired);
+
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          error: { code: "INVALID_CREDENTIALS", message: "Invalid credentials." },
+        }),
+        { status: 401, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    await expect(
+      httpClient.post("/auth/login", { email: "a@b.com", password: "wrong" }, {
+        skipAuthRefresh: true,
+      }),
+    ).rejects.toBeInstanceOf(ApiError);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(onSessionExpired).not.toHaveBeenCalled();
   });
 
   it("downloads a file as a Blob", async () => {
