@@ -1,5 +1,7 @@
 include:
-  - ../docker/observability/compose.yaml
+  - path:
+      - ../docker/observability/compose.yaml
+      - ../docker/observability/compose.dev.yaml
 
 services:
   db:

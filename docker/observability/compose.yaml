@@ -1,21 +1,16 @@
 services:
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.161.0
-    container_name: kanban_otel_collector
     restart: unless-stopped
     command: ["--config=/etc/otelcol-contrib/config.yaml"]
     volumes:
       - ./otel-collector/config.yaml:/etc/otelcol-contrib/config.yaml:ro
-    ports:
-      - "127.0.0.1:4317:4317"
-      - "127.0.0.1:4318:4318"
     depends_on:
       - tempo
       - loki
 
   prometheus:
     image: prom/prometheus:v3.15.0
-    container_name: kanban_prometheus
     restart: unless-stopped
     command:
       - --config.file=/etc/prometheus/prometheus.yml
@@ -24,12 +19,9 @@ services:
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - kanban_prometheus_data:/prometheus
-    ports:
-      - "127.0.0.1:9090:9090"
 
   loki:
     image: grafana/loki:3.7.8
-    container_name: kanban_loki
     restart: unless-stopped
     command: ["-config.file=/etc/loki/config.yaml"]
     volumes:
@@ -38,28 +30,20 @@ services:
 
   tempo:
     image: grafana/tempo:2.10.8
-    container_name: kanban_tempo
     restart: unless-stopped
     command: ["-config.file=/etc/tempo/config.yaml"]
     volumes:
       - ./tempo/config.yaml:/etc/tempo/config.yaml:ro
 
-  # Development only: anonymous admin access. Never reuse on a server.
   grafana:
     image: grafana/grafana:13.2.3
-    container_name: kanban_grafana
     restart: unless-stopped
     environment:
-      GF_AUTH_ANONYMOUS_ENABLED: "true"
-      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
-      GF_AUTH_DISABLE_LOGIN_FORM: "true"
       GF_ANALYTICS_REPORTING_ENABLED: "false"
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
       - ./grafana/dashboards:/etc/grafana/dashboards:ro
       - kanban_grafana_data:/var/lib/grafana
-    ports:
-      - "127.0.0.1:3001:3000"
     depends_on:
       - prometheus
       - loki

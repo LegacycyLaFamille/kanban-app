@@ -21,13 +21,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # compose.yaml requires a RabbitMQ password; the CI stack is
+      # compose.yaml requires RabbitMQ and Grafana passwords; the CI stack is
       # throwaway, so a random one per run avoids storing a secret.
       - name: Generate throwaway credentials
         run: |
           password="$(openssl rand -hex 24)"
           echo "::add-mask::$password"
           echo "RABBITMQ_PASSWORD=$password" >> "$GITHUB_ENV"
+          grafana_password="$(openssl rand -hex 24)"
+          echo "::add-mask::$grafana_password"
+          echo "GRAFANA_ADMIN_PASSWORD=$grafana_password" >> "$GITHUB_ENV"
 
       - name: Build & wait for healthcehecks
         run: |
@@ -46,6 +49,7 @@ jobs:
             -H 'Content-Type: application/json' \
             -d '{"name":"ci smoke test"}' -o /dev/null
           curl -fsS http://localhost:8080/api/legacy/items | grep -q 'ci smoke test'
+          curl -fsS http://localhost:8080/grafana/api/health -o /dev/null
 
       - name: Backend connected to PostgreSQL and RabbitMQ
         run: |
