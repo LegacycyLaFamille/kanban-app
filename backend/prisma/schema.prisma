@@ -13,12 +13,22 @@ datasource db {
   provider = "postgresql"
 }
 
+// System-wide role, orthogonal to per-project ownership/membership
+// (ProjectAccessGuard). USER is the default for every new account; there is
+// no admin-management UI yet, so the first ADMIN is promoted manually — see
+// docs/backend/ADMIN_ROLE.md.
+enum Role {
+  USER
+  ADMIN
+}
+
 model User {
   id            String          @id @default(uuid())
   email         String          @unique
   name          String
   passwordHash  String
   refreshToken  String?
+  role          Role            @default(USER)
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
   Project       Project[]

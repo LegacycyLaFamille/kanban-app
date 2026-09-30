@@ -73,6 +73,7 @@ export class AuthService {
       changes.email ?? current.email,
       changes.name ?? current.name,
       current.createdAt,
+      current.role,
     );
 
     await this.userRepository.updateProfile(updated);
