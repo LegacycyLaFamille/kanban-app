@@ -106,3 +106,7 @@ The `standards/` directory also contains its own index README.
 - Users are informed before the upgrade so they can preserve relevant information and recreate still-needed tasks after account creation and authentication.
 - RabbitMQ provides the event-driven workflow.
 - Docker, GitHub Actions, ESLint, tests, coverage, and static quality analysis are part of the modernization.
+
+## tests
+
+- Run tests with this command: npx playwright test
