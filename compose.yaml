@@ -3,7 +3,6 @@ services:
     build:
       context: .
       dockerfile: docker/frontend/Dockerfile
-    image: kanban:frontend
     ports:
       - "8080:80"
     depends_on:
@@ -15,7 +14,6 @@ services:
     build:
       context: .
       dockerfile: docker/backend/Dockerfile
-    image: kanban:backend
     environment:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-kanban_user}:${POSTGRES_PASSWORD:-kanban_password}@postgres:5432/${POSTGRES_DB:-kanban_db}
       - JWT_SECRET=${JWT_SECRET}
