@@ -9,6 +9,19 @@ interface RequestConfig extends RequestOptions {
   body?: unknown;
 }
 
+/**
+ * Notified once a 401 survives a refresh attempt (or refresh wasn't
+ * possible), i.e. the session is truly dead rather than just momentarily
+ * expired. This is the single chokepoint for "the backend session is gone" —
+ * every authenticated request passes through `send`, so features never need
+ * their own 401-handling to keep auth state in sync.
+ */
+let sessionExpiredHandler: (() => void) | null = null;
+
+export function setSessionExpiredHandler(handler: (() => void) | null): void {
+  sessionExpiredHandler = handler;
+}
+
 let refreshPromise: Promise<boolean> | null = null;
 
 async function refreshSession(): Promise<boolean> {
@@ -65,6 +78,10 @@ async function send(
 
     if (refreshed) {
       response = await executeRequest(endpoint, config);
+    }
+
+    if (response.status === 401) {
+      sessionExpiredHandler?.();
     }
   }
 
