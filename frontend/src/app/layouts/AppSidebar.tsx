@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { MenuItem, Text, View } from "reshaped";
+import { Badge, MenuItem, Text, View } from "reshaped";
 import { useLocation, useNavigate } from "react-router-dom";
 import { AppLogo } from "../../shared/components/AppLogo/AppLogo.tsx";
 
@@ -8,6 +8,7 @@ import styles from "./AppSidebar.module.css";
 type AppSidebarProps = {
   userName?: string;
   userEmail?: string;
+  isAdmin?: boolean;
   onLogout?: () => void;
 };
 
@@ -112,6 +113,7 @@ function LogoutIcon() {
 export function AppSidebar({
   userName = "Current user",
   userEmail = "user@example.com",
+  isAdmin = false,
   onLogout,
 }: AppSidebarProps) {
   const location = useLocation();
@@ -185,7 +187,14 @@ export function AppSidebar({
           </div>
 
           <div className={styles.userInformation}>
-            <strong>{userName}</strong>
+            <div className={styles.userNameRow}>
+              <strong>{userName}</strong>
+              {isAdmin && (
+                <Badge size="small" color="primary" rounded>
+                  Admin
+                </Badge>
+              )}
+            </div>
             <span>{userEmail}</span>
           </div>
         </div>
