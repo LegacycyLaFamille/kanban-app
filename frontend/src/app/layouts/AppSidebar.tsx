@@ -91,6 +91,17 @@ const navigationItems: NavigationItem[] = [
   },
 ];
 
+const adminNavigationItem: NavigationItem = {
+  label: "All Tasks (Admin)",
+  path: "/admin/tasks",
+  icon: (
+    <SidebarIcon>
+      <path d="M9 11.5 11 13.5 15 9" />
+      <path d="M12 3 4 6.5V11c0 4.5 3.2 8.4 8 9.5 4.8-1.1 8-5 8-9.5V6.5Z" />
+    </SidebarIcon>
+  ),
+};
+
 function SettingsIcon() {
   return (
     <SidebarIcon>
@@ -118,6 +129,10 @@ export function AppSidebar({
 }: AppSidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
+
+  const items = isAdmin
+    ? [...navigationItems, adminNavigationItem]
+    : navigationItems;
 
   const isActive = (path: string) => {
     if (path === "/") {
@@ -152,7 +167,7 @@ export function AppSidebar({
 
         <nav className={styles.navigation} aria-label="Main navigation">
           <View gap={1}>
-            {navigationItems.map((item) => (
+            {items.map((item) => (
               <MenuItem
                 key={item.path}
                 selected={isActive(item.path)}
