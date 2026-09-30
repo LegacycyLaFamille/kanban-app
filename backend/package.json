@@ -20,7 +20,8 @@
     "db:promote-admin": "node dist/scripts/promote-admin.js",
     "db:promote-admin:dev": "tsx src/scripts/promote-admin.ts",
     "db:migrate-legacy": "node dist/scripts/migrate-legacy-data.js",
-    "db:migrate-legacy:dev": "tsx src/scripts/migrate-legacy-data.ts"
+    "db:migrate-legacy:dev": "tsx src/scripts/migrate-legacy-data.ts",
+    "test:integration": "vitest run --config vitest.integration.config.ts"
   },
   "keywords": [],
   "author": "",

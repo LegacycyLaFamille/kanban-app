@@ -15,8 +15,10 @@ export interface EventSubscription<E extends DomainEvent = DomainEvent> {
   // Event types to receive. Topic wildcards are allowed: `*` matches one
   // word, `#` zero or more (e.g. `task.*`).
   eventTypes: Array<E["type"] | EventTypePattern>;
-  // Resolving acknowledges the event; throwing sends it to the dead-letter
-  // queue. Delivery is at-least-once: handlers must be idempotent.
+  // Resolving acknowledges the event. Throwing retries it a few times with
+  // a delay, then sends it to the dead-letter queue; throw
+  // NonRetryableEventError to skip the retries. Delivery is at-least-once:
+  // handlers must be idempotent.
   handler: EventHandler<E>;
 }
 
@@ -29,6 +31,10 @@ export interface EventBus {
     subscription: EventSubscription<E>,
   ): Promise<void>;
 }
+
+// Thrown by a handler when retrying cannot help (e.g. invalid payload):
+// the event goes straight to the dead-letter queue.
+export class NonRetryableEventError extends Error {}
 
 export class EventPublishError extends Error {
   constructor(
