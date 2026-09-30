@@ -9,6 +9,7 @@ import { useGetTasks } from "../hooks/useGetTasks";
 import { useCreateTask } from "../hooks/useCreateTask";
 import { useUpdateTask } from "../hooks/useUpdateTask";
 import { useDeleteTask } from "../hooks/useDeleteTask";
+import { useTaskDragAndDrop } from "../hooks/useTaskDragAndDrop";
 import type {
   Task as BackendTask,
   TaskStatus,
@@ -132,6 +133,16 @@ export function Board({ projectId }: BoardProps) {
     isSubmitting: isDeleting,
     error: deleteError,
   } = useDeleteTask();
+  const {
+    getEffectiveStatus,
+    isPending: isTaskPending,
+    moveTask,
+    error: dragError,
+  } = useTaskDragAndDrop({
+    onPersisted: async () => {
+      await refetch();
+    },
+  });
 
   // Local Modal UI State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -139,19 +150,20 @@ export function Board({ projectId }: BoardProps) {
   const [activeTask, setActiveTask] = useState<FrontendTask>(EMPTY_TASK);
   const [isEditing, setIsEditing] = useState(false);
 
-  // Map API items to frontend tasks
-  const tasks: FrontendTask[] = backendTasks.map(toFrontendTask);
+  // Map API items to frontend tasks, applying any in-flight optimistic status
+  const tasks: FrontendTask[] = backendTasks.map((task) =>
+    toFrontendTask({ ...task, status: getEffectiveStatus(task) }),
+  );
 
-  // Drag and drop task status update
+  // Drag and drop task status update: optimistic, with rollback on failure
+  // and a per-task pending lock, both handled by useTaskDragAndDrop.
   const handleDropTask = useCallback(
-    async (taskId: string, targetColumnId: ColumnId) => {
-      const newStatus = toBackendStatus(targetColumnId);
-      const success = await updateTask(taskId, { status: newStatus });
-      if (success) {
-        await refetch();
-      }
+    (taskId: string, targetColumnId: ColumnId) => {
+      const task = backendTasks.find((t) => t.id === taskId);
+      if (!task) return;
+      void moveTask(task, toBackendStatus(targetColumnId));
     },
-    [updateTask, refetch],
+    [backendTasks, moveTask],
   );
 
   const handleOpenCreate = (columnId: ColumnId = "todo") => {
@@ -265,6 +277,15 @@ export function Board({ projectId }: BoardProps) {
           </Card>
         )}
 
+        {/* Drag-and-drop Persistence Error Banner */}
+        {dragError && (
+          <Card padding={3}>
+            <div role="alert">
+              <Text color="critical">{dragError}</Text>
+            </div>
+          </Card>
+        )}
+
         {/* Board Columns Grid */}
         <div
           style={{
@@ -285,6 +306,7 @@ export function Board({ projectId }: BoardProps) {
                 tasks={tasks.filter((task) => task.columnId === column.id)}
                 onDropTask={handleDropTask}
                 onAddTask={() => handleOpenCreate(column.id)}
+                isTaskPending={isTaskPending}
               />
             </div>
           ))}
