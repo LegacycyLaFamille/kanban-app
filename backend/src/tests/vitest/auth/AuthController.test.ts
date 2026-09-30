@@ -3,6 +3,8 @@ import express, { type Express, type NextFunction } from "express";
 import request from "supertest";
 import { AuthController } from "../../../modules/auth/AuthController.js";
 import type { AuthService } from "../../../modules/auth/AuthService.js";
+import { updateProfileSchema } from "../../../modules/auth/auth.schema.js";
+import { validateSchema } from "../../../shared/http/validateSchema.js";
 import { User } from "../../../modules/users/User.js";
 
 describe("AuthController - current user", () => {
@@ -38,7 +40,12 @@ describe("AuthController - current user", () => {
     app = express();
     app.use(express.json());
     app.get("/me", fakeAuth, controller.getProfile);
-    app.patch("/me", fakeAuth, controller.updateProfile);
+    app.patch(
+      "/me",
+      fakeAuth,
+      validateSchema(updateProfileSchema),
+      controller.updateProfile,
+    );
     app.get("/me/stats", fakeAuth, controller.getActivityStats);
   });
 

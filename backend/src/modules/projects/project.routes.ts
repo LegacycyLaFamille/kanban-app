@@ -1,12 +1,18 @@
 import { Router, type Request, type Response } from "express";
 import { ProjectController } from "./ProjectController.js";
 import { requireAuth } from "../../shared/security/requireAuth.js";
+import { validateSchema } from "../../shared/http/validateSchema.js";
 import { ProjectService } from "./ProjectService.js";
 import { PrismaProjectRepository } from "./PrismaProjectRepository.js";
 import { PrismaProjectMemberRepository } from "./PrismaProjectMemberRepository.js";
 import { PrismaUserRepository } from "../users/PrismaUserRepository.js";
 import { ProjectAccessGuard } from "../../shared/security/ProjectAccessGuard.js";
 import { prisma } from "../../shared/database/prisma.js";
+import {
+  addProjectMemberSchema,
+  createProjectSchema,
+  updateProjectSchema,
+} from "./project.schema.js";
 
 export const projectRouter = Router();
 
@@ -25,8 +31,11 @@ const projectService = new ProjectService(
 );
 const projectController = new ProjectController(projectService);
 
-projectRouter.post("/projects", requireAuth, (req: Request, res: Response) =>
-  projectController.createProject(req, res),
+projectRouter.post(
+  "/projects",
+  requireAuth,
+  validateSchema(createProjectSchema),
+  (req: Request, res: Response) => projectController.createProject(req, res),
 );
 
 projectRouter.get("/projects", requireAuth, (req: Request, res: Response) =>
@@ -43,7 +52,7 @@ projectRouter.get(
 projectRouter.patch(
   "/projects/:projectId",
   requireAuth,
-  // validateSchema(updateProjectSchema),
+  validateSchema(updateProjectSchema),
   (req: Request<{ projectId: string }>, res: Response) =>
     projectController.updateProject(req, res),
 );
@@ -65,6 +74,7 @@ projectRouter.get(
 projectRouter.post(
   "/projects/:projectId/members",
   requireAuth,
+  validateSchema(addProjectMemberSchema),
   (req: Request<{ projectId: string }>, res: Response) =>
     projectController.addMember(req, res),
 );

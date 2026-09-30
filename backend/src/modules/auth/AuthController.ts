@@ -1,39 +1,19 @@
 import type { Request, Response } from "express";
-import { z } from "zod";
 import { AuthService } from "./AuthService.js";
-
-const registerSchema = z.object({
-  email: z.email(),
-  name: z.string().min(2),
-  password: z.string().min(8),
-});
-
-const loginSchema = z.object({
-  email: z.email(),
-  password: z.string(),
-});
-
-const updateProfileSchema = z
-  .strictObject({
-    name: z.string().trim().min(2).max(100).optional(),
-    email: z.email().trim().optional(),
-  })
-  .refine((data) => data.name !== undefined || data.email !== undefined, {
-    message: "At least one field must be provided",
-  });
+import type {
+  LoginInput,
+  RegisterInput,
+  UpdateProfileInput,
+} from "./auth.schema.js";
 
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   register = async (req: Request, res: Response): Promise<void> => {
     try {
-      const validatedData = registerSchema.parse(req.body);
+      const { email, name, password } = req.body as RegisterInput;
 
-      const user = await this.authService.register(
-        validatedData.email,
-        validatedData.name,
-        validatedData.password,
-      );
+      const user = await this.authService.register(email, name, password);
 
       res.status(201).json({
         message: "Compte créé avec succès",
@@ -45,31 +25,33 @@ export class AuthController {
         },
       });
     } catch (error: unknown) {
-      if (error instanceof z.ZodError) {
-        res
-          .status(400)
-          .json({ error: "Données invalides", details: error.message });
-        return;
-      }
-
-      const message = error instanceof Error ? error.message : "Erreur interne";
+      const message = error instanceof Error ? error.message : "";
 
       if (message.includes("Conflit de données")) {
-        res.status(409).json({ error: "Cet email est déjà utilisé." });
+        res.status(409).json({
+          error: {
+            code: "EMAIL_ALREADY_IN_USE",
+            message: "This email is already used by another account.",
+            details: { email: ["This email is already in use"] },
+          },
+        });
         return;
       }
 
-      res.status(500).json({ error: "Erreur serveur" });
+      console.error("[Register Error]", error);
+      res.status(500).json({
+        error: { code: "INTERNAL_ERROR", message: "Unexpected server error" },
+      });
     }
   };
 
   login = async (req: Request, res: Response): Promise<void> => {
     try {
-      const validatedData = loginSchema.parse(req.body);
+      const { email, password } = req.body as LoginInput;
 
       const { accessToken, refreshToken, user } = await this.authService.login(
-        validatedData.email,
-        validatedData.password,
+        email,
+        password,
       );
       this.setCookies(res, accessToken, refreshToken);
 
@@ -82,22 +64,22 @@ export class AuthController {
         },
       });
     } catch (error: unknown) {
-      if (error instanceof z.ZodError) {
-        res
-          .status(400)
-          .json({ error: "Données invalides", details: error.message });
-        return;
-      }
-
-      const message = error instanceof Error ? error.message : "Erreur interne";
+      const message = error instanceof Error ? error.message : "";
 
       if (message === "Identifiants invalides") {
-        res.status(401).json({ error: message });
+        res.status(401).json({
+          error: {
+            code: "INVALID_CREDENTIALS",
+            message: "Invalid credentials.",
+          },
+        });
         return;
       }
 
       console.error("[Login Error]", error);
-      res.status(500).json({ error: "Erreur serveur" });
+      res.status(500).json({
+        error: { code: "INTERNAL_ERROR", message: "Unexpected server error" },
+      });
     }
   };
 
@@ -105,7 +87,9 @@ export class AuthController {
     try {
       const { refreshToken } = req.cookies;
       if (!refreshToken) {
-        res.status(401).json({ error: "Session inexistante" });
+        res.status(401).json({
+          error: { code: "NO_SESSION", message: "No active session." },
+        });
         return;
       }
 
@@ -116,9 +100,12 @@ export class AuthController {
         .status(200)
         .json({ message: "Session rafraîchie", user: session.user });
     } catch {
-      res
-        .status(401)
-        .json({ error: "Session expirée, veuillez vous reconnecter" });
+      res.status(401).json({
+        error: {
+          code: "SESSION_EXPIRED",
+          message: "Session expired, please sign in again.",
+        },
+      });
     }
   };
 
@@ -127,7 +114,9 @@ export class AuthController {
       const user = await this.authService.getUserById(req.userId!);
 
       if (!user) {
-        res.status(404).json({ error: "Utilisateur introuvable" });
+        res.status(404).json({
+          error: { code: "USER_NOT_FOUND", message: "User not found" },
+        });
         return;
       }
 
@@ -139,13 +128,15 @@ export class AuthController {
       });
     } catch (error) {
       console.error("[Profile Error]", error);
-      res.status(500).json({ error: "Erreur serveur" });
+      res.status(500).json({
+        error: { code: "INTERNAL_ERROR", message: "Unexpected server error" },
+      });
     }
   };
 
   updateProfile = async (req: Request, res: Response): Promise<void> => {
     try {
-      const changes = updateProfileSchema.parse(req.body);
+      const changes = req.body as UpdateProfileInput;
 
       const user = await this.authService.updateProfile(req.userId!, changes);
 
@@ -156,19 +147,6 @@ export class AuthController {
         createdAt: user.createdAt,
       });
     } catch (error: unknown) {
-      if (error instanceof z.ZodError) {
-        const { formErrors, fieldErrors } = z.flattenError(error);
-
-        res.status(400).json({
-          error: {
-            code: "VALIDATION_ERROR",
-            message: formErrors[0] ?? "Invalid request",
-            details: fieldErrors,
-          },
-        });
-        return;
-      }
-
       const message = error instanceof Error ? error.message : "";
 
       if (message === "Utilisateur introuvable") {

@@ -31,13 +31,25 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/ValidationError'
+              example:
+                error:
+                  code: VALIDATION_ERROR
+                  message: Invalid request
+                  details:
+                    email: ["Invalid email address"]
         '409':
           description: Conflit (L'email existe déjà).
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/ValidationError'
+              example:
+                error:
+                  code: EMAIL_ALREADY_IN_USE
+                  message: This email is already used by another account.
+                  details:
+                    email: ["This email is already in use"]
 
   /api/v1/auth/login:
     post:
@@ -67,13 +79,17 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/ValidationError'
         '401':
           description: Identifiants invalides.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/StandardError'
+              example:
+                error:
+                  code: INVALID_CREDENTIALS
+                  message: Invalid credentials.
 
   /api/v1/auth/refresh:
     post:
@@ -98,7 +114,11 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/StandardError'
+              example:
+                error:
+                  code: SESSION_EXPIRED
+                  message: Session expired, please sign in again.
 
   /api/v1/auth/me:
     get:
@@ -120,7 +140,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/StandardError'
     patch:
       summary: Mettre à jour le profil de l'utilisateur connecté
       description: >
@@ -160,7 +180,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/StandardError'
         '404':
           description: Utilisateur introuvable.
           content:
@@ -200,7 +220,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/StandardError'
 
   /api/v1/auth/me/export:
     get:
@@ -278,7 +298,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/StandardError'
         '404':
           description: >
             Un projet sélectionné est introuvable ou n'appartient pas à
@@ -312,7 +332,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/StandardError'
 
   # ==========================================
   # MODULE PROJECTS
@@ -357,7 +377,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/ValidationError'
 
   /api/v1/projects/{projectId}:
     get:
@@ -413,6 +433,10 @@ paths:
                 $ref: '#/components/schemas/Project'
         '400':
           description: Données invalides (Zod)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
         '403':
           $ref: '#/components/responses/ForbiddenError'
         '404':
@@ -434,6 +458,112 @@ paths:
       responses:
         '204':
           description: Projet supprimé avec succès
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/projects/{projectId}/members:
+    get:
+      summary: Liste les membres d'un projet (hors propriétaire)
+      tags:
+        - Projects
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Liste des membres
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProjectMember'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    post:
+      summary: Ajoute un membre au projet (lecture seule) par email
+      description: Réservé au propriétaire du projet.
+      tags:
+        - Projects
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddProjectMemberDto'
+      responses:
+        '201':
+          description: Membre ajouté
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectMember'
+        '400':
+          description: Données invalides (Zod)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: Projet introuvable, ou aucun utilisateur avec cet email.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+        '409':
+          description: >
+            L'utilisateur est déjà le propriétaire ou déjà membre du projet.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+
+  /api/v1/projects/{projectId}/members/{memberUserId}:
+    delete:
+      summary: Retire un membre du projet
+      description: Réservé au propriétaire du projet.
+      tags:
+        - Projects
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: memberUserId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Membre retiré avec succès
         '403':
           $ref: '#/components/responses/ForbiddenError'
         '404':
@@ -617,6 +747,10 @@ paths:
                 $ref: '#/components/schemas/Task'
         '400':
           description: Données invalides (Zod)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
         '403':
           $ref: '#/components/responses/ForbiddenError'
         '404':
@@ -651,6 +785,10 @@ paths:
                 $ref: '#/components/schemas/Task'
         '400':
           description: Données invalides (Zod)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
         '403':
           $ref: '#/components/responses/ForbiddenError'
         '404':
@@ -781,6 +919,25 @@ components:
             $ref: '#/components/schemas/Board'
           description: Liste des tableaux liés (peut être omis si non peuplé)
 
+    ProjectMember:
+      type: object
+      description: >
+        Read-only access grant; the owner is not duplicated here (see
+        Project.ownerId).
+      properties:
+        id:
+          type: string
+          format: uuid
+        projectId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+
     Board:
       type: object
       properties:
@@ -816,7 +973,7 @@ components:
           enum: [TODO, IN_PROGRESS, DONE]
         priority:
           type: string
-          enum: [LOW, NORMAL, HIGH]
+          enum: [Low, Medium, High]
         description:
           type: string
         createdAt:
@@ -830,20 +987,39 @@ components:
     # --- DTOs ---
     CreateProjectDto:
       type: object
+      additionalProperties: false
       required: [name]
       properties:
         name:
           type: string
+          minLength: 1
+          maxLength: 200
         description:
           type: string
+          maxLength: 2000
+          default: ""
 
     UpdateProjectDto:
       type: object
+      additionalProperties: false
+      minProperties: 1
       properties:
         name:
           type: string
+          minLength: 1
+          maxLength: 200
         description:
           type: string
+          maxLength: 2000
+
+    AddProjectMemberDto:
+      type: object
+      additionalProperties: false
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
 
     CreateBoardDto:
       type: object
@@ -860,15 +1036,28 @@ components:
 
     CreateTaskDto:
       type: object
+      additionalProperties: false
       required: [title]
       properties:
         title:
           type: string
+          minLength: 1
+          maxLength: 200
         description:
           type: string
+          maxLength: 5000
+          default: ""
+        status:
+          description: >
+            Normally omitted — new tasks start in TODO. Accepted for
+            completeness/defense-in-depth if a client sends it explicitly.
+          type: string
+          enum: [TODO, IN_PROGRESS, DONE]
+          default: TODO
         priority:
           type: string
-          enum: [LOW, NORMAL, HIGH]
+          enum: [Low, Medium, High]
+          default: Medium
         deadline:
           type: string
           format: date-time
@@ -880,17 +1069,22 @@ components:
 
     UpdateTaskDto:
       type: object
+      additionalProperties: false
+      minProperties: 1
       properties:
         title:
           type: string
+          minLength: 1
+          maxLength: 200
         status:
           type: string
           enum: [TODO, IN_PROGRESS, DONE]
         priority:
           type: string
-          enum: [LOW, NORMAL, HIGH]
+          enum: [Low, Medium, High]
         description:
           type: string
+          maxLength: 5000
         deadline:
           type: string
           format: date-time
@@ -901,18 +1095,8 @@ components:
           nullable: true
 
     # --- ERRORS ---
-    ErrorResponse:
-      type: object
-      properties:
-        error:
-          type: string
-          example: Message d'erreur
-        details:
-          type: array
-          items:
-            type: object
-          description: Présent uniquement pour les erreurs 400 (Zod).
-
+    # Every error response uses one of the two shapes below (never a bare
+    # string), matching docs/standards/API_CONVENTIONS.md §8.
     StandardError:
       type: object
       properties:
