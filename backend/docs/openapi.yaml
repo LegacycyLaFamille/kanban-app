@@ -756,6 +756,63 @@ paths:
         '404':
           $ref: '#/components/responses/NotFoundError'
 
+  /api/v1/tasks/my:
+    get:
+      summary: Tâches assignées à l'utilisateur connecté, tous projets confondus
+      description: >
+        Page "My tasks". Ne renvoie que les tâches des projets dont
+        l'utilisateur est propriétaire ou membre : une tâche restée assignée
+        après le retrait du projet n'apparaît plus. Tri par échéance la plus
+        proche, les tâches sans échéance en dernier, puis par date de
+        création.
+      tags:
+        - Tasks
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [TODO, IN_PROGRESS, DONE]
+      responses:
+        '200':
+          description: Tâches assignées avec leur projet.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  allOf:
+                    - $ref: '#/components/schemas/Task'
+                    - type: object
+                      properties:
+                        assigneeId:
+                          type: string
+                          format: uuid
+                          nullable: true
+                        project:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              format: uuid
+                            name:
+                              type: string
+        '400':
+          description: Paramètre de requête invalide ou inconnu.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          description: Non authentifié.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+
   /api/v1/tasks/{taskId}:
     patch:
       summary: Met à jour une tâche (statut, titre, boardId...)

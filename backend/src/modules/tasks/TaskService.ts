@@ -1,4 +1,8 @@
-import type { TaskRepository } from "./TaskRepository.js";
+import type {
+  AssignedTask,
+  AssignedTaskFilter,
+  TaskRepository,
+} from "./TaskRepository.js";
 import { Task } from "./Task.js";
 import type { ProjectAccessGuard } from "../../shared/security/ProjectAccessGuard.js";
 import { randomUUID } from "node:crypto";
@@ -48,6 +52,17 @@ export class TaskService {
       return [];
     }
     return tasks;
+  }
+
+  /**
+   * Tasks assigned to the user across all projects, limited to projects the
+   * user is owner or member of (checked by the repository query).
+   */
+  readAssigned(
+    userId: string,
+    filter: AssignedTaskFilter = {},
+  ): Promise<AssignedTask[]> {
+    return this.taskRepository.findAssignedTo(userId, filter);
   }
 
   /** Owner or member of the parent project. */
