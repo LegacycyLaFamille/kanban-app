@@ -21,10 +21,15 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - PORT=3000
       - SQLITE_DB_LOCATION=/data/todo.db
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_USER=${RABBITMQ_USER:-kanban}
+      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD must be set in .env}
     volumes:
       - backend-data:/data
     depends_on:
       postgres:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     expose:
       - "3000"
@@ -47,6 +52,28 @@ services:
       - "5432"
     restart: unless-stopped
 
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    # RabbitMQ stores its data under a directory named after the hostname.
+    hostname: rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER:-kanban}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD must be set in .env}
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+    # AMQP and management UI stay on the internal network, see
+    # docs/backend/RABBITMQ.md to reach the UI through an SSH tunnel.
+    expose:
+      - "5672"
+      - "15672"
+    restart: unless-stopped
+
 volumes:
   backend-data:
   postgres-data:
+  rabbitmq-data:
