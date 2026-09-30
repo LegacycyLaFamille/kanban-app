@@ -88,4 +88,4 @@ npx prisma generate
 
 ### 3. Observability
 
-`docker compose up -d` also starts the observability stack (OpenTelemetry Collector, Prometheus, Loki, Tempo and Grafana on <http://localhost:3001>). See [OBSERVABILITY.md](OBSERVABILITY.md).
+`docker compose up -d` also starts the observability stack (OpenTelemetry Collector, Prometheus, Loki, Tempo and Grafana on <http://localhost:3001>). See [OBSERVABILITY.md](OBSERVABILITY.md) and the [demo scenario](OBSERVABILITY_DEMO.md).

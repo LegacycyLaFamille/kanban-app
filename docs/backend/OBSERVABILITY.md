@@ -136,3 +136,15 @@ to Loki. Event workflow logs carry `component`, `eventId`, `eventType`,
   recorded.
 - Event logs only carry ids and types, never payloads: task titles are user
   content.
+
+## Dashboard
+
+**Kanban - Backend observability** (Grafana → Dashboards → Kanban) is
+provisioned from `docker/observability/grafana/dashboards/kanban-backend.json`,
+in four rows: API, Event workflow, Logs and Traces. It is read-only in
+Grafana: to change it, edit it in the UI, export it as JSON (Export → Export as
+JSON, "Export the dashboard to use in another instance" off) and replace the
+file.
+
+The demonstration scenario is described in
+[OBSERVABILITY_DEMO.md](OBSERVABILITY_DEMO.md).
