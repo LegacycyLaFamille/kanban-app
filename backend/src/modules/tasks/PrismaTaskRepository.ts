@@ -20,6 +20,7 @@ export class PrismaTaskRepository implements TaskRepository {
       prismaTask.deadline,
       prismaTask.createdAt,
       prismaTask.boardId,
+      prismaTask.assigneeId,
     );
   }
 
@@ -47,6 +48,7 @@ export class PrismaTaskRepository implements TaskRepository {
         deadline: task.deadline,
         projectId: task.projectId,
         boardId: task.boardId,
+        assigneeId: task.assigneeId,
       },
       create: {
         id: task.id,
@@ -58,6 +60,7 @@ export class PrismaTaskRepository implements TaskRepository {
         projectId: task.projectId,
         createdAt: task.createdAt,
         boardId: task.boardId,
+        assigneeId: task.assigneeId,
       },
     });
     return this.toDomain(saved);
