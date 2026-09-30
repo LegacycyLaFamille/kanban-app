@@ -12,6 +12,7 @@ import {
 } from "../../../shared/events/EventBus.js";
 import { InMemoryEventBus } from "../../../shared/events/InMemoryEventBus.js";
 import { publishSafely } from "../../../shared/events/publishSafely.js";
+import { createEventLogger } from "../../../shared/events/eventLogger.js";
 
 type TaskCreated = DomainEvent<"task.created", { taskId: string }>;
 
@@ -146,8 +147,8 @@ describe("publishSafely", () => {
     ).resolves.toBe(true);
   });
 
-  it("ne propage pas l'échec et le journalise avec l'id et le type", async () => {
-    const event = createEvent("task.created", {});
+  it("ne propage pas l'échec et le journalise en JSON avec l'id et le type, sans le payload", async () => {
+    const event = createEvent("task.created", { title: "secret" });
     const bus: EventBus = {
       publish: () =>
         Promise.reject(
@@ -157,13 +158,21 @@ describe("publishSafely", () => {
         ),
       subscribe: vi.fn(),
     };
-    const log = vi.fn();
-
-    await expect(publishSafely(bus, event, log)).resolves.toBe(false);
-    expect(log).toHaveBeenCalledWith(
-      expect.stringMatching(
-        new RegExp(`task\\.created ${event.id}.*RabbitMQ is not connected`),
-      ),
+    const lines: string[] = [];
+    const logger = createEventLogger("event-bus", (_level, line) =>
+      lines.push(line),
     );
+
+    await expect(publishSafely(bus, event, logger)).resolves.toBe(false);
+    expect(lines).toHaveLength(1);
+    expect(JSON.parse(lines[0]!)).toMatchObject({
+      level: "error",
+      component: "event-bus",
+      message: "Event lost: could not be published",
+      eventId: event.id,
+      eventType: "task.created",
+      error: "RabbitMQ is not connected",
+    });
+    expect(lines[0]).not.toContain("secret");
   });
 });

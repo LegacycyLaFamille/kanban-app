@@ -118,11 +118,12 @@ New consumers must follow the same rule: derive a unique key from
 ## Failures
 
 - Broker down when the task changes: the task is still saved, the event is
-  logged as lost (`[event-bus] Event lost: …`), no notification is created.
-- Consumer error (e.g. database down): the message goes to
-  `kanban.events.dead-letter` with the event id in the logs.
-
-Retries and replay from the dead-letter queue are covered by S2-28.
+  logged as lost (`Event lost: could not be published`), no notification is
+  created.
+- Consumer error (e.g. database down): retried 3 times, 5 s apart, then sent
+  to `kanban.events.dead-letter`. Duplicates caused by retries are harmless
+  (see the idempotency strategy above). Details in
+  [EVENTS.md](EVENTS.md#failures-and-retries).
 
 ## Code
 

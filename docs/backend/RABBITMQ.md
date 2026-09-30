@@ -81,7 +81,9 @@ The backend declares these on every (re)connection. Declaring is idempotent.
 | --------------------------- | ---------------- | ----------------------------------------------- |
 | `kanban.events`             | topic exchange   | Domain events, routing key `<domain>.<action>` (e.g. `task.created`) |
 | `kanban.events.dlx`         | topic exchange   | Dead-letter exchange                            |
-| `kanban.events.dead-letter` | queue (`#` on DLX) | Receives rejected / expired messages          |
+| `kanban.events.dead-letter` | queue (`#` on DLX) | Receives events that failed every attempt      |
+| `<consumer>`                | queue            | One per subscription, declared by the Event Bus |
+| `<consumer>.retry`          | queue (TTL)      | Delays retries, then returns them to `<consumer>` |
 
 Everything is durable. A module adds its own queue through `withQueues` in
 `src/shared/events/rabbitmq/topology.ts`, for example:
