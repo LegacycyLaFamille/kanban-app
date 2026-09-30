@@ -10,17 +10,22 @@ import { AuthProvider } from "./AuthProvider";
 vi.mock("../api/auth.api");
 
 vi.mock("../../../shared/api", async () => {
-  const actual =
-    await vi.importActual<typeof import("../../../shared/api")>(
-      "../../../shared/api",
-    );
+  const actual = await vi.importActual<typeof import("../../../shared/api")>(
+    "../../../shared/api",
+  );
 
   return { ...actual, setSessionExpiredHandler: vi.fn() };
 });
 
 function Probe() {
-  const { user, isAuthenticated, isInitializing, sessionError, signIn, signOut } =
-    useAuth();
+  const {
+    user,
+    isAuthenticated,
+    isInitializing,
+    sessionError,
+    signIn,
+    signOut,
+  } = useAuth();
 
   return (
     <div>
@@ -83,7 +88,9 @@ describe("AuthProvider", () => {
   });
 
   it("surfaces a session error on startup for non-auth failures (e.g. network)", async () => {
-    vi.mocked(authApi.getCurrentUser).mockRejectedValue(new Error("network down"));
+    vi.mocked(authApi.getCurrentUser).mockRejectedValue(
+      new Error("network down"),
+    );
 
     renderProvider();
 
@@ -113,7 +120,9 @@ describe("AuthProvider", () => {
     // Simulate httpClient's centralized 401 handler firing for a request
     // made from an unrelated feature (e.g. GET /projects), which is how
     // AuthProvider actually learns the backend session died mid-session.
-    const registeredHandler = vi.mocked(setSessionExpiredHandler).mock.calls.at(-1)?.[0];
+    const registeredHandler = vi
+      .mocked(setSessionExpiredHandler)
+      .mock.calls.at(-1)?.[0];
 
     expect(registeredHandler).toBeInstanceOf(Function);
 

@@ -422,7 +422,10 @@ describe("httpClient", () => {
       .mockResolvedValueOnce(
         new Response(
           JSON.stringify({
-            error: { code: "UNAUTHENTICATED", message: "Invalid or expired session." },
+            error: {
+              code: "UNAUTHENTICATED",
+              message: "Invalid or expired session.",
+            },
           }),
           { status: 401, headers: { "Content-Type": "application/json" } },
         ),
@@ -443,7 +446,10 @@ describe("httpClient", () => {
       .mockResolvedValueOnce(
         new Response(
           JSON.stringify({
-            error: { code: "UNAUTHENTICATED", message: "Invalid or expired session." },
+            error: {
+              code: "UNAUTHENTICATED",
+              message: "Invalid or expired session.",
+            },
           }),
           { status: 401, headers: { "Content-Type": "application/json" } },
         ),
@@ -452,7 +458,10 @@ describe("httpClient", () => {
       .mockResolvedValueOnce(
         new Response(
           JSON.stringify({
-            error: { code: "UNAUTHENTICATED", message: "Invalid or expired session." },
+            error: {
+              code: "UNAUTHENTICATED",
+              message: "Invalid or expired session.",
+            },
           }),
           { status: 401, headers: { "Content-Type": "application/json" } },
         ),
@@ -472,7 +481,10 @@ describe("httpClient", () => {
       .mockResolvedValueOnce(
         new Response(
           JSON.stringify({
-            error: { code: "UNAUTHENTICATED", message: "Invalid or expired session." },
+            error: {
+              code: "UNAUTHENTICATED",
+              message: "Invalid or expired session.",
+            },
           }),
           { status: 401, headers: { "Content-Type": "application/json" } },
         ),
@@ -498,16 +510,23 @@ describe("httpClient", () => {
     fetchMock.mockResolvedValueOnce(
       new Response(
         JSON.stringify({
-          error: { code: "INVALID_CREDENTIALS", message: "Invalid credentials." },
+          error: {
+            code: "INVALID_CREDENTIALS",
+            message: "Invalid credentials.",
+          },
         }),
         { status: 401, headers: { "Content-Type": "application/json" } },
       ),
     );
 
     await expect(
-      httpClient.post("/auth/login", { email: "a@b.com", password: "wrong" }, {
-        skipAuthRefresh: true,
-      }),
+      httpClient.post(
+        "/auth/login",
+        { email: "a@b.com", password: "wrong" },
+        {
+          skipAuthRefresh: true,
+        },
+      ),
     ).rejects.toBeInstanceOf(ApiError);
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
