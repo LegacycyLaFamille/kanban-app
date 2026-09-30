@@ -9,5 +9,6 @@ export class Task {
     public readonly deadline: Date | null,
     public readonly createdAt: Date,
     public readonly boardId: string | null,
+    public readonly assigneeId: string | null = null,
   ) {}
 }

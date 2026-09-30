@@ -113,7 +113,9 @@ export class RabbitMqConnection {
     if (this.model === null || !this.isConnected()) {
       throw new RabbitMqNotConnectedError(this.current.state);
     }
-    return this.model.createConfirmChannel();
+    const channel = await this.model.createConfirmChannel();
+    await channel.prefetch(this.config?.prefetch ?? 10);
+    return channel;
   }
 
   // Runs after every successful (re)connection, once the topology exists.

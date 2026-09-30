@@ -58,6 +58,7 @@ describe("AuthService", () => {
       expect(user.email).toBe(email);
       expect(user.name).toBe(name);
       expect(user.id).toBeDefined();
+      expect(user.role).toBe("USER");
 
       expect(mockUserRepository.createWithPassword).toHaveBeenCalledTimes(1);
       const [savedUser, savedHash] =
@@ -202,6 +203,25 @@ describe("AuthService", () => {
         new User("user_1", "old@example.com", "New Name", createdAt),
       );
       expect(mockUserRepository.updateProfile).toHaveBeenCalledWith(result);
+    });
+
+    it("preserves the user's role across a profile update", async () => {
+      const createdAt = new Date("2026-09-01T10:00:00.000Z");
+      const admin = User.create(
+        "admin@example.com",
+        "Admin",
+        "user_1",
+        createdAt,
+        "ADMIN",
+      );
+      mockUserRepository.findById.mockResolvedValue(admin);
+      mockUserRepository.updateProfile.mockResolvedValue();
+
+      const result = await authService.updateProfile("user_1", {
+        name: "New Name",
+      });
+
+      expect(result.role).toBe("ADMIN");
     });
 
     it("doit lever une erreur si l'utilisateur n'existe pas", async () => {

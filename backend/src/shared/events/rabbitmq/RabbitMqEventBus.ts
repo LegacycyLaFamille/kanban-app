@@ -1,30 +1,57 @@
-import type { Channel, ConfirmChannel, ConsumeMessage } from "amqplib";
+import type { ConfirmChannel, ConsumeMessage, Options } from "amqplib";
 import { parseDomainEvent, type DomainEvent } from "../DomainEvent.js";
 import {
   EventPublishError,
+  NonRetryableEventError,
   type EventBus,
   type EventSubscription,
 } from "../EventBus.js";
-import type { Logger, RabbitMqConnection } from "./RabbitMqConnection.js";
-import { EVENTS_EXCHANGE, declareTopology } from "./topology.js";
+import {
+  createEventLogger,
+  errorMessage,
+  type EventLogger,
+} from "../eventLogger.js";
+import type { RabbitMqConnection } from "./RabbitMqConnection.js";
+import {
+  DEAD_LETTER_EXCHANGE,
+  EVENTS_EXCHANGE,
+  declareTopology,
+} from "./topology.js";
 
-const prefix = "[event-bus]";
-const consoleLogger: Logger = {
-  info: (m) => console.log(`${prefix} ${m}`),
-  warn: (m) => console.warn(`${prefix} ${m}`),
-  error: (m) => console.error(`${prefix} ${m}`),
+export interface RetryPolicy {
+  // Retries after the first attempt: maxRetries + 1 attempts in total.
+  maxRetries: number;
+  // Wait before each retry. Fixed per consumer: changing it requires
+  // deleting the existing `<consumer>.retry` queue (its TTL is immutable).
+  delayMs: number;
+}
+
+export const DEFAULT_RETRY_POLICY: RetryPolicy = {
+  maxRetries: 3,
+  delayMs: 5_000,
 };
 
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
+// Headers carried by retried and dead-lettered messages.
+export const RETRY_COUNT_HEADER = "x-retry-count";
+export const FAILED_CONSUMER_HEADER = "x-failed-consumer";
+export const FAILURE_REASON_HEADER = "x-failure-reason";
+
+export const retryQueueName = (consumer: string) => `${consumer}.retry`;
+
+function retryCount(message: ConsumeMessage): number {
+  const value: unknown = message.properties.headers?.[RETRY_COUNT_HEADER];
+  return typeof value === "number" && value >= 0 ? value : 0;
 }
 
 // RabbitMQ implementation of the Event Bus:
 // - publish: persistent message on the `kanban.events` topic exchange, the
 //   event type as routing key, confirmed by the broker before resolving;
-// - subscribe: one durable queue per subscription, bound to its event types,
-//   dead-lettered on failure. Consumers are re-created after every
-//   reconnection.
+// - subscribe: one durable queue per subscription, bound to its event types.
+//   A failed event is re-queued for this consumer only, through
+//   `<consumer>.retry` (TTL = retry delay), up to maxRetries times, then
+//   published to the dead-letter exchange. A message is acknowledged only
+//   once its copy (retry or dead-letter) is confirmed by the broker.
+//   Consumers are re-created after every reconnection.
 export class RabbitMqEventBus implements EventBus {
   private publishChannel: Promise<ConfirmChannel> | null = null;
   private readonly subscriptions: EventSubscription[] = [];
@@ -33,7 +60,8 @@ export class RabbitMqEventBus implements EventBus {
 
   constructor(
     private readonly connection: RabbitMqConnection,
-    private readonly logger: Logger = consoleLogger,
+    private readonly logger: EventLogger = createEventLogger("event-bus"),
+    private readonly retryPolicy: RetryPolicy = DEFAULT_RETRY_POLICY,
   ) {
     connection.onConnected(() => this.startConsumers());
   }
@@ -81,7 +109,9 @@ export class RabbitMqEventBus implements EventBus {
     if (this.publishChannel === null) {
       const opening = this.connection.createConfirmChannel().then((channel) => {
         channel.on("error", (error: unknown) => {
-          this.logger.error(`Publish channel error: ${errorMessage(error)}`);
+          this.logger.error("Publish channel error", {
+            error: errorMessage(error),
+          });
         });
         channel.on("close", () => {
           if (this.publishChannel === opening) this.publishChannel = null;
@@ -101,9 +131,10 @@ export class RabbitMqEventBus implements EventBus {
       try {
         await this.startConsumer(subscription);
       } catch (error) {
-        this.logger.error(
-          `Could not start consumer ${subscription.name}: ${errorMessage(error)}`,
-        );
+        this.logger.error("Could not start consumer", {
+          consumer: subscription.name,
+          error: errorMessage(error),
+        });
       }
     }
   }
@@ -120,78 +151,194 @@ export class RabbitMqEventBus implements EventBus {
   }
 
   private async openConsumer(subscription: EventSubscription): Promise<void> {
-    const channel = await this.connection.createChannel();
+    const consumer = subscription.name;
+    // Confirm channel: retry and dead-letter copies are confirmed by the
+    // broker before the original message is acknowledged.
+    const channel = await this.connection.createConfirmChannel();
     channel.on("error", (error: unknown) => {
-      this.logger.error(
-        `Consumer ${subscription.name} channel error: ${errorMessage(error)}`,
-      );
+      this.logger.error("Consumer channel error", {
+        consumer,
+        error: errorMessage(error),
+      });
     });
-    channel.on("close", () => this.active.delete(subscription.name));
+    channel.on("close", () => this.active.delete(consumer));
 
     await declareTopology(channel, {
       exchanges: [],
       queues: [
         {
-          name: subscription.name,
+          name: consumer,
           exchange: EVENTS_EXCHANGE,
           bindings: subscription.eventTypes,
           deadLetter: true,
         },
       ],
     });
+    // Expired messages go back to this consumer's queue only (default
+    // exchange, routing key = queue name), not to every subscriber.
+    await channel.assertQueue(retryQueueName(consumer), {
+      durable: true,
+      messageTtl: this.retryPolicy.delayMs,
+      deadLetterExchange: "",
+      deadLetterRoutingKey: consumer,
+    });
 
-    await channel.consume(subscription.name, (message) => {
+    await channel.consume(consumer, (message) => {
       // null means the broker cancelled the consumer (e.g. queue deleted).
       if (message === null) {
-        this.logger.warn(`Consumer ${subscription.name} cancelled by broker`);
+        this.logger.warn("Consumer cancelled by broker", { consumer });
         return;
       }
       void this.handle(channel, subscription, message);
     });
-    this.logger.info(
-      `Consumer ${subscription.name} listening to ${subscription.eventTypes.join(", ")}`,
-    );
+    this.logger.info("Consumer started", {
+      consumer,
+      eventTypes: subscription.eventTypes,
+      maxAttempts: this.retryPolicy.maxRetries + 1,
+      retryDelayMs: this.retryPolicy.delayMs,
+    });
   }
 
   private async handle(
-    channel: Channel,
+    channel: ConfirmChannel,
     subscription: EventSubscription,
     message: ConsumeMessage,
   ): Promise<void> {
+    const consumer = subscription.name;
+    const maxAttempts = this.retryPolicy.maxRetries + 1;
+
     let event: DomainEvent;
     try {
       event = parseDomainEvent(JSON.parse(message.content.toString("utf8")));
     } catch (error) {
-      this.logger.error(
-        `Consumer ${subscription.name} rejected unreadable message ` +
-          `${message.properties.messageId ?? "(no id)"}: ${errorMessage(error)}`,
-      );
-      this.settle(channel, message, false);
+      // Retrying cannot fix an unreadable message.
+      const reason = errorMessage(error);
+      this.logger.error("Unreadable message sent to dead-letter", {
+        consumer,
+        messageId: message.properties.messageId ?? null,
+        error: reason,
+      });
+      await this.forward(channel, message, {
+        exchange: DEAD_LETTER_EXCHANGE,
+        routingKey: "unreadable",
+        headers: {
+          [FAILED_CONSUMER_HEADER]: consumer,
+          [FAILURE_REASON_HEADER]: reason,
+        },
+      });
       return;
     }
 
+    const attempt = retryCount(message) + 1;
+    const context = {
+      eventId: event.id,
+      eventType: event.type,
+      consumer,
+      attempt,
+      maxAttempts,
+    };
+
     try {
       await subscription.handler(event);
-      this.settle(channel, message, true);
     } catch (error) {
-      this.logger.error(
-        `Consumer ${subscription.name} failed on ${event.type} ${event.id}, ` +
-          `sent to dead-letter: ${errorMessage(error)}`,
-      );
-      this.settle(channel, message, false);
+      const reason = errorMessage(error);
+      const retryable =
+        !(error instanceof NonRetryableEventError) && attempt < maxAttempts;
+
+      if (retryable) {
+        this.logger.warn("Event processing failed, retry scheduled", {
+          ...context,
+          retryInMs: this.retryPolicy.delayMs,
+          error: reason,
+        });
+        await this.forward(channel, message, {
+          exchange: "",
+          routingKey: retryQueueName(consumer),
+          headers: {
+            [RETRY_COUNT_HEADER]: attempt,
+            [FAILURE_REASON_HEADER]: reason,
+          },
+        });
+      } else {
+        this.logger.error("Event processing failed, sent to dead-letter", {
+          ...context,
+          nonRetryable: error instanceof NonRetryableEventError,
+          error: reason,
+        });
+        await this.forward(channel, message, {
+          exchange: DEAD_LETTER_EXCHANGE,
+          routingKey: event.type,
+          headers: {
+            [RETRY_COUNT_HEADER]: attempt - 1,
+            [FAILED_CONSUMER_HEADER]: consumer,
+            [FAILURE_REASON_HEADER]: reason,
+          },
+        });
+      }
+      return;
     }
+
+    if (attempt > 1) {
+      this.logger.info("Event processed after retry", context);
+    }
+    this.settle(channel, message, "ack");
+  }
+
+  // Publishes a copy of the message (same body and properties, extra
+  // headers) and acknowledges the original once the broker confirmed it.
+  // If the copy fails, the original is requeued rather than lost.
+  private async forward(
+    channel: ConfirmChannel,
+    message: ConsumeMessage,
+    target: {
+      exchange: string;
+      routingKey: string;
+      headers: Record<string, unknown>;
+    },
+  ): Promise<void> {
+    const { headers, ...properties } = message.properties;
+    const options: Options.Publish = {
+      ...(properties as Options.Publish),
+      persistent: true,
+      headers: { ...headers, ...target.headers },
+    };
+    try {
+      await new Promise<void>((resolve, reject) => {
+        channel.publish(
+          target.exchange,
+          target.routingKey,
+          message.content,
+          options,
+          (err: unknown) => (err ? reject(err) : resolve()),
+        );
+      });
+    } catch (error) {
+      this.logger.error("Could not forward message, requeued", {
+        messageId: message.properties.messageId ?? null,
+        target: target.routingKey,
+        error: errorMessage(error),
+      });
+      this.settle(channel, message, "requeue");
+      return;
+    }
+    this.settle(channel, message, "ack");
   }
 
   // If the channel closed meanwhile, the broker redelivers the message on
   // the next connection: nothing else to do here.
-  private settle(channel: Channel, message: ConsumeMessage, ok: boolean) {
+  private settle(
+    channel: ConfirmChannel,
+    message: ConsumeMessage,
+    outcome: "ack" | "requeue",
+  ) {
     try {
-      if (ok) channel.ack(message);
-      else channel.nack(message, false, false);
+      if (outcome === "ack") channel.ack(message);
+      else channel.nack(message, false, true);
     } catch (error) {
-      this.logger.warn(
-        `Could not ${ok ? "ack" : "nack"} message, it will be redelivered: ${errorMessage(error)}`,
-      );
+      this.logger.warn("Could not settle message, it will be redelivered", {
+        messageId: message.properties.messageId ?? null,
+        error: errorMessage(error),
+      });
     }
   }
 }

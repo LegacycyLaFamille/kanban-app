@@ -36,6 +36,7 @@ function fakeModel() {
   const channel = fakeChannel();
   const model = Object.assign(emitter, {
     createChannel: vi.fn().mockResolvedValue(channel),
+    createConfirmChannel: vi.fn().mockResolvedValue(channel),
     close: vi.fn(async () => {
       emitter.emit("close");
     }),
@@ -301,5 +302,50 @@ describe("RabbitMqConnection", () => {
     expect(model.close).toHaveBeenCalledOnce();
     expect(connect).toHaveBeenCalledOnce();
     expect(logger.warn).not.toHaveBeenCalled();
+  });
+
+  it("ouvre des canaux confirm avec le prefetch configuré, seulement une fois connecté", async () => {
+    const { model, channel } = fakeModel();
+    const connection = new RabbitMqConnection(config, {
+      topology: defaultTopology,
+      logger,
+      connect: vi.fn().mockResolvedValue(model),
+    });
+
+    await expect(connection.createConfirmChannel()).rejects.toThrow(
+      RabbitMqNotConnectedError,
+    );
+
+    await connection.start();
+    await connection.createConfirmChannel();
+
+    expect(model.createConfirmChannel).toHaveBeenCalledOnce();
+    expect(channel.prefetch).toHaveBeenCalledWith(5);
+  });
+
+  it("appelle les hooks onConnected à chaque connexion et journalise leurs erreurs", async () => {
+    const first = fakeModel();
+    const second = fakeModel();
+    const connection = new RabbitMqConnection(config, {
+      topology: defaultTopology,
+      logger,
+      connect: vi
+        .fn()
+        .mockResolvedValueOnce(first.model)
+        .mockResolvedValueOnce(second.model),
+      initialReconnectDelayMs: 10,
+    });
+    const hook = vi.fn().mockRejectedValueOnce(new Error("setup failed"));
+    connection.onConnected(hook);
+
+    await connection.start();
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.stringContaining("Post-connection setup failed: setup failed"),
+    );
+
+    first.model.emit("close", new Error("lost"));
+    await vi.advanceTimersByTimeAsync(10);
+
+    expect(hook).toHaveBeenCalledTimes(2);
   });
 });

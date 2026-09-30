@@ -19,7 +19,11 @@ export function MainLayout() {
   return (
     <div className={styles.layout}>
       <AppSidebar
-        {...(user && { userName: user.name, userEmail: user.email })}
+        {...(user && {
+          userName: user.name,
+          userEmail: user.email,
+          isAdmin: user.role === "ADMIN",
+        })}
         onLogout={handleLogout}
       />
 
