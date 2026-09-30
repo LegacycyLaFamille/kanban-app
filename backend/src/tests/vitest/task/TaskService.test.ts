@@ -7,6 +7,7 @@ import { ProjectAccessGuard } from "../../../shared/security/ProjectAccessGuard.
 import { randomUUID } from "node:crypto";
 import type { ProjectRepository } from "../../../modules/projects/ProjectRepository.js";
 import type { ProjectMemberRepository } from "../../../modules/projects/ProjectMemberRepository.js";
+import { InMemoryEventBus } from "../../../shared/events/InMemoryEventBus.js";
 
 describe("TaskService", () => {
   let taskService: TaskService;
@@ -60,7 +61,11 @@ describe("TaskService", () => {
       mockProjectMemberRepository as unknown as ProjectMemberRepository,
     );
 
-    taskService = new TaskService(mockTaskRepository, projectAccessGuard);
+    taskService = new TaskService(
+      mockTaskRepository,
+      projectAccessGuard,
+      new InMemoryEventBus(),
+    );
   });
 
   describe("create", () => {

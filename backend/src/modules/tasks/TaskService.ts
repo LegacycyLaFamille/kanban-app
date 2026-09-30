@@ -2,6 +2,16 @@ import type { TaskRepository } from "./TaskRepository.js";
 import { Task } from "./Task.js";
 import type { ProjectAccessGuard } from "../../shared/security/ProjectAccessGuard.js";
 import { randomUUID } from "node:crypto";
+import type { EventBus } from "../../shared/events/EventBus.js";
+import { createEvent } from "../../shared/events/DomainEvent.js";
+import { publishSafely } from "../../shared/events/publishSafely.js";
+import {
+  changedTaskFields,
+  isCompletion,
+  type TaskCompletedEvent,
+  type TaskCreatedEvent,
+  type TaskUpdatedEvent,
+} from "./task.events.js";
 
 export interface CreateTaskDto {
   title: string;
@@ -25,6 +35,7 @@ export class TaskService {
   constructor(
     private readonly taskRepository: TaskRepository,
     private readonly projectAccessGuard: ProjectAccessGuard,
+    private readonly eventBus: EventBus,
   ) {}
 
   /** Owner or member of the parent project. */
@@ -72,6 +83,20 @@ export class TaskService {
     if (!res) {
       throw new Error("Task not created");
     }
+
+    const event: TaskCreatedEvent = createEvent(
+      "task.created",
+      {
+        taskId: res.id,
+        projectId: res.projectId,
+        boardId: res.boardId,
+        title: res.title,
+        status: res.status,
+        priority: res.priority,
+      },
+      { actorId: userid },
+    );
+    await publishSafely(this.eventBus, event);
     return res;
   }
 
@@ -102,6 +127,7 @@ export class TaskService {
     );
 
     await this.taskRepository.save(updatedTask);
+    await this.publishUpdateEvents(task, updatedTask, userid);
     return updatedTask;
   }
 
@@ -113,5 +139,44 @@ export class TaskService {
     }
     await this.projectAccessGuard.assertIsOwner(task.projectId, userid);
     await this.taskRepository.delete(task);
+  }
+
+  // Published only once the update is persisted, and only for real changes
+  // so that resending the same payload has no side effect.
+  private async publishUpdateEvents(
+    before: Task,
+    after: Task,
+    actorId: string,
+  ): Promise<void> {
+    const changes = changedTaskFields(before, after);
+    if (changes.length === 0) return;
+
+    const updated: TaskUpdatedEvent = createEvent(
+      "task.updated",
+      {
+        taskId: after.id,
+        projectId: after.projectId,
+        title: after.title,
+        changes,
+        previousStatus: before.status,
+        status: after.status,
+      },
+      { actorId },
+    );
+    await publishSafely(this.eventBus, updated);
+
+    if (isCompletion(before, after)) {
+      const completed: TaskCompletedEvent = createEvent(
+        "task.completed",
+        {
+          taskId: after.id,
+          projectId: after.projectId,
+          title: after.title,
+          previousStatus: before.status,
+        },
+        { actorId },
+      );
+      await publishSafely(this.eventBus, completed);
+    }
   }
 }
