@@ -185,10 +185,21 @@ Tasks:
 ```text
 POST   /api/projects/:projectId/tasks
 GET    /api/projects/:projectId/tasks
+GET    /api/tasks/my            tasks assigned to the current user, across all their projects
 GET    /api/tasks/:taskId
 PATCH  /api/tasks/:taskId
 DELETE /api/tasks/:taskId
 ```
+
+`GET /tasks/my` is declared before `/tasks/:taskId` so `my` is never read as
+a task id. It requires only `requireAuth` — a user can always see what's
+assigned to them, so this is not `ProjectAccessGuard`- or `requireAdmin`-gated
+like `/admin/tasks` is. It's restricted to tasks in projects the requesting
+user still owns or is a member of: `Task.assigneeId` isn't cleared when a
+user is removed from a project, so the repository query re-checks access
+itself (same rule as `ProjectAccessGuard.assertCanView`) rather than trusting
+the stored assignment. Supports an optional `?status=` filter and sorts by
+closest deadline first (tasks without a deadline last), then creation date.
 
 ---
 

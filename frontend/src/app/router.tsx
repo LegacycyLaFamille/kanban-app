@@ -12,6 +12,8 @@ import { ProfilePage } from "../features/profile/pages/ProfilePage";
 
 import { AdminDashboardPage } from "../features/admin/pages/AdminDashboardPage";
 
+import { MyTasksPage } from "../features/tasks/pages/MyTasksPage";
+
 import { WaitTemplate } from "../shared/components/WaitTemplate";
 
 import { LegacyApp } from "./legacy/LegacyApp";
@@ -62,7 +64,7 @@ export const router = createBrowserRouter([
           },
           {
             path: "/tasks",
-            element: <WaitTemplate template="TASKS" />,
+            element: <MyTasksPage />,
           },
           {
             path: "/notifications",

@@ -1,0 +1,12 @@
+.page {
+  width: 100%;
+  padding: 32px;
+  box-sizing: border-box;
+}
+
+.groupTrigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
