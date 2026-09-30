@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 
-import { ApiError } from "../../../shared/api";
+import { toUserMessage } from "../../../shared/api";
 import { updateTask } from "../api/tasks.api";
 import type { Task, TaskStatus } from "../types/task.types";
 
@@ -72,9 +72,7 @@ export function useTaskDragAndDrop({
           return next;
         });
         setError(
-          requestError instanceof ApiError
-            ? requestError.message
-            : "Unable to move task. Please try again.",
+          toUserMessage(requestError, "Unable to move task. Please try again."),
         );
       } finally {
         pendingRef.current.delete(task.id);
