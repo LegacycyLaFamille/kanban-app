@@ -1,6 +1,6 @@
 import type { TaskRepository } from "./TaskRepository.js";
 import { Task } from "./Task.js";
-import type { ProjectRepository } from "../projects/ProjectRepository.js";
+import type { ProjectAccessGuard } from "../../shared/security/ProjectAccessGuard.js";
 import { randomUUID } from "node:crypto";
 
 export interface CreateTaskDto {
@@ -24,17 +24,13 @@ export interface updateTaskDto {
 export class TaskService {
   constructor(
     private readonly taskRepository: TaskRepository,
-    private readonly projectRepository: ProjectRepository,
+    private readonly projectAccessGuard: ProjectAccessGuard,
   ) {}
 
+  /** Owner or member of the parent project. */
   async read(projectId: string, userid: string): Promise<Task[]> {
-    const project = await this.projectRepository.findById(projectId);
-    if (!project) {
-      throw new Error("Project not found");
-    }
-    if (project.ownerId !== userid) {
-      throw new Error("Forbidden");
-    }
+    await this.projectAccessGuard.assertCanView(projectId, userid);
+
     const tasks = await this.taskRepository.findByProjectId(projectId);
 
     if (!tasks) {
@@ -43,25 +39,23 @@ export class TaskService {
     return tasks;
   }
 
+  /** Owner or member of the parent project. */
   async readSingle(taskId: string, userid: string): Promise<Task> {
     const task = await this.taskRepository.findById(taskId);
     if (!task) {
       throw new Error("Not found");
     }
-    if (!(await this.checkPermission(userid, task))) {
-      throw new Error("Forbidden");
-    }
+    await this.projectAccessGuard.assertCanView(task.projectId, userid);
     return task;
   }
 
+  /** Owner of the parent project only. */
   async create(
     projectId: string,
     userid: string,
     data: CreateTaskDto,
   ): Promise<Task> {
-    const project = await this.projectRepository.findById(projectId);
-    if (!project) throw new Error("Project not found");
-    if (project.ownerId !== userid) throw new Error("Forbidden");
+    await this.projectAccessGuard.assertIsOwner(projectId, userid);
 
     const newTask = new Task(
       randomUUID(),
@@ -81,6 +75,7 @@ export class TaskService {
     return res;
   }
 
+  /** Owner of the parent project only. */
   async update(
     taskId: string,
     userid: string,
@@ -88,8 +83,7 @@ export class TaskService {
   ): Promise<Task> {
     const task = await this.taskRepository.findById(taskId);
     if (!task) throw new Error("Not found");
-    if (!(await this.checkPermission(userid, task)))
-      throw new Error("Forbidden");
+    await this.projectAccessGuard.assertIsOwner(task.projectId, userid);
 
     const updatedTask = new Task(
       task.id,
@@ -107,22 +101,13 @@ export class TaskService {
     return updatedTask;
   }
 
+  /** Owner of the parent project only. */
   async delete(taskId: string, userid: string): Promise<void> {
     const task = await this.taskRepository.findById(taskId);
     if (!task) {
       throw new Error("Not found");
     }
-    if (!(await this.checkPermission(userid, task))) {
-      throw new Error("Forbidden");
-    }
+    await this.projectAccessGuard.assertIsOwner(task.projectId, userid);
     await this.taskRepository.delete(task);
-  }
-
-  private async checkPermission(userid: string, task: Task): Promise<boolean> {
-    const project = await this.projectRepository.findById(task.projectId);
-    if (!project) {
-      throw new Error("Project not found");
-    }
-    return project.ownerId === userid;
   }
 }

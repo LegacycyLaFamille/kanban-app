@@ -453,6 +453,29 @@ Tasks A
 
 L’utilisateur A ne doit pas pouvoir consulter ou modifier les ressources privées de l’utilisateur B.
 
+Chaque projet a exactement un propriétaire (`Project.ownerId`), qui dispose
+de tous les droits (lecture/écriture/suppression) et gère les membres. Une
+table de jointure `ProjectMember` accorde à d'autres utilisateurs un accès
+en lecture seule au projet, sans en faire des propriétaires :
+
+```text
+Project
+ ├── owner         (User, requis — accès complet, gère les membres)
+ └── ProjectMember (User, accès en lecture seule)
+```
+
+L'accès à une tâche n'est jamais vérifié indépendamment : il découle
+toujours de l'accès de l'utilisateur au projet parent de la tâche
+(propriétaire ou membre peuvent lire ; seul le propriétaire peut
+créer/modifier/supprimer). Cette règle est centralisée dans un unique
+`ProjectAccessGuard` partagé (`backend/src/shared/security/`), utilisé à la
+fois par les modules projects et tasks.
+
+Conformément à l'[ADR-007](../adr/ADR-007-no-legacy-data-migration.md), les
+anciennes données Todo ne sont jamais migrées vers ce domaine : `ProjectMember`
+et `Project.ownerId` sont donc tous deux des relations requises et non
+nullables — il n'y a pas de données historiques à prendre en compte ici.
+
 ### Étape 9 — Introduire l’event-driven
 
 Une fois le domaine Task stabilisé :
