@@ -92,7 +92,11 @@ export class TaskService {
       task.projectId,
       data.status ?? task.status,
       data.priority ?? task.priority,
-      data.deadline ? new Date(data.deadline) : task.deadline,
+      data.deadline !== undefined
+        ? data.deadline
+          ? new Date(data.deadline)
+          : null
+        : task.deadline,
       task.createdAt,
       data.boardId !== undefined ? data.boardId : task.boardId,
     );
