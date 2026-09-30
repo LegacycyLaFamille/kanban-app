@@ -75,9 +75,9 @@ return task;
 `eventBus.publish` itself resolves only once RabbitMQ has confirmed the
 message, and rejects with `EventPublishError` otherwise.
 
-Known limit: an event published while the broker is unreachable is lost and
-logged as `[event-bus] Event lost: <type> <id> (…)`. Retries are the scope of
-S2-28.
+Known limit, accepted for S2-28: an event published while the broker is
+unreachable is **not retried**. It is logged as an error (see below) and
+must be handled by hand if needed.
 
 ## Consuming
 
@@ -92,15 +92,68 @@ await eventBus.subscribe<TaskCreated>({
 - Each subscription gets its own durable RabbitMQ queue named after
   `name`, bound to `eventTypes` on `kanban.events`. Several subscriptions
   receive their own copy of the same event.
-- The handler resolving acknowledges the message. Throwing sends it to
-  `kanban.events.dead-letter` and logs the event type and id. Unreadable
-  messages go there too.
+- The handler resolving acknowledges the message. Failures are handled as
+  described in [Failures and retries](#failures-and-retries).
 - Consumers are re-created automatically after a reconnection.
 - Delivery is **at-least-once**: the same event can be delivered twice
   (e.g. connection lost before the ack). Handlers must be idempotent, using
   `event.id`.
 - Removing an event type from `eventTypes` does not remove the existing
   binding in RabbitMQ: unbind it manually from the management UI.
+
+## Failures and retries
+
+**Consumers.** When a handler throws, the event is retried for **this
+consumer only**, after a delay, then dead-lettered:
+
+```text
+kanban.events ─► <consumer> ──handler throws──► <consumer>.retry (TTL 5 s)
+                     ▲                                  │ expires
+                     └──────────────────────────────────┘
+after 4 attempts (1 + 3 retries) ──► kanban.events.dlx ─► kanban.events.dead-letter
+```
+
+| Case | Behaviour |
+| ---- | --------- |
+| Handler throws | Retried up to 3 times, 5 s apart, then dead-letter |
+| Handler throws `NonRetryableEventError` | Dead-letter at once (retrying cannot help, e.g. invalid payload) |
+| Unreadable message (bad JSON / envelope) | Dead-letter at once, routing key `unreadable` |
+| Retry / dead-letter copy not confirmed by the broker | Original requeued, never lost |
+
+- Retries go through `<consumer>.retry`, whose expired messages return to
+  `<consumer>` only: other subscribers of the same event are not affected.
+- A message is acknowledged only once its retry or dead-letter copy has
+  been confirmed by RabbitMQ.
+- Retried and dead-lettered messages keep their body and `messageId` (the
+  event id) and carry headers: `x-retry-count`, `x-failure-reason`,
+  `x-failed-consumer` (dead-letter). Inspect them in the management UI,
+  queue `kanban.events.dead-letter` → *Get messages*.
+- The policy (`maxRetries: 3`, `delayMs: 5000`) is `DEFAULT_RETRY_POLICY` in
+  `RabbitMqEventBus.ts`. Changing the delay of an existing consumer requires
+  deleting its `<consumer>.retry` queue first (a queue TTL cannot change).
+- Handlers must stay idempotent: a retried event is the same event.
+
+**Publishers.** No retry: `publishSafely` logs the lost event as an error
+with its id and type, and the business operation still succeeds.
+
+**Logs.** The event workflow logs one JSON object per line, ready for the
+centralized logging stack (S2-36):
+
+```json
+{"time":"2026-09-30T16:30:32.681Z","level":"warn","component":"event-bus","message":"Event processing failed, retry scheduled","eventId":"42eb…","eventType":"task.created","consumer":"notifications.task-events","attempt":2,"maxAttempts":4,"retryInMs":5000,"error":"…"}
+```
+
+| Message | Level |
+| ------- | ----- |
+| `Event processing failed, retry scheduled` | warn |
+| `Event processed after retry` | info |
+| `Event processing failed, sent to dead-letter` | error |
+| `Unreadable message sent to dead-letter` | error |
+| `Event lost: could not be published` | error |
+
+Payloads are never logged (they contain user content such as task titles).
+The event `id` is the correlation key between the publisher, the retries and
+the dead-letter queue until tracing is added (S2-37).
 
 ## Tests
 

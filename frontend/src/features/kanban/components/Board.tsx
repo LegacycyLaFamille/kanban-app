@@ -178,6 +178,7 @@ export function Board({ projectId }: BoardProps) {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [activeTask, setActiveTask] = useState<FrontendTask>(EMPTY_TASK);
   const [isEditing, setIsEditing] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   // Map API items to frontend tasks, applying any in-flight optimistic status
   const tasks: FrontendTask[] = backendTasks.map((task) =>
@@ -202,20 +203,29 @@ export function Board({ projectId }: BoardProps) {
       columnId,
     });
     setIsEditing(false);
+    setValidationError(null);
     setIsModalOpen(true);
   };
 
   const handleOpenEdit = (task: FrontendTask) => {
     setActiveTask({ ...task });
     setIsEditing(true);
+    setValidationError(null);
     setIsModalOpen(true);
   };
 
   const handleSave = async () => {
-    if (!activeTask.title.trim()) return;
+    const trimmedTitle = activeTask.title.trim();
+
+    if (!trimmedTitle) {
+      setValidationError("Task title is required.");
+      return;
+    }
+
+    setValidationError(null);
 
     const payload = {
-      title: activeTask.title,
+      title: trimmedTitle,
       description: activeTask.description,
       priority: toBackendPriority(activeTask.priority),
       status: toBackendStatus(activeTask.columnId),
@@ -255,7 +265,8 @@ export function Board({ projectId }: BoardProps) {
     }
   };
 
-  const currentActionError = createError || updateError || deleteError;
+  const currentActionError =
+    validationError || createError || updateError || deleteError;
 
   return (
     <DndProvider backend={HTML5Backend}>
@@ -407,9 +418,10 @@ export function Board({ projectId }: BoardProps) {
                     name="title"
                     placeholder="Task title..."
                     value={activeTask.title}
-                    onChange={({ value }) =>
-                      setActiveTask((prev) => ({ ...prev, title: value }))
-                    }
+                    onChange={({ value }) => {
+                      setActiveTask((prev) => ({ ...prev, title: value }));
+                      setValidationError(null);
+                    }}
                   />
                 </View>
 

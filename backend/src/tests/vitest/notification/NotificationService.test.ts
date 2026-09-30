@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import { NotificationService } from "../../../modules/notifications/NotificationService.js";
-import type { Notification } from "../../../modules/notifications/Notification.js";
-import type { NotificationRepository } from "../../../modules/notifications/NotificationRepository.js";
+import { Notification } from "../../../modules/notifications/Notification.js";
+import { InMemoryNotificationRepository } from "./InMemoryNotificationRepository.js";
 import {
   NOTIFICATION_CONSUMER,
   subscribeNotificationConsumer,
@@ -20,26 +20,6 @@ import { InMemoryEventBus } from "../../../shared/events/InMemoryEventBus.js";
 const OWNER = "owner";
 const ALICE = "alice";
 const BOB = "bob";
-
-// Mirrors the Prisma repository: (eventId, userId) is unique and duplicates
-// are skipped.
-class InMemoryNotificationRepository implements NotificationRepository {
-  readonly rows: Notification[] = [];
-
-  async createMany(notifications: Notification[]): Promise<number> {
-    let count = 0;
-    for (const n of notifications) {
-      const exists = this.rows.some(
-        (r) => r.eventId === n.eventId && r.userId === n.userId,
-      );
-      if (!exists) {
-        this.rows.push(n);
-        count++;
-      }
-    }
-    return count;
-  }
-}
 
 function member(userId: string) {
   return new ProjectMember(`m-${userId}`, "proj-1", userId, new Date());
@@ -233,5 +213,77 @@ describe("Workflow task → Event Bus → notifications", () => {
         eventTypes: ["task.created", "task.completed"],
       }),
     );
+  });
+});
+
+describe("Idempotence du consumer (S2-29)", () => {
+  function setup() {
+    const eventBus = new InMemoryEventBus();
+    const notifications = new InMemoryNotificationRepository();
+    const log = vi.fn();
+    const service = new NotificationService(
+      notifications,
+      {
+        findById: vi
+          .fn()
+          .mockResolvedValue(
+            new Project("proj-1", "Kanban", "", OWNER, new Date()),
+          ),
+      } as unknown as ProjectRepository,
+      {
+        findByProject: vi.fn().mockResolvedValue([member(ALICE), member(BOB)]),
+      } as unknown as ProjectMemberRepository,
+    );
+    return { eventBus, notifications, log, service };
+  }
+
+  it("une double livraison du même événement ne crée aucun doublon", async () => {
+    const { eventBus, notifications, log, service } = setup();
+    await subscribeNotificationConsumer(eventBus, service, log);
+    const event = completedEvent(ALICE);
+
+    await eventBus.publish(event);
+    await eventBus.publish(event);
+
+    expect(notifications.rows).toHaveLength(2);
+    expect(log).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining("2 created for 2 recipient(s)"),
+    );
+    expect(log).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining(
+        "0 created for 2 recipient(s) (2 already existed)",
+      ),
+    );
+    expect(eventBus.failures).toEqual([]);
+  });
+
+  it("une relivraison partielle complète les destinataires manquants", async () => {
+    const { eventBus, notifications, service } = setup();
+    await subscribeNotificationConsumer(eventBus, service);
+    const event = completedEvent(ALICE);
+    // Simulates a crash after only the owner's row was written.
+    await notifications.createMany([
+      new Notification(
+        "n-owner",
+        OWNER,
+        event.type,
+        event.id,
+        ALICE,
+        "proj-1",
+        "task-1",
+        "Write docs",
+        null,
+        new Date(event.occurredAt),
+      ),
+    ]);
+
+    await eventBus.publish(event);
+
+    expect(notifications.rows.map((n) => n.userId).sort()).toEqual([
+      BOB,
+      OWNER,
+    ]);
   });
 });

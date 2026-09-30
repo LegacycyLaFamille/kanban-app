@@ -145,7 +145,7 @@ describe("TaskService - événements", () => {
         }),
       ).resolves.toMatchObject({ title: "x" });
       expect(errors).toHaveBeenCalledWith(
-        expect.stringContaining("Event lost: task.created"),
+        expect.stringContaining('"eventType":"task.created"'),
       );
       errors.mockRestore();
     });

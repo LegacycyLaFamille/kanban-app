@@ -62,8 +62,19 @@ describe("AuthController - current user", () => {
         id: "user_1",
         email: "me@example.com",
         name: "Me",
+        role: "USER",
         createdAt: createdAt.toISOString(),
       });
+    });
+
+    it("exposes the ADMIN role for a promoted user", async () => {
+      mockAuthService.getUserById.mockResolvedValue(
+        new User("user_1", "admin@example.com", "Admin", createdAt, "ADMIN"),
+      );
+
+      const res = await request(app).get("/me");
+
+      expect(res.body.role).toBe("ADMIN");
     });
   });
 

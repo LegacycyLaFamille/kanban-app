@@ -203,6 +203,53 @@ describe("TaskService", () => {
       expect(mockTaskRepository.save).toHaveBeenCalled();
     });
 
+    it("clears an existing deadline when the payload sends deadline: null", async () => {
+      const taskWithDeadline = new Task(
+        "task-1",
+        "Test",
+        "",
+        "proj-1",
+        "TODO",
+        "",
+        new Date("2026-12-01T00:00:00.000Z"),
+        new Date(),
+        null,
+      );
+      mockTaskRepository.findById.mockResolvedValue(taskWithDeadline);
+      mockProjectRepository.findById.mockResolvedValue(project);
+
+      const result = await taskService.update("task-1", ownerId, {
+        deadline: null,
+      });
+
+      expect(result.deadline).toBeNull();
+      expect(mockTaskRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ deadline: null }),
+      );
+    });
+
+    it("keeps the existing deadline when the payload omits it", async () => {
+      const taskWithDeadline = new Task(
+        "task-1",
+        "Test",
+        "",
+        "proj-1",
+        "TODO",
+        "",
+        new Date("2026-12-01T00:00:00.000Z"),
+        new Date(),
+        null,
+      );
+      mockTaskRepository.findById.mockResolvedValue(taskWithDeadline);
+      mockProjectRepository.findById.mockResolvedValue(project);
+
+      const result = await taskService.update("task-1", ownerId, {
+        title: "Renamed",
+      });
+
+      expect(result.deadline).toEqual(taskWithDeadline.deadline);
+    });
+
     it("rejects an update from a member (read-only access)", async () => {
       mockTaskRepository.findById.mockResolvedValue(task);
       mockProjectRepository.findById.mockResolvedValue(project);

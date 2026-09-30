@@ -6,9 +6,24 @@ import type {
   TaskCreatedEvent,
 } from "../tasks/task.events.js";
 import { Notification } from "./Notification.js";
-import type { NotificationRepository } from "./NotificationRepository.js";
+import type {
+  NotificationRepository,
+  NotificationView,
+} from "./NotificationRepository.js";
 
 export type NotifiableTaskEvent = TaskCreatedEvent | TaskCompletedEvent;
+
+export class NotificationNotFoundError extends Error {
+  constructor() {
+    super("Notification not found");
+  }
+}
+
+export interface NotificationPage {
+  items: NotificationView[];
+  // Pass as `cursor` to get the next page, null on the last page.
+  nextCursor: string | null;
+}
 
 export interface NotificationResult {
   recipients: number;
@@ -61,5 +76,43 @@ export class NotificationService {
     );
 
     return { recipients: recipients.length, created };
+  }
+
+  async list(
+    userId: string,
+    query: { unreadOnly: boolean; limit: number; cursor?: string },
+  ): Promise<NotificationPage> {
+    // One extra row tells whether another page exists.
+    const rows = await this.notificationRepository.findForUser(userId, {
+      ...query,
+      limit: query.limit + 1,
+    });
+    const items = rows.slice(0, query.limit);
+    const hasMore = rows.length > query.limit;
+    return {
+      items,
+      nextCursor: hasMore ? (items[items.length - 1]?.id ?? null) : null,
+    };
+  }
+
+  countUnread(userId: string): Promise<number> {
+    return this.notificationRepository.countUnread(userId);
+  }
+
+  async markRead(
+    notificationId: string,
+    userId: string,
+  ): Promise<NotificationView> {
+    const view = await this.notificationRepository.markRead(
+      notificationId,
+      userId,
+      new Date(),
+    );
+    if (view === null) throw new NotificationNotFoundError();
+    return view;
+  }
+
+  markAllRead(userId: string): Promise<number> {
+    return this.notificationRepository.markAllRead(userId, new Date());
   }
 }
