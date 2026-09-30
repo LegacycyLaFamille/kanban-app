@@ -36,8 +36,8 @@ export class PrismaTaskRepository implements TaskRepository {
     return tasks.map((task) => this.toDomain(task));
   }
 
-  async save(task: Task): Promise<Task | void> {
-    await this.prisma.task.upsert({
+  async save(task: Task): Promise<Task> {
+    const saved = await this.prisma.task.upsert({
       where: { id: task.id },
       update: {
         title: task.title,
@@ -60,7 +60,9 @@ export class PrismaTaskRepository implements TaskRepository {
         boardId: task.boardId,
       },
     });
+    return this.toDomain(saved);
   }
+
   async delete(task: Task): Promise<void> {
     await this.prisma.task.delete({ where: { id: task.id } });
   }
