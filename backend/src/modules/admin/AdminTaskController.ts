@@ -1,3 +1,4 @@
+import { recordError } from "../../shared/observability/recordError.js";
 import type { Request, Response } from "express";
 import { AdminTaskService } from "./AdminTaskService.js";
 import type { AssignTaskInput } from "./admin.schema.js";
@@ -10,7 +11,7 @@ export class AdminTaskController {
       const projectTasks = await this.adminTaskService.listAll();
       res.status(200).json(projectTasks);
     } catch (error) {
-      console.error("[AdminTaskController Error]", error);
+      recordError(error, "Admin task request failed");
       res.status(500).json({
         error: {
           code: "INTERNAL_SERVER_ERROR",
@@ -55,7 +56,7 @@ export class AdminTaskController {
         return;
       }
 
-      console.error("[AdminTaskController Error]", error);
+      recordError(error, "Admin task request failed");
       res.status(500).json({
         error: {
           code: "INTERNAL_SERVER_ERROR",

@@ -90,3 +90,49 @@ Metrics are pushed every 15 s: wait a little after sending requests.
   `docker compose run --rm --no-deps otel-collector validate --config=/etc/otelcol-contrib/config.yaml`
 - Collector logs: `docker logs kanban_otel_collector`
 - Prometheus targets must be `UP`: <http://localhost:9090/targets>
+
+## Instrumentation
+
+### HTTP
+
+Every request except `/api/v1/health` and `/api-docs` produces a trace and
+the `http_server_request_duration_seconds` histogram (method, route, status).
+Unexpected errors go through `recordError`
+(`src/shared/observability/recordError.ts`): the exception is recorded on the
+span, the span is marked as failed and an `error` log with the stack is
+written.
+
+### Event workflow
+
+| Metric                                      | Labels                                                                   | Description           |
+| ------------------------------------------- | ------------------------------------------------------------------------ | --------------------- |
+| `kanban_events_published_total`             | `event_type`, `outcome` (`success`, `failure`)                           | Events sent to the broker |
+| `kanban_events_consumed_total`              | `consumer`, `event_type`, `outcome` (`success`, `retry`, `dead_letter`, `unreadable`) | Events handled by a consumer |
+| `kanban_events_processing_duration_seconds` | `consumer`, `event_type`, `outcome`                                      | Handler duration      |
+
+The RabbitMQ auto-instrumentation creates the publish and consume spans and
+carries the trace context in the message headers (`traceparent`). A request
+that creates a task therefore produces one trace: HTTP, publish, consumer,
+PostgreSQL. Retries are published from the consumer span and stay in the same
+trace. Consumer spans carry `kanban.event.id`, `kanban.event.type`,
+`kanban.consumer` and `kanban.event.attempt`.
+
+Queue depths (retry and dead-letter queues included) come from RabbitMQ's own
+metrics, e.g. `rabbitmq_queue_messages_ready`.
+
+### Logs
+
+Every backend log goes through pino (`src/shared/observability/logger.ts`):
+JSON on stdout, with `trace_id` and `span_id` when a span is active, and sent
+to Loki. Event workflow logs carry `component`, `eventId`, `eventType`,
+`consumer` and `attempt`.
+
+### Sensitive data
+
+- pino replaces `password`, `passwordHash`, `token`, `accessToken` and
+  `refreshToken` (top level and one level deep), plus the `authorization` and
+  `cookie` request headers, with `[REDACTED]`.
+- HTTP headers and bodies, message payloads and SQL parameters are never
+  recorded.
+- Event logs only carry ids and types, never payloads: task titles are user
+  content.

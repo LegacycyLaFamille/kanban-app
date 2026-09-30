@@ -446,3 +446,66 @@ describe("RabbitMqEventBus - incidents", () => {
     );
   });
 });
+
+describe("RabbitMqEventBus - métriques", () => {
+  const CONSUMER = "notifications.task-events";
+  const metrics = () => ({ published: vi.fn(), consumed: vi.fn() });
+
+  it("compte les publications réussies et refusées", async () => {
+    const { connection, channels } = fakeConnection();
+    const m = metrics();
+    const bus = new RabbitMqEventBus(connection, logger(), undefined, m);
+
+    await bus.publish(createEvent("task.created", {}));
+    channels[0]!.confirmError = new Error("nack");
+    await expect(
+      bus.publish(createEvent("task.updated", {})),
+    ).rejects.toBeInstanceOf(EventPublishError);
+
+    expect(m.published.mock.calls).toEqual([
+      ["task.created", "success"],
+      ["task.updated", "failure"],
+    ]);
+  });
+
+  it("compte chaque traitement par résultat, avec sa durée", async () => {
+    const fake = fakeConnection();
+    const m = metrics();
+    const handler = vi
+      .fn()
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error("db down"))
+      .mockRejectedValueOnce(new Error("db down"));
+    const bus = new RabbitMqEventBus(
+      fake.connection,
+      logger(),
+      { maxRetries: 1, delayMs: 1_000 },
+      m,
+    );
+    await bus.subscribe({
+      name: CONSUMER,
+      eventTypes: ["task.created"],
+      handler,
+    });
+    const channel = fake.channels[0]!;
+    const deliver = async (retries: number) => {
+      channel.deliver(JSON.stringify(createEvent("task.created", {})), {
+        headers: { [RETRY_COUNT_HEADER]: retries },
+      });
+      await flush();
+    };
+
+    await deliver(0);
+    await deliver(0);
+    await deliver(1);
+    channel.deliver("{not json");
+    await flush();
+
+    expect(m.consumed.mock.calls).toEqual([
+      [CONSUMER, "task.created", "success", expect.any(Number)],
+      [CONSUMER, "task.created", "retry", expect.any(Number)],
+      [CONSUMER, "task.created", "dead_letter", expect.any(Number)],
+      [CONSUMER, "unknown", "unreadable"],
+    ]);
+  });
+});

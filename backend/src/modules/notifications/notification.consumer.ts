@@ -1,4 +1,5 @@
 import type { EventBus } from "../../shared/events/EventBus.js";
+import { logger } from "../../shared/observability/logger.js";
 import type {
   NotificationService,
   NotifiableTaskEvent,
@@ -15,7 +16,7 @@ export const NOTIFIED_EVENT_TYPES = [
 export function subscribeNotificationConsumer(
   eventBus: EventBus,
   service: NotificationService,
-  log: (message: string) => void = (m) => console.log(m),
+  log: (message: string) => void = (m) => logger.info(m),
 ): Promise<void> {
   return eventBus.subscribe<NotifiableTaskEvent>({
     name: NOTIFICATION_CONSUMER,

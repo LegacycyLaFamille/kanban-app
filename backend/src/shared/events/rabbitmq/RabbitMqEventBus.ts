@@ -1,4 +1,5 @@
 import type { ConfirmChannel, ConsumeMessage, Options } from "amqplib";
+import { SpanStatusCode, trace } from "@opentelemetry/api";
 import { parseDomainEvent, type DomainEvent } from "../DomainEvent.js";
 import {
   EventPublishError,
@@ -12,6 +13,10 @@ import {
   type EventLogger,
 } from "../eventLogger.js";
 import type { RabbitMqConnection } from "./RabbitMqConnection.js";
+import {
+  eventMetrics,
+  type EventMetrics,
+} from "../../observability/eventMetrics.js";
 import {
   DEAD_LETTER_EXCHANGE,
   EVENTS_EXCHANGE,
@@ -62,6 +67,7 @@ export class RabbitMqEventBus implements EventBus {
     private readonly connection: RabbitMqConnection,
     private readonly logger: EventLogger = createEventLogger("event-bus"),
     private readonly retryPolicy: RetryPolicy = DEFAULT_RETRY_POLICY,
+    private readonly metrics: EventMetrics = eventMetrics,
   ) {
     connection.onConnected(() => this.startConsumers());
   }
@@ -87,7 +93,9 @@ export class RabbitMqEventBus implements EventBus {
           (err: unknown) => (err ? reject(err) : resolve()),
         );
       });
+      this.metrics.published(event.type, "success");
     } catch (error) {
+      this.metrics.published(event.type, "failure");
       throw new EventPublishError(event, { cause: error });
     }
   }
@@ -212,6 +220,7 @@ export class RabbitMqEventBus implements EventBus {
       event = parseDomainEvent(JSON.parse(message.content.toString("utf8")));
     } catch (error) {
       // Retrying cannot fix an unreadable message.
+      this.metrics.consumed(consumer, "unknown", "unreadable");
       const reason = errorMessage(error);
       this.logger.error("Unreadable message sent to dead-letter", {
         consumer,
@@ -230,6 +239,15 @@ export class RabbitMqEventBus implements EventBus {
     }
 
     const attempt = retryCount(message) + 1;
+    const span = trace.getActiveSpan();
+    span?.setAttributes({
+      "kanban.event.id": event.id,
+      "kanban.event.type": event.type,
+      "kanban.consumer": consumer,
+      "kanban.event.attempt": attempt,
+    });
+    const startedAt = performance.now();
+    const elapsed = () => (performance.now() - startedAt) / 1000;
     const context = {
       eventId: event.id,
       eventType: event.type,
@@ -242,10 +260,13 @@ export class RabbitMqEventBus implements EventBus {
       await subscription.handler(event);
     } catch (error) {
       const reason = errorMessage(error);
+      span?.recordException(error instanceof Error ? error : reason);
+      span?.setStatus({ code: SpanStatusCode.ERROR, message: reason });
       const retryable =
         !(error instanceof NonRetryableEventError) && attempt < maxAttempts;
 
       if (retryable) {
+        this.metrics.consumed(consumer, event.type, "retry", elapsed());
         this.logger.warn("Event processing failed, retry scheduled", {
           ...context,
           retryInMs: this.retryPolicy.delayMs,
@@ -260,6 +281,7 @@ export class RabbitMqEventBus implements EventBus {
           },
         });
       } else {
+        this.metrics.consumed(consumer, event.type, "dead_letter", elapsed());
         this.logger.error("Event processing failed, sent to dead-letter", {
           ...context,
           nonRetryable: error instanceof NonRetryableEventError,
@@ -278,6 +300,7 @@ export class RabbitMqEventBus implements EventBus {
       return;
     }
 
+    this.metrics.consumed(consumer, event.type, "success", elapsed());
     if (attempt > 1) {
       this.logger.info("Event processed after retry", context);
     }
