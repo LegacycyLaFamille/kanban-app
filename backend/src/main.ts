@@ -11,6 +11,7 @@ import { projectRouter } from "./modules/projects/project.routes.js";
 import { taskRouter } from "./modules/tasks/task.routes.js";
 import { boardRouter } from "./modules/boards/board.routes.js";
 import { exportRouter } from "./modules/exports/export.routes.js";
+import { adminRouter } from "./modules/admin/admin.routes.js";
 
 dotenv.config();
 
@@ -40,6 +41,7 @@ app.use("/api/v1", projectRouter);
 app.use("/api/v1", taskRouter);
 app.use("/api/v1", boardRouter);
 app.use("/api/v1", exportRouter);
+app.use("/api/v1", adminRouter);
 
 app.get("/", (_req: Request, res: Response) => {
   res.send("Hello from ts backend");
