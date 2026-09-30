@@ -1,0 +1,17 @@
+{
+  "name": "legacy",
+  "version": "1.0.0",
+  "description": "This directory is the entry point for the technical documentation of the incremental modernization of the legacy TodoList into the Kanban application.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {},
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^26.5.1"
+  }
+}

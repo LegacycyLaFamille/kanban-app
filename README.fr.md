@@ -108,3 +108,7 @@ Le dossier `standards/` possède également son propre README récapitulatif.
 - Les utilisateurs doivent être prévenus avant la mise à niveau afin de pouvoir conserver les informations nécessaires et recréer les tâches encore pertinentes après authentification.
 - RabbitMQ est utilisé pour le workflow event-driven.
 - Docker, GitHub Actions, ESLint, tests, couverture et analyse de qualité font partie de la modernisation.
+
+## tests
+
+- Lancer les tests avec la command: npx playwright test
