@@ -24,7 +24,7 @@ export const router = createBrowserRouter([
   {
     path: "/",
     element: <LegacyApp />,
-    errorElement: <NotFound />
+    errorElement: <NotFound />,
   },
   {
     path: "/login",
