@@ -17,11 +17,14 @@ import { WaitTemplate } from "../shared/components/WaitTemplate";
 import { LegacyApp } from "./legacy/LegacyApp";
 import { MainLayout } from "./layouts/MainLayout";
 import { KanbanPage } from "../features/kanban/pages/KanbanPage.tsx";
+import NotFound from "../features/errors/NotFound/NotFound.tsx";
+import Forbidden from "../features/errors/Forbidden/Forbidden.tsx";
 
 export const router = createBrowserRouter([
   {
     path: "/",
     element: <LegacyApp />,
+    errorElement: <NotFound />
   },
   {
     path: "/login",
@@ -30,6 +33,10 @@ export const router = createBrowserRouter([
   {
     path: "/register",
     element: <RegisterPage />,
+  },
+  {
+    path: "/403",
+    element: <Forbidden />,
   },
   {
     element: <ProtectedRoute />,
