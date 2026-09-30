@@ -1,14 +1,29 @@
+import { useState } from "react";
+
 import { Button, Card, Text, View } from "reshaped";
+import { Link, useNavigate, useParams } from "react-router-dom";
 
-import { useNavigate, useParams } from "react-router-dom";
+import { useAuth } from "../../auth/hooks/useAuth";
 
+import { BoardForm } from "../components/BoardForm";
+import { ProjectForm } from "../components/ProjectForm";
+
+import { useBoards } from "../hooks/useBoards";
 import { useProjectDetails } from "../hooks/useProjectDetails";
 
-import type { TaskPriority, TaskStatus } from "../types/project.types";
+import type {
+  CreateBoardPayload,
+  CreateProjectPayload,
+  ProjectBoard,
+} from "../types/project-api.types";
 
+import boardLinkStyles from "../components/BoardLink.module.css";
 import styles from "./ProjectDetailsPage.module.css";
 
-function formatDate(date: string) {
+type BoardFormState =
+  { kind: "create" } | { kind: "edit"; board: ProjectBoard };
+
+function formatDate(date: string): string {
   return new Intl.DateTimeFormat("en-GB", {
     day: "2-digit",
     month: "short",
@@ -16,36 +31,51 @@ function formatDate(date: string) {
   }).format(new Date(date));
 }
 
-function getStatusLabel(status: TaskStatus) {
-  switch (status) {
-    case "IN_PROGRESS":
-      return "In progress";
-
-    case "DONE":
-      return "Done";
-
-    case "TODO":
-    default:
-      return "Todo";
-  }
-}
-
-function getPriorityLabel(priority: TaskPriority) {
-  return priority.charAt(0) + priority.slice(1).toLowerCase();
-}
-
 export function ProjectDetailsPage() {
   const navigate = useNavigate();
-
   const { projectId } = useParams<{ projectId: string }>();
 
-  const { project, isLoading, notFound, error, reload } =
-    useProjectDetails(projectId);
+  const { user } = useAuth();
+
+  const {
+    project,
+    isLoading,
+    notFound,
+    error,
+    isSaving,
+    isDeleting,
+    mutationError,
+    reload,
+    saveProject,
+    removeProject,
+    resetMutationError,
+  } = useProjectDetails(projectId);
+
+  const {
+    boards,
+    isLoading: boardsLoading,
+    error: boardsError,
+    isMutating: isMutatingBoard,
+    mutationError: boardMutationError,
+    reload: reloadBoards,
+    createBoard,
+    updateBoard,
+    deleteBoard,
+    resetMutationError: resetBoardMutationError,
+  } = useBoards(projectId);
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+
+  const [boardForm, setBoardForm] = useState<BoardFormState | null>(null);
+  const [boardToDelete, setBoardToDelete] = useState<ProjectBoard | null>(null);
 
   if (isLoading) {
     return (
       <section className={styles.page}>
-        <div className={styles.state}>Loading project...</div>
+        <div className={styles.state} role="status">
+          Loading project...
+        </div>
       </section>
     );
   }
@@ -55,9 +85,7 @@ export function ProjectDetailsPage() {
       <section className={styles.page}>
         <div className={styles.state}>
           <h1>Project not found</h1>
-
           <p>This project does not exist or is no longer available.</p>
-
           <Button onClick={() => navigate("/projects")}>
             Back to projects
           </Button>
@@ -71,9 +99,7 @@ export function ProjectDetailsPage() {
       <section className={styles.page}>
         <div className={styles.state}>
           <h1>Unable to load project</h1>
-
-          <p>{error}</p>
-
+          <p role="alert">{error || "The project could not be loaded."}</p>
           <Button
             variant="outline"
             onClick={() => {
@@ -87,10 +113,107 @@ export function ProjectDetailsPage() {
     );
   }
 
-  const totalTasks =
-    project.taskSummary.todo +
-    project.taskSummary.inProgress +
-    project.taskSummary.done;
+  const isOwner = user?.id === project.ownerId;
+
+  function openEditProject() {
+    resetMutationError();
+    resetBoardMutationError();
+
+    setBoardForm(null);
+    setBoardToDelete(null);
+    setIsConfirmingDelete(false);
+    setIsEditing(true);
+  }
+
+  function openDeleteProject() {
+    resetMutationError();
+    resetBoardMutationError();
+
+    setBoardForm(null);
+    setBoardToDelete(null);
+    setIsEditing(false);
+    setIsConfirmingDelete(true);
+  }
+
+  function openCreateBoard() {
+    resetBoardMutationError();
+
+    setIsEditing(false);
+    setIsConfirmingDelete(false);
+    setBoardToDelete(null);
+    setBoardForm({ kind: "create" });
+  }
+
+  function openEditBoard(board: ProjectBoard) {
+    resetBoardMutationError();
+
+    setIsEditing(false);
+    setIsConfirmingDelete(false);
+    setBoardToDelete(null);
+    setBoardForm({ kind: "edit", board });
+  }
+
+  function openDeleteBoard(board: ProjectBoard) {
+    resetBoardMutationError();
+
+    setIsEditing(false);
+    setIsConfirmingDelete(false);
+    setBoardForm(null);
+    setBoardToDelete(board);
+  }
+
+  async function handleSaveProject(
+    payload: CreateProjectPayload,
+  ): Promise<boolean> {
+    const updatedProject = await saveProject(payload);
+
+    if (!updatedProject) {
+      return false;
+    }
+
+    setIsEditing(false);
+    return true;
+  }
+
+  async function handleDeleteProject(): Promise<void> {
+    const deleted = await removeProject();
+
+    if (deleted) {
+      navigate("/projects", { replace: true });
+    }
+  }
+
+  async function handleBoardSubmit(
+    payload: CreateBoardPayload,
+  ): Promise<boolean> {
+    if (!boardForm) {
+      return false;
+    }
+
+    const result =
+      boardForm.kind === "create"
+        ? await createBoard(payload)
+        : await updateBoard(boardForm.board.id, payload);
+
+    if (!result) {
+      return false;
+    }
+
+    setBoardForm(null);
+    return true;
+  }
+
+  async function handleDeleteBoard(): Promise<void> {
+    if (!boardToDelete) {
+      return;
+    }
+
+    const deleted = await deleteBoard(boardToDelete.id);
+
+    if (deleted) {
+      setBoardToDelete(null);
+    }
+  }
 
   return (
     <section className={styles.page}>
@@ -105,7 +228,7 @@ export function ProjectDetailsPage() {
 
         <header className={styles.header}>
           <div className={styles.projectHeading}>
-            <div className={styles.projectIcon}>
+            <div className={styles.projectIcon} aria-hidden="true">
               <span />
               <span />
             </div>
@@ -113,150 +236,280 @@ export function ProjectDetailsPage() {
             <div>
               <div className={styles.titleLine}>
                 <h1>{project.name}</h1>
-
-                <span
-                  className={
-                    project.status === "ACTIVE"
-                      ? styles.statusActive
-                      : styles.statusArchived
-                  }
-                >
-                  {project.status === "ACTIVE" ? "Active" : "Archived"}
-                </span>
               </div>
 
-              <p className={styles.description}>{project.description}</p>
+              <p className={styles.description}>
+                {project.description || "No description provided."}
+              </p>
             </div>
           </div>
 
           <div className={styles.actions}>
-            <Button variant="outline">Edit project</Button>
+            {isOwner && (
+              <>
+                <Button
+                  variant="outline"
+                  disabled={isSaving || isDeleting}
+                  onClick={openEditProject}
+                >
+                  Edit project
+                </Button>
 
-            <Button
-              color="primary"
-              onClick={() => navigate(`/projects/${project.id}/kanban`)}
-            >
-              Open board
-            </Button>
+                <Button
+                  variant="outline"
+                  color="critical"
+                  disabled={isSaving || isDeleting}
+                  onClick={openDeleteProject}
+                >
+                  Delete project
+                </Button>
+              </>
+            )}
           </div>
         </header>
 
-        <div className={styles.statsGrid}>
-          <Card padding={4}>
-            <div className={styles.stat}>
-              <span>Total tasks</span>
-              <strong>{totalTasks}</strong>
-            </div>
+        {isEditing && isOwner && (
+          <Card padding={5}>
+            <ProjectForm
+              key={project.id}
+              title="Edit project"
+              submitLabel="Save changes"
+              initialValues={{
+                name: project.name,
+                description: project.description,
+              }}
+              isSubmitting={isSaving}
+              serverError={mutationError}
+              onSubmit={handleSaveProject}
+              onCancel={() => {
+                resetMutationError();
+                setIsEditing(false);
+              }}
+            />
           </Card>
+        )}
 
-          <Card padding={4}>
-            <div className={styles.stat}>
-              <span>Todo</span>
-              <strong>{project.taskSummary.todo}</strong>
-            </div>
-          </Card>
+        {isConfirmingDelete && isOwner && (
+          <Card padding={5}>
+            <View gap={3}>
+              <div role="group" aria-label={`Delete project ${project.name}`}>
+                <Text weight="bold">Delete project?</Text>
 
-          <Card padding={4}>
-            <div className={styles.stat}>
-              <span>In progress</span>
-              <strong>{project.taskSummary.inProgress}</strong>
-            </div>
-          </Card>
+                <p className={styles.description}>
+                  Are you sure you want to delete "{project.name}"? This action
+                  cannot be undone.
+                </p>
+              </div>
 
-          <Card padding={4}>
-            <div className={styles.stat}>
-              <span>Done</span>
-              <strong>{project.taskSummary.done}</strong>
-            </div>
+              {mutationError && (
+                <p role="alert" className={styles.description}>
+                  {mutationError}
+                </p>
+              )}
+
+              <div className={styles.actions}>
+                <Button
+                  variant="outline"
+                  disabled={isDeleting}
+                  onClick={() => {
+                    resetMutationError();
+                    setIsConfirmingDelete(false);
+                  }}
+                >
+                  Cancel
+                </Button>
+
+                <Button
+                  color="critical"
+                  loading={isDeleting}
+                  loadingAriaLabel="Deleting project"
+                  onClick={() => {
+                    void handleDeleteProject();
+                  }}
+                >
+                  Confirm deletion
+                </Button>
+              </div>
+            </View>
           </Card>
-        </div>
+        )}
 
         <div className={styles.mainGrid}>
           <div className={styles.mainColumn}>
             <Card padding={5}>
               <View gap={4}>
-                <div className={styles.sectionHeader}>
-                  <div>
-                    <Text weight="bold">Project progress</Text>
+                <Text weight="bold">Project overview</Text>
 
-                    <Text color="neutral-faded">Overall task completion</Text>
-                  </div>
-
-                  <strong className={styles.progressPercent}>
-                    {project.progress}%
-                  </strong>
-                </div>
-
-                <div
-                  className={styles.progressTrack}
-                  aria-label={`${project.progress}% completed`}
-                >
-                  <div
-                    className={styles.progressValue}
-                    style={{
-                      width: `${project.progress}%`,
-                    }}
-                  />
-                </div>
-
-                <div className={styles.progressLegend}>
-                  <span>{project.taskSummary.done} completed</span>
-
-                  <span>{totalTasks - project.taskSummary.done} remaining</span>
-                </div>
+                <p className={styles.description}>
+                  {project.description || "No description provided."}
+                </p>
               </View>
             </Card>
 
             <Card padding={5}>
               <View gap={4}>
                 <div className={styles.sectionHeader}>
-                  <div>
-                    <Text weight="bold">Recent tasks</Text>
+                  <Text weight="bold">Boards</Text>
 
-                    <Text color="neutral-faded">
-                      Latest tasks from this project
-                    </Text>
+                  <div className={styles.actions}>
+                    {!boardsLoading && !boardsError && (
+                      <Text color="neutral-faded">
+                        {boards.length}{" "}
+                        {boards.length === 1 ? "board" : "boards"}
+                      </Text>
+                    )}
+
+                    {isOwner && !boardForm && (
+                      <Button
+                        variant="ghost"
+                        disabled={boardsLoading || isMutatingBoard}
+                        onClick={openCreateBoard}
+                      >
+                        + New board
+                      </Button>
+                    )}
                   </div>
-
-                  <Button
-                    variant="ghost"
-                    onClick={() => navigate(`/projects/${project.id}/kanban`)}
-                  >
-                    View board
-                  </Button>
                 </div>
 
-                {project.recentTasks.length === 0 ? (
-                  <div className={styles.empty}>No tasks yet.</div>
-                ) : (
-                  <div className={styles.taskList}>
-                    {project.recentTasks.map((task) => (
-                      <div key={task.id} className={styles.task}>
-                        <div className={styles.taskMain}>
-                          <strong>{task.title}</strong>
+                {isOwner && boardForm && (
+                  <BoardForm
+                    key={
+                      boardForm.kind === "create"
+                        ? "create-board"
+                        : boardForm.board.id
+                    }
+                    title={
+                      boardForm.kind === "create"
+                        ? "Create board"
+                        : "Rename board"
+                    }
+                    submitLabel={
+                      boardForm.kind === "create"
+                        ? "Create board"
+                        : "Save changes"
+                    }
+                    initialName={
+                      boardForm.kind === "edit" ? boardForm.board.name : ""
+                    }
+                    isSubmitting={isMutatingBoard}
+                    serverError={boardMutationError}
+                    onSubmit={handleBoardSubmit}
+                    onCancel={() => {
+                      resetBoardMutationError();
+                      setBoardForm(null);
+                    }}
+                  />
+                )}
 
-                          {task.deadline && (
-                            <span>Due {formatDate(task.deadline)}</span>
-                          )}
-                        </div>
+                {isOwner && boardToDelete && (
+                  <div
+                    role="group"
+                    aria-label={`Delete board ${boardToDelete.name}`}
+                  >
+                    <Text weight="bold">
+                      Delete board "{boardToDelete.name}"?
+                    </Text>
 
-                        <div className={styles.taskMetadata}>
-                          <span
-                            className={`${styles.priority} ${
-                              styles[`priority${task.priority}`]
-                            }`}
-                          >
-                            {getPriorityLabel(task.priority)}
-                          </span>
+                    <p className={styles.description}>
+                      This action cannot be undone.
+                    </p>
 
-                          <span
-                            className={`${styles.taskStatus} ${
-                              styles[`status${task.status}`]
-                            }`}
-                          >
-                            {getStatusLabel(task.status)}
-                          </span>
-                        </div>
+                    {boardMutationError && (
+                      <p role="alert" className={styles.description}>
+                        {boardMutationError}
+                      </p>
+                    )}
+
+                    <div className={styles.actions}>
+                      <Button
+                        variant="outline"
+                        disabled={isMutatingBoard}
+                        onClick={() => {
+                          resetBoardMutationError();
+                          setBoardToDelete(null);
+                        }}
+                      >
+                        Cancel
+                      </Button>
+
+                      <Button
+                        color="critical"
+                        loading={isMutatingBoard}
+                        loadingAriaLabel="Deleting board"
+                        onClick={() => {
+                          void handleDeleteBoard();
+                        }}
+                      >
+                        Confirm board deletion
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {boardsLoading && (
+                  <div className={styles.empty} role="status">
+                    Loading boards...
+                  </div>
+                )}
+
+                {!boardsLoading && boardsError && (
+                  <div className={styles.empty}>
+                    <p role="alert">{boardsError}</p>
+
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        void reloadBoards();
+                      }}
+                    >
+                      Retry loading boards
+                    </Button>
+                  </div>
+                )}
+
+                {!boardsLoading && !boardsError && boards.length === 0 && (
+                  <div className={styles.empty}>No boards yet.</div>
+                )}
+
+                {!boardsLoading && !boardsError && boards.length > 0 && (
+                  <div className={styles.memberList}>
+                    {boards.map((board) => (
+                      <div key={board.id} className={styles.member}>
+                        <Link
+                          className={boardLinkStyles.link}
+                          to={`/projects/${encodeURIComponent(project.id)}/kanban?boardId=${encodeURIComponent(board.id)}`}
+                          aria-label={`Open board ${board.name}`}
+                        >
+                          <div className={styles.avatar} aria-hidden="true">
+                            {board.name.charAt(0).toUpperCase()}
+                          </div>
+
+                          <div className={boardLinkStyles.details}>
+                            <strong>{board.name}</strong>
+                            <span>Created {formatDate(board.createdAt)}</span>
+                          </div>
+                        </Link>
+
+                        {isOwner && (
+                          <div className={styles.actions}>
+                            <Button
+                              variant="ghost"
+                              disabled={isMutatingBoard}
+                              onClick={() => openEditBoard(board)}
+                            >
+                              Rename {board.name}
+                            </Button>
+
+                            <Button
+                              variant="ghost"
+                              color="critical"
+                              disabled={isMutatingBoard}
+                              onClick={() => openDeleteBoard(board)}
+                            >
+                              Delete {board.name}
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -273,7 +526,7 @@ export function ProjectDetailsPage() {
                 <div className={styles.information}>
                   <div>
                     <span>Owner</span>
-                    <strong>{project.owner.name}</strong>
+                    <strong>{isOwner ? user?.name : project.ownerId}</strong>
                   </div>
 
                   <div>
@@ -282,49 +535,9 @@ export function ProjectDetailsPage() {
                   </div>
 
                   <div>
-                    <span>Last updated</span>
-                    <strong>{formatDate(project.updatedAt)}</strong>
+                    <span>Project ID</span>
+                    <strong>{project.id}</strong>
                   </div>
-
-                  {project.deadline && (
-                    <div>
-                      <span>Deadline</span>
-                      <strong>{formatDate(project.deadline)}</strong>
-                    </div>
-                  )}
-                </div>
-              </View>
-            </Card>
-
-            <Card padding={5}>
-              <View gap={4}>
-                <div className={styles.sectionHeader}>
-                  <div>
-                    <Text weight="bold">Members</Text>
-
-                    <Text color="neutral-faded">
-                      {project.members.length}{" "}
-                      {project.members.length === 1 ? "member" : "members"}
-                    </Text>
-                  </div>
-
-                  <Button variant="ghost">Manage</Button>
-                </div>
-
-                <div className={styles.memberList}>
-                  {project.members.map((member) => (
-                    <div key={member.id} className={styles.member}>
-                      <div className={styles.avatar}>{member.initials}</div>
-
-                      <div>
-                        <strong>{member.name}</strong>
-
-                        <span>
-                          {member.id === project.owner.id ? "Owner" : "Member"}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
                 </div>
               </View>
             </Card>
