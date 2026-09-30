@@ -8,9 +8,12 @@ are checked independently. See
 [`../standards/API_CONVENTIONS.md`](../standards/API_CONVENTIONS.md#system-wide-roles)
 for the full convention.
 
-This is groundwork for the admin dashboard ticket (global task view,
-assignment). No admin-only route exists yet in this repo — only the schema,
-the guard, and role exposure to the frontend.
+This started as groundwork for the admin dashboard (global task view,
+assignment) and now backs it directly: see
+[`../standards/API_CONVENTIONS.md`](../standards/API_CONVENTIONS.md#admin-dashboard-endpoints)
+for the `/admin/tasks` endpoints, and the frontend at
+`frontend/src/features/admin/` (route: `/admin/tasks`, guarded by
+`RequireAdmin`, reachable from the sidebar only when `role === "ADMIN"`).
 
 ## What exists
 
@@ -34,8 +37,12 @@ the guard, and role exposure to the frontend.
   request rather than waiting for their access token to expire.
 - `GET /auth/me` now returns `role` alongside `id`/`email`/`name`/`createdAt`.
   The frontend's `AuthUser` type (`frontend/src/features/auth/types/auth.types.ts`)
-  has a matching optional `role` field — nothing yet reads it; that's the
-  dashboard ticket's job.
+  has a matching optional `role` field, read by `RequireAdmin` (route guard)
+  and `AppSidebar` (Admin badge + nav entry).
+- `/admin/tasks` (`backend/src/modules/admin/`): `requireAuth` + `requireAdmin`
+  on every route. `Task.assigneeId` (nullable `User` relation, migration
+  `add_task_assignee`) backs assignment; a task can only be assigned to its
+  project's owner or an existing member — see API_CONVENTIONS.md for why.
 
 ## Promoting the first admin
 

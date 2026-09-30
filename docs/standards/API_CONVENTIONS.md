@@ -283,9 +283,31 @@ rejects with the standard error shape from §8:
 `GET /auth/me` includes `role` in its response, alongside `id`/`email`/`name`/`createdAt`.
 
 There is no admin-management UI yet — promoting the first admin is a manual
-step, see [`../backend/ADMIN_ROLE.md`](../backend/ADMIN_ROLE.md). No route
-currently requires `requireAdmin`; it exists as groundwork for the admin
-dashboard (global task view, assignment) that consumes it directly.
+step, see [`../backend/ADMIN_ROLE.md`](../backend/ADMIN_ROLE.md).
+
+### Admin dashboard endpoints
+
+Every route under `/admin` requires `requireAuth` + `requireAdmin`, in that
+order:
+
+```text
+GET   /admin/tasks                    all tasks across all projects, grouped by project
+PATCH /admin/tasks/:taskId/assignee   set (assigneeId: <uuid>) or clear (assigneeId: null) a task's assignee
+```
+
+`GET /admin/tasks` returns tasks grouped by project (not a flat list), each
+group carrying its `assignableUsers` (owner + members) so the frontend can
+render the assignment control without a second request per project — see
+`backend/src/modules/admin/AdminTask.ts` for the exact shape.
+
+**Assignment permission decision:** a task may only be assigned to a user
+who already has access to its project (the owner or an existing
+`ProjectMember`). Assigning to someone with no project access would create
+a task nobody but an admin could ever see or act on, breaking the
+`ProjectAccessGuard` invariant that only a project's owner/members may view
+or act on its tasks. Rejected with `400 ASSIGNEE_NOT_PROJECT_MEMBER`. To
+assign to someone new, add them as a project member first via the existing
+`POST /projects/:projectId/members`.
 
 ---
 

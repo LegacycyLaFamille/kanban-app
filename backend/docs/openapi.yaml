@@ -815,6 +815,122 @@ paths:
         '404':
           $ref: '#/components/responses/NotFoundError'
 
+  # ==========================================
+  # MODULE ADMIN
+  # ==========================================
+  # Every route below requires requireAuth + requireAdmin — a system-wide
+  # role check, independent of ProjectAccessGuard's per-project
+  # owner/member authorization. See
+  # docs/standards/API_CONVENTIONS.md#admin-dashboard-endpoints.
+  /api/v1/admin/tasks:
+    get:
+      summary: Liste toutes les tâches de tous les projets, groupées par projet
+      description: >
+        Vue globale admin, non filtrée par appartenance/rôle projet. Chaque
+        groupe inclut assignableUsers (propriétaire + membres) pour permettre
+        l'assignation sans requête supplémentaire.
+      tags:
+        - Admin
+      security:
+        - CookieAuth: []
+      responses:
+        '200':
+          description: Tâches groupées par projet
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AdminProjectTasks'
+        '401':
+          description: Non authentifié.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+        '403':
+          description: Authentifié mais non administrateur.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+              example:
+                error:
+                  code: FORBIDDEN
+                  message: This action requires administrator access.
+
+  /api/v1/admin/tasks/{taskId}/assignee:
+    patch:
+      summary: Assigne (ou désassigne) une tâche à un utilisateur
+      description: >
+        L'utilisateur cible doit déjà avoir accès au projet de la tâche
+        (propriétaire ou ProjectMember) ; sinon 400
+        ASSIGNEE_NOT_PROJECT_MEMBER. Ajoutez d'abord l'utilisateur comme
+        membre via POST /projects/{projectId}/members.
+      tags:
+        - Admin
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignTaskDto'
+      responses:
+        '200':
+          description: Tâche mise à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          description: >
+            Données invalides (Zod), ou utilisateur cible non membre du
+            projet (ASSIGNEE_NOT_PROJECT_MEMBER).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              examples:
+                validation:
+                  value:
+                    error:
+                      code: VALIDATION_ERROR
+                      message: Invalid request
+                      details:
+                        assigneeId: ["Invalid UUID"]
+                notAMember:
+                  value:
+                    error:
+                      code: ASSIGNEE_NOT_PROJECT_MEMBER
+                      message: The selected user is not a member of this task's project.
+        '401':
+          description: Non authentifié.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+        '403':
+          description: Authentifié mais non administrateur.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+              example:
+                error:
+                  code: FORBIDDEN
+                  message: This action requires administrator access.
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
 components:
   securitySchemes:
     CookieAuth:
@@ -983,6 +1099,93 @@ components:
           type: string
           format: date-time
           nullable: true
+        assigneeId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Set via PATCH /admin/tasks/{taskId}/assignee (admin-only).
+
+    # --- ADMIN DASHBOARD ---
+    AdminAssignableUser:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+
+    AdminTask:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        status:
+          type: string
+          enum: [TODO, IN_PROGRESS, DONE]
+        priority:
+          type: string
+          enum: [Low, Medium, High]
+        deadline:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        boardId:
+          type: string
+          format: uuid
+          nullable: true
+        assigneeId:
+          type: string
+          format: uuid
+          nullable: true
+        assigneeName:
+          type: string
+          nullable: true
+        assigneeEmail:
+          type: string
+          format: email
+          nullable: true
+
+    AdminProjectTasks:
+      type: object
+      properties:
+        projectId:
+          type: string
+          format: uuid
+        projectName:
+          type: string
+        assignableUsers:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminAssignableUser'
+          description: Project owner + members — the only valid assignment targets.
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminTask'
+
+    AssignTaskDto:
+      type: object
+      additionalProperties: false
+      required: [assigneeId]
+      properties:
+        assigneeId:
+          type: string
+          format: uuid
+          nullable: true
+          description: null clears the assignment.
 
     # --- DTOs ---
     CreateProjectDto:
