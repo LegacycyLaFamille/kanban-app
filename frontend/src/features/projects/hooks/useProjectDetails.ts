@@ -1,89 +1,188 @@
 import { useCallback, useEffect, useState } from "react";
 
-import { getProjectById } from "../api/project-details.api";
+import { ApiError } from "../../../shared/api";
 
-import type { ProjectDetails } from "../types/project.types";
+import {
+  deleteProject as deleteProjectRequest,
+  getProject,
+  updateProject as updateProjectRequest,
+} from "../api/projects.api";
+
+import type {
+  ProjectResponse,
+  UpdateProjectPayload,
+} from "../types/project-api.types";
+
+import { projectErrorMessage } from "../utils/projectError";
+
+type ProjectLoadState = {
+  projectId: string | undefined;
+  project: ProjectResponse | null;
+  notFound: boolean;
+  error: string | null;
+};
+
+function toLoadState(
+  projectId: string,
+  requestError: unknown,
+): ProjectLoadState {
+  if (requestError instanceof ApiError && requestError.status === 404) {
+    return {
+      projectId,
+      project: null,
+      notFound: true,
+      error: null,
+    };
+  }
+
+  return {
+    projectId,
+    project: null,
+    notFound: false,
+    error: projectErrorMessage(requestError, "Unable to load this project."),
+  };
+}
 
 export function useProjectDetails(projectId: string | undefined) {
-  const [project, setProject] = useState<ProjectDetails | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [state, setState] = useState<ProjectLoadState>({
+    projectId: undefined,
+    project: null,
+    notFound: false,
+    error: null,
+  });
+
+  const [isReloading, setIsReloading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [mutationError, setMutationError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!projectId) {
       return;
     }
 
-    let cancelled = false;
+    let active = true;
 
-    getProjectById(projectId)
-      .then((response) => {
-        if (cancelled) {
+    getProject(projectId)
+      .then((project) => {
+        if (!active) {
           return;
         }
 
-        if (!response) {
-          setProject(null);
-          setNotFound(true);
-
-          return;
-        }
-
-        setProject(response);
-        setNotFound(false);
-        setError(null);
+        setState({
+          projectId,
+          project,
+          notFound: false,
+          error: null,
+        });
       })
-      .catch(() => {
-        if (cancelled) {
-          return;
-        }
-
-        setError("Unable to load this project.");
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setIsLoading(false);
+      .catch((requestError: unknown) => {
+        if (active) {
+          setState(toLoadState(projectId, requestError));
         }
       });
 
     return () => {
-      cancelled = true;
+      active = false;
     };
   }, [projectId]);
 
-  const reload = useCallback(async () => {
+  const reload = useCallback(async (): Promise<void> => {
     if (!projectId) {
       return;
     }
 
+    setIsReloading(true);
+
     try {
-      setIsLoading(true);
-      setError(null);
-      setNotFound(false);
+      const project = await getProject(projectId);
 
-      const response = await getProjectById(projectId);
-
-      if (!response) {
-        setProject(null);
-        setNotFound(true);
-
-        return;
-      }
-
-      setProject(response);
-    } catch {
-      setError("Unable to load this project.");
+      setState({
+        projectId,
+        project,
+        notFound: false,
+        error: null,
+      });
+    } catch (requestError) {
+      setState(toLoadState(projectId, requestError));
     } finally {
-      setIsLoading(false);
+      setIsReloading(false);
     }
   }, [projectId]);
 
+  const saveProject = useCallback(
+    async (payload: UpdateProjectPayload): Promise<ProjectResponse | null> => {
+      if (!projectId) {
+        return null;
+      }
+
+      setIsSaving(true);
+      setMutationError(null);
+
+      try {
+        const updatedProject = await updateProjectRequest(projectId, payload);
+
+        setState({
+          projectId,
+          project: updatedProject,
+          notFound: false,
+          error: null,
+        });
+
+        return updatedProject;
+      } catch (requestError) {
+        setMutationError(
+          projectErrorMessage(requestError, "Unable to update project."),
+        );
+
+        return null;
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [projectId],
+  );
+
+  const removeProject = useCallback(async (): Promise<boolean> => {
+    if (!projectId) {
+      return false;
+    }
+
+    setIsDeleting(true);
+    setMutationError(null);
+
+    try {
+      await deleteProjectRequest(projectId);
+
+      return true;
+    } catch (requestError) {
+      setMutationError(
+        projectErrorMessage(requestError, "Unable to delete project."),
+      );
+
+      return false;
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [projectId]);
+
+  const resetMutationError = useCallback(() => {
+    setMutationError(null);
+  }, []);
+
+  const matchesCurrentProject = state.projectId === projectId;
+
   return {
-    project,
-    isLoading,
-    notFound: !projectId || notFound,
-    error,
+    project: matchesCurrentProject ? state.project : null,
+    isLoading: Boolean(projectId) && (!matchesCurrentProject || isReloading),
+    notFound: !projectId || (matchesCurrentProject && state.notFound),
+    error: matchesCurrentProject ? state.error : null,
+    isSaving,
+    isDeleting,
+    mutationError,
     reload,
+    saveProject,
+    removeProject,
+    resetMutationError,
   };
 }

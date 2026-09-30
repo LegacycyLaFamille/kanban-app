@@ -4,7 +4,7 @@ import {
   type User as PrismaUser,
 } from "../../generated/prisma/client.js";
 import { User } from "./User.js";
-import type { UserRepository } from "./UserRepository.js";
+import type { UserActivityStats, UserRepository } from "./UserRepository.js";
 
 export class PrismaUserRepository implements UserRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -110,5 +110,28 @@ export class PrismaUserRepository implements UserRepository {
     });
     if (!record) return null;
     return User.create(record.email, record.name, record.id, record.createdAt);
+  }
+
+  async getActivityStats(userId: string): Promise<UserActivityStats> {
+    const ownedTasks = { project: { ownerId: userId } };
+
+    const [projectCount, statusGroups] = await Promise.all([
+      this.prisma.project.count({ where: { ownerId: userId } }),
+      this.prisma.task.groupBy({
+        by: ["status"],
+        where: ownedTasks,
+        _count: { _all: true },
+      }),
+    ]);
+
+    const tasksByStatus: Record<string, number> = {};
+    let taskCount = 0;
+
+    for (const group of statusGroups) {
+      tasksByStatus[group.status] = group._count._all;
+      taskCount += group._count._all;
+    }
+
+    return { projectCount, taskCount, tasksByStatus };
   }
 }

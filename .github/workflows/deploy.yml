@@ -1,0 +1,50 @@
+﻿name: Deploy
+
+on:
+  push:
+    branches: [Dev, main]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Define deploy destination"
+        required: true
+        type: choice
+        options: [Dev, main]
+        default: Dev
+
+jobs:
+  deploy-dev:
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/Dev') || (github.event_name == 'workflow_dispatch' && (github.event.inputs.target == 'Dev'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy Dev stack
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          script: |
+            set -e
+            cd ~/kanban-dev
+            git fetch origin
+            git reset --hard origin/Dev
+            docker compose build
+            docker compose up -d --wait --wait-timeout 180
+
+  deploy-main:
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && (github.event.inputs.target == 'main'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy main stack
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          script: |
+            set -e
+            cd ~/kanban-main
+            git fetch origin
+            git reset --hard origin/main
+            docker compose build
+            docker compose up -d --wait --wait-timeout 180

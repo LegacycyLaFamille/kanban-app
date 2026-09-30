@@ -91,7 +91,7 @@ Controllers handle HTTP-specific concerns:
 - HTTP responses.
 
 Controllers must not contain SQL, Prisma queries, or business rules.
-
+  
 ### Services
 
 Services contain application and business logic:
@@ -285,6 +285,13 @@ Controller
     ↓
 Service
 ```
+
+Implemented as a shared `validateSchema(schema)` Express middleware
+(`backend/src/shared/http/validateSchema.ts`), applied per route ahead of the
+controller. Each module colocates its own Zod schemas next to its service
+(e.g. `backend/src/modules/projects/project.schema.ts`). A schema failure
+short-circuits with the `VALIDATION_ERROR` shape from §8 and never reaches
+the controller or service.
 
 ---
 

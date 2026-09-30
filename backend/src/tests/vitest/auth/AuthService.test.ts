@@ -36,6 +36,7 @@ describe("AuthService", () => {
       getCredentials: vi.fn(),
       updateRefreshToken: vi.fn(),
       findByRefreshToken: vi.fn(),
+      getActivityStats: vi.fn(),
     } as unknown as Mocked<UserRepository>;
 
     authService = new AuthService(mockUserRepository);
@@ -178,6 +179,71 @@ describe("AuthService", () => {
 
       const result = await authService.getUserById("bad-id");
       expect(result).toBeNull();
+    });
+  });
+
+  describe("AuthService - Update Profile", () => {
+    it("doit mettre à jour uniquement les champs fournis et conserver le reste", async () => {
+      const createdAt = new Date("2026-09-01T10:00:00.000Z");
+      const user = User.create(
+        "old@example.com",
+        "Old Name",
+        "user_1",
+        createdAt,
+      );
+      mockUserRepository.findById.mockResolvedValue(user);
+      mockUserRepository.updateProfile.mockResolvedValue();
+
+      const result = await authService.updateProfile("user_1", {
+        name: "New Name",
+      });
+
+      expect(result).toEqual(
+        new User("user_1", "old@example.com", "New Name", createdAt),
+      );
+      expect(mockUserRepository.updateProfile).toHaveBeenCalledWith(result);
+    });
+
+    it("doit lever une erreur si l'utilisateur n'existe pas", async () => {
+      mockUserRepository.findById.mockResolvedValue(null);
+
+      await expect(
+        authService.updateProfile("bad-id", { name: "Name" }),
+      ).rejects.toThrow("Utilisateur introuvable");
+      expect(mockUserRepository.updateProfile).not.toHaveBeenCalled();
+    });
+
+    it("doit propager le conflit si l'email est déjà utilisé", async () => {
+      mockUserRepository.findById.mockResolvedValue(
+        User.create("old@example.com", "Name", "user_1"),
+      );
+      mockUserRepository.updateProfile.mockRejectedValue(
+        new Error(
+          "Conflit de données : Cet email est déjà utilisé par un autre compte.",
+        ),
+      );
+
+      await expect(
+        authService.updateProfile("user_1", { email: "taken@example.com" }),
+      ).rejects.toThrow("Conflit de données");
+    });
+  });
+
+  describe("AuthService - Activity Stats", () => {
+    it("doit retourner les statistiques du repository pour l'utilisateur", async () => {
+      const stats = {
+        projectCount: 2,
+        taskCount: 5,
+        tasksByStatus: { TODO: 3, DONE: 2 },
+      };
+      mockUserRepository.getActivityStats.mockResolvedValue(stats);
+
+      await expect(authService.getActivityStats("user_1")).resolves.toEqual(
+        stats,
+      );
+      expect(mockUserRepository.getActivityStats).toHaveBeenCalledWith(
+        "user_1",
+      );
     });
   });
 

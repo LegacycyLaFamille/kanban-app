@@ -6,28 +6,46 @@ import { TaskCard } from "./TaskCard";
 
 type DraggableTaskCardProps = {
   task: Task;
+  /** True while this task's status update is being persisted; blocks re-dragging it. */
+  isPending?: boolean;
 };
 
-export function DraggableTaskCard({ task }: DraggableTaskCardProps) {
+export function DraggableTaskCard({
+  task,
+  isPending = false,
+}: DraggableTaskCardProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [{ isDragging }, dragRef] = useDrag<
     DragItem,
     void,
     { isDragging: boolean }
-  >(() => ({
-    type: DND_ITEM_TYPE,
-    item: { id: task.id, sourceColumnId: task.columnId },
-    collect: (monitor) => ({
-      isDragging: monitor.isDragging(),
+  >(
+    () => ({
+      type: DND_ITEM_TYPE,
+      item: { id: task.id, sourceColumnId: task.columnId },
+      canDrag: () => !isPending,
+      collect: (monitor) => ({
+        isDragging: monitor.isDragging(),
+      }),
     }),
-  }));
+    [task.id, task.columnId, isPending],
+  );
 
   useEffect(() => {
     dragRef(ref);
   }, [dragRef]);
 
   return (
-    <div ref={ref} style={{ opacity: isDragging ? 0.5 : 1, cursor: "grab" }}>
+    <div
+      ref={ref}
+      data-task-id={task.id}
+      aria-busy={isPending}
+      style={{
+        opacity: isPending ? 0.6 : isDragging ? 0.4 : 1,
+        cursor: isPending ? "wait" : "grab",
+        transition: "opacity 0.15s ease",
+      }}
+    >
       <TaskCard task={task} />
     </div>
   );
