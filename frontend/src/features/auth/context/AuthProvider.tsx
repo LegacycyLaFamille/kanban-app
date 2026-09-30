@@ -6,7 +6,7 @@ import {
   useState,
 } from "react";
 
-import { ApiError } from "../../../shared/api";
+import { ApiError, setSessionExpiredHandler } from "../../../shared/api";
 
 import { getCurrentUser, login, logout } from "../api/auth.api";
 
@@ -31,6 +31,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const [sessionError, setSessionError] = useState<string | null>(null);
 
+  const clearSession = useCallback(() => {
+    setUser(null);
+    setSessionError(null);
+  }, []);
+
+  // Single subscriber to httpClient's centralized 401 handling: any
+  // authenticated request anywhere in the app that gets a 401 surviving a
+  // refresh attempt ends up here, so auth state never drifts from the (now
+  // dead) backend session without every feature needing its own logic for it.
+  useEffect(() => {
+    setSessionExpiredHandler(clearSession);
+
+    return () => {
+      setSessionExpiredHandler(null);
+    };
+  }, [clearSession]);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -48,14 +65,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
           return;
         }
 
-        setUser(null);
-
         if (isAuthenticationError(error)) {
-          setSessionError(null);
+          clearSession();
 
           return;
         }
 
+        setUser(null);
         setSessionError("Unable to verify your session.");
       })
       .finally(() => {
@@ -67,7 +83,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [clearSession]);
 
   const refreshUser = useCallback(async () => {
     try {
@@ -76,19 +92,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setUser(currentUser);
       setSessionError(null);
     } catch (error) {
-      setUser(null);
-
       if (isAuthenticationError(error)) {
-        setSessionError(null);
+        clearSession();
 
         return;
       }
 
+      setUser(null);
       setSessionError("Unable to verify your session.");
 
       throw error;
     }
-  }, []);
+  }, [clearSession]);
 
   const signIn = useCallback(async (payload: LoginPayload) => {
     await login(payload);
@@ -103,10 +118,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       await logout();
     } finally {
-      setUser(null);
-      setSessionError(null);
+      clearSession();
     }
-  }, []);
+  }, [clearSession]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
