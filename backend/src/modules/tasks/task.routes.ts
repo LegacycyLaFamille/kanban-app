@@ -42,6 +42,11 @@ taskRouter.get(
     taskController.getTasksByProject(req, res),
 );
 
+// Must stay before /tasks/:taskId, otherwise "my" is read as a task id.
+taskRouter.get("/tasks/my", requireAuth, (req: Request, res: Response) =>
+  taskController.getMyTasks(req, res),
+);
+
 taskRouter.get(
   "/tasks/:taskId",
   requireAuth,
