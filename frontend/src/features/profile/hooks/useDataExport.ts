@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 
-import { ApiError } from "../../../shared/api";
+import { toUserMessage } from "../../../shared/api";
 import { saveFile } from "../../../shared/utils/saveFile";
 
 import { downloadDataExport } from "../api/dataExport.api";
@@ -37,10 +37,10 @@ export function useDataExport() {
         return true;
       } catch (requestError) {
         setError(
-          requestError instanceof ApiError &&
-            requestError.code !== "UNKNOWN_ERROR"
-            ? requestError.message
-            : "Unable to export your data. Please try again.",
+          toUserMessage(
+            requestError,
+            "Unable to export your data. Please try again.",
+          ),
         );
 
         return false;

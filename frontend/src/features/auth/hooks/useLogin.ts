@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 
-import { ApiError } from "../../../shared/api";
+import { ApiError, toUserMessage } from "../../../shared/api";
 
 import type { LoginPayload } from "../types/auth.types";
 
@@ -23,10 +23,12 @@ export function useLogin() {
 
         return true;
       } catch (requestError) {
-        if (requestError instanceof ApiError) {
-          setError(requestError.message);
+        if (requestError instanceof ApiError && requestError.status === 401) {
+          setError("Invalid email or password.");
         } else {
-          setError("Unable to sign in. Please try again.");
+          setError(
+            toUserMessage(requestError, "Unable to sign in. Please try again."),
+          );
         }
 
         return false;
