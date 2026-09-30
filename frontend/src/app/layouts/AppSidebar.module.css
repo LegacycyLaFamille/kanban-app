@@ -90,8 +90,18 @@
   min-width: 0;
 }
 
+.userNameRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  min-width: 0;
+}
+
 .userInformation strong {
   overflow: hidden;
+
+  min-width: 0;
 
   color: #ffffff;
 

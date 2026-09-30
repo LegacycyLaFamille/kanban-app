@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { MenuItem, Text, View } from "reshaped";
+import { Badge, MenuItem, Text, View } from "reshaped";
 import { useLocation, useNavigate } from "react-router-dom";
 import { AppLogo } from "../../shared/components/AppLogo/AppLogo.tsx";
 
@@ -8,6 +8,7 @@ import styles from "./AppSidebar.module.css";
 type AppSidebarProps = {
   userName?: string;
   userEmail?: string;
+  isAdmin?: boolean;
   onLogout?: () => void;
 };
 
@@ -35,18 +36,6 @@ function SidebarIcon({ children }: { children: ReactNode }) {
 }
 
 const navigationItems: NavigationItem[] = [
-  {
-    label: "Dashboard",
-    path: "/",
-    icon: (
-      <SidebarIcon>
-        <rect x="3" y="3" width="7" height="7" rx="1" />
-        <rect x="14" y="3" width="7" height="7" rx="1" />
-        <rect x="3" y="14" width="7" height="7" rx="1" />
-        <rect x="14" y="14" width="7" height="7" rx="1" />
-      </SidebarIcon>
-    ),
-  },
   {
     label: "Projects",
     path: "/projects",
@@ -90,6 +79,32 @@ const navigationItems: NavigationItem[] = [
   },
 ];
 
+// Admin-only nav items, appended to navigationItems when isAdmin is true.
+const adminNavigationItems: NavigationItem[] = [
+  {
+    label: "Dashboard",
+    path: "/admin/dashboard",
+    icon: (
+      <SidebarIcon>
+        <path d="M9 11.5 11 13.5 15 9" />
+        <path d="M12 3 4 6.5V11c0 4.5 3.2 8.4 8 9.5 4.8-1.1 8-5 8-9.5V6.5Z" />
+      </SidebarIcon>
+    ),
+  },
+  {
+    label: "Legacy",
+    path: "/",
+    icon: (
+      <SidebarIcon>
+        <rect x="3" y="3" width="7" height="7" rx="1" />
+        <rect x="14" y="3" width="7" height="7" rx="1" />
+        <rect x="3" y="14" width="7" height="7" rx="1" />
+        <rect x="14" y="14" width="7" height="7" rx="1" />
+      </SidebarIcon>
+    ),
+  },
+];
+
 function SettingsIcon() {
   return (
     <SidebarIcon>
@@ -112,10 +127,15 @@ function LogoutIcon() {
 export function AppSidebar({
   userName = "Current user",
   userEmail = "user@example.com",
+  isAdmin = false,
   onLogout,
 }: AppSidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
+
+  const items = isAdmin
+    ? [...navigationItems, ...adminNavigationItems]
+    : navigationItems;
 
   const isActive = (path: string) => {
     if (path === "/") {
@@ -150,7 +170,7 @@ export function AppSidebar({
 
         <nav className={styles.navigation} aria-label="Main navigation">
           <View gap={1}>
-            {navigationItems.map((item) => (
+            {items.map((item) => (
               <MenuItem
                 key={item.path}
                 selected={isActive(item.path)}
@@ -185,7 +205,14 @@ export function AppSidebar({
           </div>
 
           <div className={styles.userInformation}>
-            <strong>{userName}</strong>
+            <div className={styles.userNameRow}>
+              <strong>{userName}</strong>
+              {isAdmin && (
+                <Badge size="small" color="primary" rounded>
+                  Admin
+                </Badge>
+              )}
+            </div>
             <span>{userEmail}</span>
           </div>
         </div>

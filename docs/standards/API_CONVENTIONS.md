@@ -260,6 +260,55 @@ Frontend visibility rules are never considered a security boundary.
 
 New business data must be created in an authenticated and authorized context.
 
+### System-wide roles
+
+`User.role` (`USER` | `ADMIN`, defaults to `USER`) is a system-wide role,
+orthogonal to per-project ownership/membership (`ProjectAccessGuard`,
+`Project.ownerId`, `ProjectMember`): a user can be an app-wide admin while
+still being just a member — or nothing at all — on any given project. The
+two authorization systems never overlap and are checked independently.
+
+`requireAdmin(userRepository)` (`backend/src/shared/security/requireAdmin.ts`)
+is the reusable guard for "is this user an admin" checks, following the same
+shape as `ProjectAccessGuard`: it looks the role up fresh from the database
+on every request rather than trusting a JWT claim, so a promotion or
+demotion takes effect immediately. It must run after `requireAuth` in the
+middleware chain (it reads `req.userId`, which `requireAuth` sets) and
+rejects with the standard error shape from §8:
+
+```json
+{ "error": { "code": "FORBIDDEN", "message": "This action requires administrator access." } }
+```
+
+`GET /auth/me` includes `role` in its response, alongside `id`/`email`/`name`/`createdAt`.
+
+There is no admin-management UI yet — promoting the first admin is a manual
+step, see [`../backend/ADMIN_ROLE.md`](../backend/ADMIN_ROLE.md).
+
+### Admin dashboard endpoints
+
+Every route under `/admin` requires `requireAuth` + `requireAdmin`, in that
+order:
+
+```text
+GET   /admin/tasks                    all tasks across all projects, grouped by project
+PATCH /admin/tasks/:taskId/assignee   set (assigneeId: <uuid>) or clear (assigneeId: null) a task's assignee
+```
+
+`GET /admin/tasks` returns tasks grouped by project (not a flat list), each
+group carrying its `assignableUsers` (owner + members) so the frontend can
+render the assignment control without a second request per project — see
+`backend/src/modules/admin/AdminTask.ts` for the exact shape.
+
+**Assignment permission decision:** a task may only be assigned to a user
+who already has access to its project (the owner or an existing
+`ProjectMember`). Assigning to someone with no project access would create
+a task nobody but an admin could ever see or act on, breaking the
+`ProjectAccessGuard` invariant that only a project's owner/members may view
+or act on its tasks. Rejected with `400 ASSIGNEE_NOT_PROJECT_MEMBER`. To
+assign to someone new, add them as a project member first via the existing
+`POST /projects/:projectId/members`.
+
 ---
 
 ## 10. Input Validation
