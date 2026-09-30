@@ -1,6 +1,7 @@
 import { createBrowserRouter } from "react-router-dom";
 
 import { ProtectedRoute } from "../features/auth/components/ProtectedRoute";
+import { RequireAdmin } from "../features/auth/components/RequireAdmin";
 import { LoginPage } from "../features/auth/pages/LoginPage";
 import { RegisterPage } from "../features/auth/pages/RegisterPage";
 
@@ -8,6 +9,8 @@ import { ProjectDetailsPage } from "../features/projects/pages/ProjectDetailsPag
 import { ProjectsPage } from "../features/projects/pages/ProjectsPage";
 
 import { ProfilePage } from "../features/profile/pages/ProfilePage";
+
+import { AdminDashboardPage } from "../features/admin/pages/AdminDashboardPage";
 
 import { WaitTemplate } from "../shared/components/WaitTemplate";
 
@@ -57,6 +60,15 @@ export const router = createBrowserRouter([
           {
             path: "/notifications",
             element: <WaitTemplate template="NOTIFICATIONS" />,
+          },
+          {
+            element: <RequireAdmin />,
+            children: [
+              {
+                path: "/admin/tasks",
+                element: <AdminDashboardPage />,
+              },
+            ],
           },
         ],
       },
