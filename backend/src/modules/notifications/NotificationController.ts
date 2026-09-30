@@ -1,3 +1,4 @@
+import { recordError } from "../../shared/observability/recordError.js";
 import type { Request, Response } from "express";
 import { z } from "zod";
 import { InvalidNotificationCursorError } from "./NotificationRepository.js";
@@ -96,7 +97,7 @@ export class NotificationController {
   }
 
   private internalError(error: unknown, res: Response) {
-    console.error("[notifications] Request failed:", error);
+    recordError(error, "Notification request failed");
     return res.status(500).json({
       error: {
         code: "INTERNAL_ERROR",

@@ -1,6 +1,5 @@
-// Structured logs of the event workflow: one JSON object per line, so the
-// centralized logging stack (S2-36) can index them without parsing text.
-// Every failure carries the event id and type; retries carry the attempt.
+import type { Logger } from "pino";
+import { logger as rootLogger } from "../observability/logger.js";
 
 export interface EventLogFields {
   eventId?: string;
@@ -12,8 +11,6 @@ export interface EventLogFields {
   [key: string]: unknown;
 }
 
-export type EventLogLevel = "info" | "warn" | "error";
-
 export interface EventLogger {
   info(message: string, fields?: EventLogFields): void;
   warn(message: string, fields?: EventLogFields): void;
@@ -24,29 +21,14 @@ export function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-const writers: Record<EventLogLevel, (line: string) => void> = {
-  info: (line) => console.log(line),
-  warn: (line) => console.warn(line),
-  error: (line) => console.error(line),
-};
-
 export function createEventLogger(
   component: string,
-  write: (level: EventLogLevel, line: string) => void = (level, line) =>
-    writers[level](line),
+  base: Logger = rootLogger,
 ): EventLogger {
-  const log =
-    (level: EventLogLevel) =>
-    (message: string, fields: EventLogFields = {}) =>
-      write(
-        level,
-        JSON.stringify({
-          time: new Date().toISOString(),
-          level,
-          component,
-          message,
-          ...fields,
-        }),
-      );
-  return { info: log("info"), warn: log("warn"), error: log("error") };
+  const log = base.child({ component });
+  return {
+    info: (message, fields = {}) => log.info(fields, message),
+    warn: (message, fields = {}) => log.warn(fields, message),
+    error: (message, fields = {}) => log.error(fields, message),
+  };
 }

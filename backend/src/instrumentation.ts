@@ -5,6 +5,8 @@ import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentation
 
 dotenv.config({ quiet: true });
 
+const UNTRACED_ROUTES = ["/api/v1/health", "/api-docs"];
+
 if (process.env.OTEL_SDK_DISABLED !== "true") {
   register("@opentelemetry/instrumentation/hook.mjs", import.meta.url);
 
@@ -14,6 +16,10 @@ if (process.env.OTEL_SDK_DISABLED !== "true") {
         "@opentelemetry/instrumentation-fs": { enabled: false },
         "@opentelemetry/instrumentation-dns": { enabled: false },
         "@opentelemetry/instrumentation-net": { enabled: false },
+        "@opentelemetry/instrumentation-http": {
+          ignoreIncomingRequestHook: (req) =>
+            UNTRACED_ROUTES.some((route) => req.url?.startsWith(route)),
+        },
       }),
     ],
   });
