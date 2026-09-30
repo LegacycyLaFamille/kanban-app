@@ -1138,6 +1138,12 @@ components:
           format: email
         name:
           type: string
+        role:
+          type: string
+          enum: [USER, ADMIN]
+          description: >
+            System-wide role, orthogonal to per-project ownership/membership.
+            See docs/backend/ADMIN_ROLE.md.
         createdAt:
           type: string
           format: date-time

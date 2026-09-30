@@ -260,6 +260,33 @@ Frontend visibility rules are never considered a security boundary.
 
 New business data must be created in an authenticated and authorized context.
 
+### System-wide roles
+
+`User.role` (`USER` | `ADMIN`, defaults to `USER`) is a system-wide role,
+orthogonal to per-project ownership/membership (`ProjectAccessGuard`,
+`Project.ownerId`, `ProjectMember`): a user can be an app-wide admin while
+still being just a member — or nothing at all — on any given project. The
+two authorization systems never overlap and are checked independently.
+
+`requireAdmin(userRepository)` (`backend/src/shared/security/requireAdmin.ts`)
+is the reusable guard for "is this user an admin" checks, following the same
+shape as `ProjectAccessGuard`: it looks the role up fresh from the database
+on every request rather than trusting a JWT claim, so a promotion or
+demotion takes effect immediately. It must run after `requireAuth` in the
+middleware chain (it reads `req.userId`, which `requireAuth` sets) and
+rejects with the standard error shape from §8:
+
+```json
+{ "error": { "code": "FORBIDDEN", "message": "This action requires administrator access." } }
+```
+
+`GET /auth/me` includes `role` in its response, alongside `id`/`email`/`name`/`createdAt`.
+
+There is no admin-management UI yet — promoting the first admin is a manual
+step, see [`../backend/ADMIN_ROLE.md`](../backend/ADMIN_ROLE.md). No route
+currently requires `requireAdmin`; it exists as groundwork for the admin
+dashboard (global task view, assignment) that consumes it directly.
+
 ---
 
 ## 10. Input Validation
