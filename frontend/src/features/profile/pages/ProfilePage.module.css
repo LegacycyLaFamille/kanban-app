@@ -1,0 +1,164 @@
+.page {
+  width: 100%;
+  min-height: 100vh;
+
+  padding: 44px 48px;
+
+  color: #f8fafc;
+
+  background:
+    radial-gradient(
+      circle at 40% -20%,
+      rgba(79, 70, 229, 0.08),
+      transparent 35%
+    ),
+    #0b0b0f;
+}
+
+.layout {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+
+  min-width: 0;
+}
+
+.avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 64px;
+  height: 64px;
+
+  flex-shrink: 0;
+
+  color: #ffffff;
+  background: linear-gradient(135deg, #4f46e5, #8b5cf6);
+
+  border-radius: 16px;
+
+  box-shadow:
+    0 10px 30px rgba(79, 70, 229, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.identity {
+  min-width: 0;
+}
+
+.name {
+  margin: 0 0 4px;
+
+  color: #f8fafc;
+
+  font-size: 30px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.email {
+  margin: 0;
+
+  color: #94a3b8;
+
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(280px, 2fr);
+  align-items: start;
+
+  gap: 20px;
+
+  max-width: 1120px;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+
+  min-width: 0;
+}
+
+.details,
+.overview,
+.data,
+.danger {
+  min-width: 0;
+}
+
+@media (max-width: 1024px) {
+  .page {
+    padding: 32px 24px;
+  }
+
+  .grid {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .column {
+    display: contents;
+  }
+
+  .details {
+    order: 1;
+  }
+
+  .overview {
+    order: 2;
+  }
+
+  .data {
+    order: 3;
+  }
+
+  .danger {
+    order: 4;
+  }
+}
+
+@media (max-width: 640px) {
+  .page {
+    padding: 20px 16px;
+  }
+
+  .layout {
+    gap: 20px;
+  }
+
+  .header {
+    gap: 14px;
+  }
+
+  .avatar {
+    width: 48px;
+    height: 48px;
+
+    border-radius: 12px;
+
+    font-size: 17px;
+  }
+
+  .name {
+    font-size: 22px;
+  }
+
+  .email {
+    font-size: 13px;
+  }
+}

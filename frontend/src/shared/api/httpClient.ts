@@ -54,10 +54,10 @@ async function executeRequest(
   });
 }
 
-async function request<T>(
+async function send(
   endpoint: string,
-  config: RequestConfig = {},
-): Promise<T> {
+  config: RequestConfig,
+): Promise<Response> {
   let response = await executeRequest(endpoint, config);
 
   if (response.status === 401 && !config.skipAuthRefresh) {
@@ -71,6 +71,15 @@ async function request<T>(
   if (!response.ok) {
     throw await createApiError(response);
   }
+
+  return response;
+}
+
+async function request<T>(
+  endpoint: string,
+  config: RequestConfig = {},
+): Promise<T> {
+  const response = await send(endpoint, config);
 
   if (response.status === 204) {
     return undefined as T;
@@ -95,6 +104,7 @@ async function createApiError(response: Response): Promise<ApiError> {
       payload.error?.message ??
         response.statusText ??
         "An unexpected API error occurred.",
+      payload.error?.details,
     );
   } catch {
     return new ApiError(
@@ -111,6 +121,15 @@ export const httpClient = {
       method: "GET",
       ...options,
     });
+  },
+
+  async getFile(endpoint: string, options?: RequestOptions): Promise<Blob> {
+    const response = await send(endpoint, {
+      method: "GET",
+      ...options,
+    });
+
+    return response.blob();
   },
 
   post<TResponse, TBody = unknown>(

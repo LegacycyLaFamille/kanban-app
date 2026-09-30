@@ -114,22 +114,179 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  id:
-                    type: string
-                    format: uuid
-                  email:
-                    type: string
-                    format: email
-                  name:
-                    type: string
+                $ref: '#/components/schemas/CurrentUser'
         '401':
           description: Non authentifié (Token manquant ou expiré).
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+    patch:
+      summary: Mettre à jour le profil de l'utilisateur connecté
+      description: >
+        Mise à jour partielle. Seuls `name` et `email` sont modifiables ;
+        tout autre champ est rejeté (400). Au moins un champ est requis.
+      tags:
+        - Auth
+      security:
+        - CookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCurrentUserDto'
+      responses:
+        '200':
+          description: Profil mis à jour.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUser'
+        '400':
+          description: Données invalides (détail par champ dans `details`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              example:
+                error:
+                  code: VALIDATION_ERROR
+                  message: Invalid request
+                  details:
+                    email: ["Invalid email address"]
+        '401':
+          description: Non authentifié.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Utilisateur introuvable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+        '409':
+          description: Email déjà utilisé par un autre compte.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              example:
+                error:
+                  code: EMAIL_ALREADY_IN_USE
+                  message: This email is already used by another account.
+                  details:
+                    email: ["This email is already in use"]
+
+  /api/v1/auth/me/stats:
+    get:
+      summary: Statistiques d'activité de l'utilisateur connecté
+      description: Nombre de projets possédés et de tâches dans ces projets, par statut.
+      tags:
+        - Auth
+      security:
+        - CookieAuth: []
+      responses:
+        '200':
+          description: Statistiques récupérées.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserActivityStats'
+        '401':
+          description: Non authentifié.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/auth/me/export:
+    get:
+      summary: Exporter les données de l'utilisateur connecté (CSV ou JSON)
+      description: >
+        Télécharge les projets possédés par l'utilisateur, avec leurs tableaux
+        et leurs tâches, en CSV (UTF-8 avec BOM, une ligne par tâche) ou en JSON
+        (projet → tableaux → tâches). Les personnes ne
+        sont jamais exportées par nom ou email, uniquement par leur rôle dans
+        le projet (`owner` ou `member`). Format détaillé :
+        `docs/backend/DATA_EXPORT.md`.
+      tags:
+        - Auth
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: format
+          in: query
+          required: false
+          description: Type de fichier.
+          schema:
+            type: string
+            enum: [csv, json]
+            default: csv
+        - name: layout
+          in: query
+          required: false
+          description: >
+            `single` = un seul fichier ; `per-project` = une archive ZIP
+            contenant un fichier par projet.
+          schema:
+            type: string
+            enum: [single, per-project]
+            default: single
+        - name: projectIds
+          in: query
+          required: false
+          description: >
+            Identifiants de projets possédés, séparés par des virgules (100 max).
+            Absent = tous les projets possédés.
+          schema:
+            type: string
+            example: 8e1f1945-743b-44e3-b05a-6950e0cdd08b,fd60fd33-51fb-427b-b307-4512fb3f22d8
+      responses:
+        '200':
+          description: Fichier d'export (pièce jointe, non mis en cache).
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+                example: attachment; filename="kanban-export-2026-09-28.csv"
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+            application/json:
+              schema:
+                type: string
+                format: binary
+            application/zip:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: >
+            Paramètres invalides (`VALIDATION_ERROR`) ou aucun projet à exporter
+            (`NOTHING_TO_EXPORT`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          description: Non authentifié.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: >
+            Un projet sélectionné est introuvable ou n'appartient pas à
+            l'utilisateur (`PROJECT_NOT_FOUND`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
 
   /api/v1/auth/logout:
     post:
@@ -766,6 +923,73 @@ components:
               type: string
             message:
               type: string
+
+    ValidationError:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+              description: Messages d'erreur indexés par nom de champ.
+              additionalProperties:
+                type: array
+                items:
+                  type: string
+
+    # --- CURRENT USER ---
+    CurrentUser:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    UpdateCurrentUserDto:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+          example: Jane Doe
+        email:
+          type: string
+          format: email
+          example: jane@example.com
+
+    UserActivityStats:
+      type: object
+      properties:
+        projectCount:
+          type: integer
+          example: 3
+        taskCount:
+          type: integer
+          example: 12
+        tasksByStatus:
+          type: object
+          additionalProperties:
+            type: integer
+          example:
+            TODO: 5
+            IN_PROGRESS: 4
+            DONE: 3
 
   responses:
     ForbiddenError:

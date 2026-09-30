@@ -14,26 +14,48 @@ datasource db {
 }
 
 model User {
-  id           String    @id @default(uuid())
-  email        String    @unique
-  name         String
-  passwordHash String
-  refreshToken String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  Project      Project[]
+  id            String          @id @default(uuid())
+  email         String          @unique
+  name          String
+  passwordHash  String
+  refreshToken  String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  Project       Project[]
+  ProjectMember ProjectMember[]
 }
 
 model Project {
-  id          String   @id @default(uuid())
+  id          String          @id @default(uuid())
   name        String
   description String
   ownerId     String
-  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  owner       User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
   Task        Task[]
   Board       Board[]
+  Member      ProjectMember[]
+}
+
+// A project always has exactly one owner (Project.ownerId), who has full
+// read/write/delete/membership-management rights. ProjectMember records
+// grant additional users read-only access to a project without making them
+// owners; the owner is intentionally not duplicated as a ProjectMember row
+// so there is a single source of truth for ownership.
+//
+// Per ADR-007, legacy Todo records are never migrated into this domain, so
+// there is no legacy data here that could exist without a valid owner or
+// membership row — both userId and projectId are required, non-nullable.
+model ProjectMember {
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([projectId, userId])
 }
 
 model Board {

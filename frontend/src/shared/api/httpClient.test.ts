@@ -412,4 +412,53 @@ describe("httpClient", () => {
       id: "user-1",
     });
   });
+
+  it("downloads a file as a Blob", async () => {
+    fetchMock.mockResolvedValue(
+      new Response("a,b\r\n", {
+        status: 200,
+
+        headers: {
+          "Content-Type": "text/csv; charset=utf-8",
+        },
+      }),
+    );
+
+    const blob = await httpClient.getFile("/auth/me/export");
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/auth/me/export",
+      expect.objectContaining({
+        method: "GET",
+        credentials: "include",
+      }),
+    );
+
+    expect(await blob.text()).toBe("a,b\r\n");
+  });
+
+  it("converts file download errors into ApiError", async () => {
+    fetchMock.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          error: {
+            code: "PROJECT_NOT_FOUND",
+            message: "One or more selected projects could not be found.",
+          },
+        }),
+        {
+          status: 404,
+
+          headers: {
+            "Content-Type": "application/json",
+          },
+        },
+      ),
+    );
+
+    await expect(httpClient.getFile("/auth/me/export")).rejects.toMatchObject({
+      status: 404,
+      code: "PROJECT_NOT_FOUND",
+    });
+  });
 });

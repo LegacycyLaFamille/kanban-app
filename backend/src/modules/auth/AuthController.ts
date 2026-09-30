@@ -13,6 +13,15 @@ const loginSchema = z.object({
   password: z.string(),
 });
 
+const updateProfileSchema = z
+  .strictObject({
+    name: z.string().trim().min(2).max(100).optional(),
+    email: z.email().trim().optional(),
+  })
+  .refine((data) => data.name !== undefined || data.email !== undefined, {
+    message: "At least one field must be provided",
+  });
+
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
@@ -126,10 +135,77 @@ export class AuthController {
         id: user.id,
         email: user.email,
         name: user.name,
+        createdAt: user.createdAt,
       });
     } catch (error) {
       console.error("[Profile Error]", error);
       res.status(500).json({ error: "Erreur serveur" });
+    }
+  };
+
+  updateProfile = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const changes = updateProfileSchema.parse(req.body);
+
+      const user = await this.authService.updateProfile(req.userId!, changes);
+
+      res.status(200).json({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        createdAt: user.createdAt,
+      });
+    } catch (error: unknown) {
+      if (error instanceof z.ZodError) {
+        const { formErrors, fieldErrors } = z.flattenError(error);
+
+        res.status(400).json({
+          error: {
+            code: "VALIDATION_ERROR",
+            message: formErrors[0] ?? "Invalid request",
+            details: fieldErrors,
+          },
+        });
+        return;
+      }
+
+      const message = error instanceof Error ? error.message : "";
+
+      if (message === "Utilisateur introuvable") {
+        res.status(404).json({
+          error: { code: "USER_NOT_FOUND", message: "User not found" },
+        });
+        return;
+      }
+
+      if (message.includes("Conflit de données")) {
+        res.status(409).json({
+          error: {
+            code: "EMAIL_ALREADY_IN_USE",
+            message: "This email is already used by another account.",
+            details: { email: ["This email is already in use"] },
+          },
+        });
+        return;
+      }
+
+      console.error("[Update Profile Error]", error);
+      res.status(500).json({
+        error: { code: "INTERNAL_ERROR", message: "Unexpected server error" },
+      });
+    }
+  };
+
+  getActivityStats = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const stats = await this.authService.getActivityStats(req.userId!);
+
+      res.status(200).json(stats);
+    } catch (error) {
+      console.error("[Profile Stats Error]", error);
+      res.status(500).json({
+        error: { code: "INTERNAL_ERROR", message: "Unexpected server error" },
+      });
     }
   };
 

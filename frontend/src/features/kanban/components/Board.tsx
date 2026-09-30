@@ -3,79 +3,217 @@ import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { Button, Card, Modal, Text, TextArea, TextField, View } from "reshaped";
 
-import type { ColumnId, Task, TaskPriority } from "../types";
-import { initialTasks } from "../data/mockTasks";
+import type { ColumnId, Task as FrontendTask } from "../types";
 import { Column } from "./Column";
+import { useGetTasks } from "../hooks/useGetTasks";
+import { useCreateTask } from "../hooks/useCreateTask";
+import { useUpdateTask } from "../hooks/useUpdateTask";
+import { useDeleteTask } from "../hooks/useDeleteTask";
+import { useTaskDragAndDrop } from "../hooks/useTaskDragAndDrop";
+import type {
+  Task as BackendTask,
+  TaskStatus,
+  TaskPriority,
+} from "../types/task.types";
 
-const COLUMNS: { id: ColumnId; title: string }[] = [
-  { id: "todo", title: "To Do" },
-  { id: "in-progress", title: "In Progress" },
-  { id: "done", title: "Done" },
+interface BoardProps {
+  projectId: string;
+}
+
+type FrontendPriority = NonNullable<FrontendTask["priority"]>;
+
+const PRIORITIES: FrontendPriority[] = ["low", "medium", "high"];
+
+const COLUMNS: { id: ColumnId; title: string; backendStatus: TaskStatus }[] = [
+  { id: "todo", title: "To Do", backendStatus: "TODO" },
+  { id: "in-progress", title: "In Progress", backendStatus: "IN_PROGRESS" },
+  { id: "done", title: "Done", backendStatus: "DONE" },
 ];
 
-const PRIORITIES: TaskPriority[] = ["low", "medium", "high"];
+// --- Status conversion helpers ---
+function toColumnId(status: string | TaskStatus): ColumnId {
+  switch (status) {
+    case "IN_PROGRESS":
+      return "in-progress";
+    case "DONE":
+      return "done";
+    case "TODO":
+    default:
+      return "todo";
+  }
+}
 
-const EMPTY_TASK: Task = {
+function toBackendStatus(columnId: ColumnId): TaskStatus {
+  switch (columnId) {
+    case "in-progress":
+      return "IN_PROGRESS";
+    case "done":
+      return "DONE";
+    case "todo":
+    default:
+      return "TODO";
+  }
+}
+
+// --- Priority conversion helpers ---
+function toBackendPriority(
+  priority?: FrontendTask["priority"],
+): TaskPriority | undefined {
+  switch (priority) {
+    case "low":
+      return "Low";
+    case "high":
+      return "High";
+    case "medium":
+      return "Medium";
+    default:
+      return undefined;
+  }
+}
+
+function toFrontendPriority(
+  priority?: TaskPriority | string | null,
+): FrontendPriority {
+  switch (priority) {
+    case "Low":
+    case "low":
+      return "low";
+    case "High":
+    case "high":
+      return "high";
+    case "Medium":
+    case "medium":
+    default:
+      return "medium";
+  }
+}
+
+function toFrontendTask(task: BackendTask): FrontendTask {
+  return {
+    id: task.id,
+    title: task.title,
+    description: task.description ?? "",
+    projectId: task.projectId,
+    columnId: toColumnId(task.status),
+    priority: toFrontendPriority(task.priority),
+    assignee: { id: "", name: "" },
+  };
+}
+
+const EMPTY_TASK: FrontendTask = {
   id: "",
   title: "",
   description: "",
-  projectId: "default",
+  projectId: "",
   columnId: "todo",
   priority: "medium",
   assignee: { id: "", name: "" },
 };
 
-export function Board() {
-  const [tasks, setTasks] = useState<Task[]>(initialTasks);
+export function Board({ projectId }: BoardProps) {
+  // API Hooks
+  const {
+    tasks: backendTasks,
+    isLoading,
+    error: fetchError,
+    refetch,
+  } = useGetTasks(projectId);
+  const {
+    submit: createTask,
+    isSubmitting: isCreating,
+    error: createError,
+  } = useCreateTask();
+  const {
+    submit: updateTask,
+    isSubmitting: isUpdating,
+    error: updateError,
+  } = useUpdateTask();
+  const {
+    submit: deleteTask,
+    isSubmitting: isDeleting,
+    error: deleteError,
+  } = useDeleteTask();
+  const {
+    getEffectiveStatus,
+    isPending: isTaskPending,
+    moveTask,
+    error: dragError,
+  } = useTaskDragAndDrop({
+    onPersisted: async () => {
+      await refetch();
+    },
+  });
+
+  // Local Modal UI State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [activeTask, setActiveTask] = useState<Task>(EMPTY_TASK);
+  const [activeTask, setActiveTask] = useState<FrontendTask>(EMPTY_TASK);
   const [isEditing, setIsEditing] = useState(false);
 
+  // Map API items to frontend tasks, applying any in-flight optimistic status
+  const tasks: FrontendTask[] = backendTasks.map((task) =>
+    toFrontendTask({ ...task, status: getEffectiveStatus(task) }),
+  );
+
+  // Drag and drop task status update: optimistic, with rollback on failure
+  // and a per-task pending lock, both handled by useTaskDragAndDrop.
   const handleDropTask = useCallback(
     (taskId: string, targetColumnId: ColumnId) => {
-      setTasks((current) =>
-        current.map((task) =>
-          task.id === taskId ? { ...task, columnId: targetColumnId } : task,
-        ),
-      );
+      const task = backendTasks.find((t) => t.id === taskId);
+      if (!task) return;
+      void moveTask(task, toBackendStatus(targetColumnId));
     },
-    [],
+    [backendTasks, moveTask],
   );
 
   const handleOpenCreate = (columnId: ColumnId = "todo") => {
     setActiveTask({
       ...EMPTY_TASK,
-      id: Date.now().toString(),
+      projectId,
       columnId,
     });
     setIsEditing(false);
     setIsModalOpen(true);
   };
 
-  const handleOpenEdit = (task: Task) => {
+  const handleOpenEdit = (task: FrontendTask) => {
     setActiveTask({ ...task });
     setIsEditing(true);
     setIsModalOpen(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!activeTask.title.trim()) return;
 
+    const payload = {
+      title: activeTask.title,
+      description: activeTask.description,
+      priority: toBackendPriority(activeTask.priority),
+      status: toBackendStatus(activeTask.columnId),
+    };
+
     if (isEditing) {
-      setTasks((prev) =>
-        prev.map((t) => (t.id === activeTask.id ? activeTask : t)),
-      );
+      const updated = await updateTask(activeTask.id, payload);
+      if (updated) {
+        setIsModalOpen(false);
+        await refetch();
+      }
     } else {
-      setTasks((prev) => [...prev, activeTask]);
+      const created = await createTask(projectId, payload);
+      if (created) {
+        setIsModalOpen(false);
+        await refetch();
+      }
     }
-    setIsModalOpen(false);
   };
 
-  const handleDelete = () => {
-    setTasks((prev) => prev.filter((t) => t.id !== activeTask.id));
-    setIsDeleteModalOpen(false);
-    setIsModalOpen(false);
+  const handleDelete = async () => {
+    const success = await deleteTask(activeTask.id);
+    if (success) {
+      setIsDeleteModalOpen(false);
+      setIsModalOpen(false);
+      await refetch();
+    }
   };
 
   const handleColumnClick = (e: MouseEvent<HTMLDivElement>) => {
@@ -87,6 +225,8 @@ export function Board() {
       if (found) handleOpenEdit(found);
     }
   };
+
+  const currentActionError = createError || updateError || deleteError;
 
   return (
     <DndProvider backend={HTML5Backend}>
@@ -130,6 +270,22 @@ export function Board() {
           </View>
         </Card>
 
+        {/* Global Fetch Error Banner */}
+        {fetchError && (
+          <Card padding={3}>
+            <Text color="critical">{fetchError}</Text>
+          </Card>
+        )}
+
+        {/* Drag-and-drop Persistence Error Banner */}
+        {dragError && (
+          <Card padding={3}>
+            <div role="alert">
+              <Text color="critical">{dragError}</Text>
+            </div>
+          </Card>
+        )}
+
         {/* Board Columns Grid */}
         <div
           style={{
@@ -139,6 +295,7 @@ export function Board() {
             alignItems: "start",
             width: "100%",
             flex: 1,
+            opacity: isLoading ? 0.6 : 1,
           }}
         >
           {COLUMNS.map((column) => (
@@ -149,6 +306,7 @@ export function Board() {
                 tasks={tasks.filter((task) => task.columnId === column.id)}
                 onDropTask={handleDropTask}
                 onAddTask={() => handleOpenCreate(column.id)}
+                isTaskPending={isTaskPending}
               />
             </div>
           ))}
@@ -174,6 +332,12 @@ export function Board() {
                   ✕
                 </Button>
               </View>
+
+              {currentActionError && (
+                <Text color="critical" variant="caption-1">
+                  {currentActionError}
+                </Text>
+              )}
 
               <View gap={4}>
                 {/* Title */}
@@ -298,6 +462,7 @@ export function Board() {
                     <Button
                       variant="outline"
                       color="critical"
+                      disabled={isDeleting || isUpdating}
                       onClick={() => setIsDeleteModalOpen(true)}
                     >
                       Delete Task
@@ -313,8 +478,16 @@ export function Board() {
                   >
                     Cancel
                   </Button>
-                  <Button color="primary" onClick={handleSave}>
-                    {isEditing ? "Save Changes" : "Create Task"}
+                  <Button
+                    color="primary"
+                    disabled={isCreating || isUpdating}
+                    onClick={handleSave}
+                  >
+                    {isCreating || isUpdating
+                      ? "Saving..."
+                      : isEditing
+                        ? "Save Changes"
+                        : "Create Task"}
                   </Button>
                 </View>
               </View>
@@ -345,12 +518,17 @@ export function Board() {
                 <Button
                   variant="outline"
                   color="neutral"
+                  disabled={isDeleting}
                   onClick={() => setIsDeleteModalOpen(false)}
                 >
                   Cancel
                 </Button>
-                <Button color="critical" onClick={handleDelete}>
-                  Confirm Delete
+                <Button
+                  color="critical"
+                  disabled={isDeleting}
+                  onClick={handleDelete}
+                >
+                  {isDeleting ? "Deleting..." : "Confirm Delete"}
                 </Button>
               </View>
             </View>
