@@ -45,6 +45,40 @@ If the project was deleted before the event is processed, nothing is created.
 The frontend builds the text from `type`, `taskTitle` and the actor, so no
 user-generated HTML is stored.
 
+## API
+
+All routes require authentication and only ever return or change the
+authenticated user's own notifications (full spec in `backend/docs/openapi.yaml`).
+
+| Route | Description |
+| ----- | ----------- |
+| `GET /api/v1/notifications?unread=&limit=&cursor=` | Newest first. `unread=true` keeps unread ones, `limit` 1–100 (default 20), `cursor` = `nextCursor` of the previous page. Returns `{ items, nextCursor }` |
+| `GET /api/v1/notifications/unread-count` | `{ count }`, for a badge |
+| `PATCH /api/v1/notifications/:id/read` | Marks one as read. Idempotent: an already read notification keeps its `readAt` |
+| `POST /api/v1/notifications/read-all` | Marks all as read, returns `{ updated }` |
+
+Each item contains what the frontend needs to render it:
+
+```json
+{
+  "id": "…",
+  "type": "task.completed",
+  "readAt": null,
+  "createdAt": "2026-09-30T10:00:00.000Z",
+  "project": { "id": "…", "name": "Kanban" },
+  "task": { "id": "…", "title": "Écrire la doc" },
+  "actor": { "id": "…", "name": "Alice" }
+}
+```
+
+Access rules:
+
+- another user's notification answers **404** `NOTIFICATION_NOT_FOUND`, the
+  same as a missing one, so ids cannot be probed;
+- a `cursor` that is not one of the user's notifications answers **400**
+  `INVALID_CURSOR`;
+- unknown query parameters are rejected (**400** `VALIDATION_ERROR`).
+
 ## Idempotency strategy (duplicate deliveries)
 
 RabbitMQ delivers **at least once**: an event can be delivered again when
@@ -96,4 +130,6 @@ Retries and replay from the dead-letter queue are covered by S2-28.
 - `src/modules/notifications/NotificationService.ts`: recipients and creation
 - `src/modules/notifications/PrismaNotificationRepository.ts`: idempotent insert
 - `src/modules/notifications/notification.consumer.ts`: subscription, started
-  in `src/main.ts`
+  in `src/main.ts` through `notification.bootstrap.ts`
+- `src/modules/notifications/NotificationController.ts`,
+  `notification.routes.ts`, `notification.schema.ts`: API

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import { NotificationService } from "../../../modules/notifications/NotificationService.js";
 import { Notification } from "../../../modules/notifications/Notification.js";
-import type { NotificationRepository } from "../../../modules/notifications/NotificationRepository.js";
+import { InMemoryNotificationRepository } from "./InMemoryNotificationRepository.js";
 import {
   NOTIFICATION_CONSUMER,
   subscribeNotificationConsumer,
@@ -20,26 +20,6 @@ import { InMemoryEventBus } from "../../../shared/events/InMemoryEventBus.js";
 const OWNER = "owner";
 const ALICE = "alice";
 const BOB = "bob";
-
-// Mirrors the Prisma repository: (eventId, userId) is unique and duplicates
-// are skipped.
-class InMemoryNotificationRepository implements NotificationRepository {
-  readonly rows: Notification[] = [];
-
-  async createMany(notifications: Notification[]): Promise<number> {
-    let count = 0;
-    for (const n of notifications) {
-      const exists = this.rows.some(
-        (r) => r.eventId === n.eventId && r.userId === n.userId,
-      );
-      if (!exists) {
-        this.rows.push(n);
-        count++;
-      }
-    }
-    return count;
-  }
-}
 
 function member(userId: string) {
   return new ProjectMember(`m-${userId}`, "proj-1", userId, new Date());
