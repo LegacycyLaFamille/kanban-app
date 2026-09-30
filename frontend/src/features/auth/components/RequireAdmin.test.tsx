@@ -18,12 +18,12 @@ function renderWithGuard() {
       {
         element: <RequireAdmin />,
         children: [
-          { path: "/admin/tasks", element: <div>Admin dashboard</div> },
+          { path: "/admin/dashboard", element: <div>Admin dashboard</div> },
         ],
       },
       { path: "/projects", element: <div>Projects page</div> },
     ],
-    { initialEntries: ["/admin/tasks"] },
+    { initialEntries: ["/admin/dashboard"] },
   );
 
   render(<RouterProvider router={router} />);

@@ -65,7 +65,7 @@ export const router = createBrowserRouter([
             element: <RequireAdmin />,
             children: [
               {
-                path: "/admin/tasks",
+                path: "/admin/dashboard",
                 element: <AdminDashboardPage />,
               },
             ],

@@ -12,7 +12,7 @@ This started as groundwork for the admin dashboard (global task view,
 assignment) and now backs it directly: see
 [`../standards/API_CONVENTIONS.md`](../standards/API_CONVENTIONS.md#admin-dashboard-endpoints)
 for the `/admin/tasks` endpoints, and the frontend at
-`frontend/src/features/admin/` (route: `/admin/tasks`, guarded by
+`frontend/src/features/admin/` (route: `/admin/dashboard`, guarded by
 `RequireAdmin`, reachable from the sidebar only when `role === "ADMIN"`).
 
 ## What exists

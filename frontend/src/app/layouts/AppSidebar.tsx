@@ -93,7 +93,7 @@ const navigationItems: NavigationItem[] = [
 
 const adminNavigationItem: NavigationItem = {
   label: "All Tasks (Admin)",
-  path: "/admin/tasks",
+  path: "/admin/dashboard",
   icon: (
     <SidebarIcon>
       <path d="M9 11.5 11 13.5 15 9" />
