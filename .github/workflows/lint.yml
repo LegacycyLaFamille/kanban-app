@@ -108,6 +108,13 @@ jobs:
           cache-dependency-path: backend/package-lock.json
       - run: npm ci
         working-directory: backend
+      # Prisma client is generated, not committed (see .gitignore); some
+      # tests import it at runtime (e.g. PrismaTaskRepository.test.ts), not
+      # just for types, so it must exist before running the suite.
+      - run: npx prisma generate
+        working-directory: backend
+        env:
+          DATABASE_URL: 'postgresql://user:password@localhost:5432/kanban_ci'
       - run: npm run test:coverage
         working-directory: backend
 
@@ -125,6 +132,12 @@ jobs:
           cache-dependency-path: backend/package-lock.json
       - run: npm ci
         working-directory: backend
+      # See test-backend: the Prisma client isn't committed, and some tests
+      # import it at runtime, not just for types.
+      - run: npx prisma generate
+        working-directory: backend
+        env:
+          DATABASE_URL: 'postgresql://user:password@localhost:5432/kanban_ci'
       # Regenerate the backend coverage report so Sonar can pick up
       # sonar.javascript.lcov.reportPaths from sonar-project.properties.
       - run: npm run test:coverage
