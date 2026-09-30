@@ -17,6 +17,7 @@ import { rabbitMq } from "./shared/events/rabbitmq/index.js";
 import { createHealthRouter } from "./shared/http/health.routes.js";
 import { eventBus } from "./shared/events/index.js";
 import { startNotificationConsumer } from "./modules/notifications/notification.bootstrap.js";
+import { logger } from "./shared/observability/logger.js";
 
 dotenv.config();
 
@@ -65,7 +66,7 @@ app.get("/", (_req: Request, res: Response) => {
 async function main() {
   try {
     await prisma.$connect();
-    console.log("Connexion à PostgreSQL établie avec succès.");
+    logger.info("Connexion à PostgreSQL établie avec succès.");
 
     // Registered before connecting so consumers start on the first
     // (re)connection.
@@ -76,14 +77,12 @@ async function main() {
     void rabbitMq.start();
 
     app.listen(port, () => {
-      console.log(`Example app listening on port ${port}`);
+      logger.info(`Example app listening on port ${port}`);
     });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    console.error(
+    logger.error(
+      { err: error },
       "Échec critique de connexion à la base de données :",
-      message,
-      { cause: error },
     );
     process.exit(1);
   }

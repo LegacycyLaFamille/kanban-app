@@ -10,7 +10,12 @@ export const requireAuth = (
     const token = req.cookies.accessToken;
 
     if (!token) {
-      res.status(401).json({ error: "Authentification requise" });
+      res.status(401).json({
+        error: {
+          code: "UNAUTHENTICATED",
+          message: "Authentication required.",
+        },
+      });
       return;
     }
 
@@ -22,6 +27,11 @@ export const requireAuth = (
 
     next();
   } catch {
-    res.status(401).json({ error: "Token invalide ou expiré" });
+    res.status(401).json({
+      error: {
+        code: "UNAUTHENTICATED",
+        message: "Invalid or expired session.",
+      },
+    });
   }
 };
