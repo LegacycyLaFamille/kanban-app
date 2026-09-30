@@ -26,7 +26,10 @@ knows its address, never the storage backends.
 Ports are bound to `127.0.0.1`. Prometheus also scrapes RabbitMQ's built-in
 metrics endpoint (`rabbitmq:15692`, one series per queue).
 
-Configuration lives in `docker/observability/`.
+Configuration lives in `docker/observability/`: `compose.yaml` is shared,
+`compose.dev.yaml` (local ports, no login) is used by
+`backend/docker-compose.yml` and `compose.deploy.yaml` (login, `/grafana`
+path) by the root `compose.yaml`.
 
 ## Start / stop
 
@@ -61,8 +64,8 @@ the `pino` logger (`src/shared/observability/logger.ts`).
 | `LOG_LEVEL`                                                             | `info`                  | pino log level                 |
 
 When the collector is not running, telemetry is dropped silently: the backend
-keeps working. The full stack (`compose.yaml`, test/production) sets
-`OTEL_SDK_DISABLED=true` by default.
+keeps working. The deployed stacks (`compose.yaml`) send their telemetry to their own
+observability stack, see [Deployed stacks](#deployed-stacks).
 
 ## Checking each signal
 
@@ -78,9 +81,9 @@ Metrics are pushed every 15 s: wait a little after sending requests.
 
 ## Security
 
-- No secret is committed. Grafana runs with anonymous admin access and no
-  login form, which is only acceptable because it listens on `127.0.0.1` in
-  development. Never reuse this configuration on a server.
+- No secret is committed. In development, Grafana runs with anonymous admin
+  access and no login form, which is only acceptable because it listens on
+  `127.0.0.1`. The deployed Grafana requires a login.
 - Logs and telemetry must never contain passwords, tokens, cookies or user
   content.
 
@@ -88,7 +91,7 @@ Metrics are pushed every 15 s: wait a little after sending requests.
 
 - Validate the collector configuration:
   `docker compose run --rm --no-deps otel-collector validate --config=/etc/otelcol-contrib/config.yaml`
-- Collector logs: `docker logs kanban_otel_collector`
+- Collector logs: `docker compose logs otel-collector`
 - Prometheus targets must be `UP`: <http://localhost:9090/targets>
 
 ## Instrumentation
@@ -136,3 +139,47 @@ to Loki. Event workflow logs carry `component`, `eventId`, `eventType`,
   recorded.
 - Event logs only carry ids and types, never payloads: task titles are user
   content.
+
+## Dashboard
+
+**Kanban - Backend observability** (Grafana → Dashboards → Kanban) is
+provisioned from `docker/observability/grafana/dashboards/kanban-backend.json`,
+in four rows: API, Event workflow, Logs and Traces. It is read-only in
+Grafana: to change it, edit it in the UI, export it as JSON (Export → Export as
+JSON, "Export the dashboard to use in another instance" off) and replace the
+file.
+
+The demonstration scenario is described in
+[OBSERVABILITY_DEMO.md](OBSERVABILITY_DEMO.md).
+
+## Deployed stacks
+
+The root `compose.yaml` (Dev and main stacks on the VM, CI) runs the same
+observability stack with `docker/observability/compose.deploy.yaml`. Grafana
+is served by the frontend nginx at `/grafana` and requires a login; nothing
+else is published. The backend sends its telemetry to the collector of its own
+stack.
+
+Before deploying, add to the stack's `.env` on the server (`~/kanban-dev`,
+`~/kanban-main`):
+
+```bash
+GRAFANA_ADMIN_PASSWORD=<long random value>
+GRAFANA_ROOT_URL=<site URL>/grafana/
+```
+
+The deployment fails without `GRAFANA_ADMIN_PASSWORD`. Then open
+`<site URL>/grafana/` and log in as `admin`.
+
+The password is only applied when Grafana's data volume is created. To change
+it later, on the server, in the stack directory:
+
+```bash
+docker compose exec grafana grafana cli admin reset-admin-password <new password>
+```
+
+Each stack keeps its own data (7 days of metrics and logs, 3 days of traces)
+and uses about 1 to 1.5 GB of RAM. To turn telemetry off for a stack, set
+`OTEL_SDK_DISABLED=true` in its `.env`.
+
+The site is served over plain HTTP: the Grafana password travels unencrypted.

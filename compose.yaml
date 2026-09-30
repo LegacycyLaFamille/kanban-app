@@ -1,3 +1,8 @@
+include:
+  - path:
+      - docker/observability/compose.yaml
+      - docker/observability/compose.deploy.yaml
+
 services:
   frontend:
     build:
@@ -18,7 +23,15 @@ services:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-kanban_user}:${POSTGRES_PASSWORD:-kanban_password}@postgres:5432/${POSTGRES_DB:-kanban_db}
       - JWT_SECRET=${JWT_SECRET}
       - PORT=3000
-      - OTEL_SDK_DISABLED=${OTEL_SDK_DISABLED:-true}
+      - OTEL_SDK_DISABLED=${OTEL_SDK_DISABLED:-false}
+      - OTEL_SERVICE_NAME=kanban-backend
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+      - OTEL_TRACES_EXPORTER=otlp
+      - OTEL_METRICS_EXPORTER=otlp
+      - OTEL_LOGS_EXPORTER=otlp
+      - OTEL_METRIC_EXPORT_INTERVAL=15000
+      - OTEL_SEMCONV_STABILITY_OPT_IN=http
       - SQLITE_DB_LOCATION=/data/todo.db
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_USER=${RABBITMQ_USER:-kanban}
