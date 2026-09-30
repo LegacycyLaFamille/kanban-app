@@ -2,6 +2,7 @@ import amqp from "amqplib";
 import type { Channel, ChannelModel, ConfirmChannel } from "amqplib";
 import type { RabbitMqConfig } from "../../config/rabbitmq.config.js";
 import { declareTopology, type Topology } from "./topology.js";
+import { logger } from "../../observability/logger.js";
 
 export type RabbitMqState =
   "disabled" | "connecting" | "connected" | "disconnected" | "closed";
@@ -28,12 +29,7 @@ export interface RabbitMqConnectionOptions {
   maxReconnectDelayMs?: number;
 }
 
-const prefix = "[rabbitmq]";
-const consoleLogger: Logger = {
-  info: (m) => console.log(`${prefix} ${m}`),
-  warn: (m) => console.warn(`${prefix} ${m}`),
-  error: (m) => console.error(`${prefix} ${m}`),
-};
+const defaultLogger: Logger = logger.child({ component: "rabbitmq" });
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -66,7 +62,7 @@ export class RabbitMqConnection {
     private readonly config: RabbitMqConfig | null,
     private readonly options: RabbitMqConnectionOptions,
   ) {
-    this.logger = options.logger ?? consoleLogger;
+    this.logger = options.logger ?? defaultLogger;
     this.connect = options.connect ?? ((url) => amqp.connect(url));
     this.initialDelay = options.initialReconnectDelayMs ?? 1_000;
     this.maxDelay = options.maxReconnectDelayMs ?? 30_000;

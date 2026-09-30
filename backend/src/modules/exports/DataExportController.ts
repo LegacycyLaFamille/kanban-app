@@ -1,3 +1,4 @@
+import { recordError } from "../../shared/observability/recordError.js";
 import type { Request, Response } from "express";
 import { z } from "zod";
 import {
@@ -69,7 +70,7 @@ export class DataExportController {
         return;
       }
 
-      console.error("[Data Export Error]", error);
+      recordError(error, "Data export failed");
       res.status(500).json({
         error: { code: "INTERNAL_ERROR", message: "Unexpected server error" },
       });

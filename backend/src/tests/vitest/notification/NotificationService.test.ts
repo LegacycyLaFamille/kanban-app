@@ -171,6 +171,7 @@ describe("Workflow task → Event Bus → notifications", () => {
         }),
         findById: vi.fn(async (id: string) => stored.get(id) ?? null),
         findByProjectId: vi.fn(),
+        findAssignedTo: vi.fn(),
         delete: vi.fn(),
       },
       new ProjectAccessGuard(projectRepository, memberRepository),

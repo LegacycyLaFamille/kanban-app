@@ -1,5 +1,8 @@
+import { recordError } from "../../shared/observability/recordError.js";
 import type { Request, Response } from "express";
+import { z } from "zod";
 import { TaskService } from "./TaskService.js";
+import { myTasksQuerySchema } from "./task.schema.js";
 
 export class TaskController {
   constructor(private readonly taskService: TaskService) {}
@@ -28,6 +31,36 @@ export class TaskController {
       const tasks = await this.taskService.read(projectId, userId);
 
       return res.status(200).json(tasks);
+    } catch (error: unknown) {
+      return this.handleServiceError(error, res);
+    }
+  }
+
+  // GET /api/tasks/my
+  async getMyTasks(req: Request, res: Response) {
+    // validateSchema only covers the body: the query string is validated
+    // here with the same error shape.
+    const parsed = myTasksQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      const { formErrors, fieldErrors } = z.flattenError(parsed.error);
+      return res.status(400).json({
+        error: {
+          code: "VALIDATION_ERROR",
+          message: formErrors[0] ?? "Invalid request",
+          details: fieldErrors,
+        },
+      });
+    }
+
+    try {
+      const { status } = parsed.data;
+      const assigned = await this.taskService.readAssigned(
+        req.userId!,
+        status === undefined ? {} : { status },
+      );
+      return res
+        .status(200)
+        .json(assigned.map(({ task, project }) => ({ ...task, project })));
     } catch (error: unknown) {
       return this.handleServiceError(error, res);
     }
@@ -101,7 +134,7 @@ export class TaskController {
       });
     }
 
-    console.error("[TaskController Error]", error);
+    recordError(error, "Task request failed");
     return res.status(500).json({
       error: {
         code: "INTERNAL_SERVER_ERROR",

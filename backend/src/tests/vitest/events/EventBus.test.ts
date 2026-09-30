@@ -13,6 +13,7 @@ import {
 import { InMemoryEventBus } from "../../../shared/events/InMemoryEventBus.js";
 import { publishSafely } from "../../../shared/events/publishSafely.js";
 import { createEventLogger } from "../../../shared/events/eventLogger.js";
+import { pino } from "pino";
 
 type TaskCreated = DomainEvent<"task.created", { taskId: string }>;
 
@@ -159,16 +160,17 @@ describe("publishSafely", () => {
       subscribe: vi.fn(),
     };
     const lines: string[] = [];
-    const logger = createEventLogger("event-bus", (_level, line) =>
-      lines.push(line),
+    const logger = createEventLogger(
+      "event-bus",
+      pino({}, { write: (line: string) => lines.push(line) }),
     );
 
     await expect(publishSafely(bus, event, logger)).resolves.toBe(false);
     expect(lines).toHaveLength(1);
     expect(JSON.parse(lines[0]!)).toMatchObject({
-      level: "error",
+      level: 50,
       component: "event-bus",
-      message: "Event lost: could not be published",
+      msg: "Event lost: could not be published",
       eventId: event.id,
       eventType: "task.created",
       error: "RabbitMQ is not connected",
