@@ -15,6 +15,7 @@ describe("TaskService", () => {
     save: Mock;
     findById: Mock;
     findByProjectId: Mock;
+    findAssignedTo: Mock;
     delete: Mock;
   };
   let mockProjectRepository: {
@@ -47,6 +48,7 @@ describe("TaskService", () => {
       save: vi.fn(),
       findById: vi.fn(),
       findByProjectId: vi.fn(),
+      findAssignedTo: vi.fn(),
       delete: vi.fn(),
     };
     mockProjectRepository = {
@@ -295,6 +297,20 @@ describe("TaskService", () => {
       await expect(taskService.delete("task-1", outsiderId)).rejects.toThrow(
         "Forbidden",
       );
+    });
+  });
+
+  describe("readAssigned", () => {
+    it("délègue au repository avec l'utilisateur et le filtre", async () => {
+      const assigned = [{ task, project: { id: "proj-1", name: "P" } }];
+      mockTaskRepository.findAssignedTo.mockResolvedValue(assigned);
+
+      await expect(
+        taskService.readAssigned(ownerId, { status: "TODO" }),
+      ).resolves.toBe(assigned);
+      expect(mockTaskRepository.findAssignedTo).toHaveBeenCalledWith(ownerId, {
+        status: "TODO",
+      });
     });
   });
 });

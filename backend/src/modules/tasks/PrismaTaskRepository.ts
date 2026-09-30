@@ -4,7 +4,11 @@ import {
   type Task as PrismaTask,
 } from "../../generated/prisma/client.js";
 import { Task } from "./Task.js";
-import type { TaskRepository } from "./TaskRepository.js";
+import type {
+  AssignedTask,
+  AssignedTaskFilter,
+  TaskRepository,
+} from "./TaskRepository.js";
 
 export class PrismaTaskRepository implements TaskRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -35,6 +39,32 @@ export class PrismaTaskRepository implements TaskRepository {
       orderBy: { createdAt: "asc" },
     });
     return tasks.map((task) => this.toDomain(task));
+  }
+
+  async findAssignedTo(
+    userId: string,
+    filter: AssignedTaskFilter = {},
+  ): Promise<AssignedTask[]> {
+    const rows = await this.prisma.task.findMany({
+      where: {
+        assigneeId: userId,
+        ...(filter.status === undefined ? {} : { status: filter.status }),
+        // Same rule as ProjectAccessGuard.assertCanView: owner or member.
+        project: {
+          OR: [{ ownerId: userId }, { Member: { some: { userId } } }],
+        },
+      },
+      include: { project: { select: { id: true, name: true } } },
+      // Closest deadline first, tasks without deadline last.
+      orderBy: [
+        { deadline: { sort: "asc", nulls: "last" } },
+        { createdAt: "asc" },
+      ],
+    });
+    return rows.map(({ project, ...task }) => ({
+      task: this.toDomain(task),
+      project,
+    }));
   }
 
   async save(task: Task): Promise<Task> {
