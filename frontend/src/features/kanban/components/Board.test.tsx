@@ -4,7 +4,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Reshaped } from "reshaped";
 
-import { getTasksByProject, updateTask } from "../api/tasks.api";
+import { createTask, getTasksByProject, updateTask } from "../api/tasks.api";
 import type { Task as BackendTask } from "../types/task.types";
 import type { ColumnId, Task as FrontendTask } from "../types";
 import { Board } from "./Board";
@@ -202,5 +202,19 @@ describe("Board", () => {
     expect(screen.getByTestId("column-todo").textContent).not.toContain(
       task.title,
     );
+  });
+
+  it("shows a validation error and does not call the API when the task title is empty", async () => {
+    const user = userEvent.setup();
+    vi.mocked(getTasksByProject).mockResolvedValue([]);
+
+    renderBoard();
+    await screen.findByRole("button", { name: "+ Add Task" });
+
+    await user.click(screen.getByRole("button", { name: "+ Add Task" }));
+    await user.click(screen.getByRole("button", { name: "Create Task" }));
+
+    expect(await screen.findByText("Task title is required.")).toBeTruthy();
+    expect(createTask).not.toHaveBeenCalled();
   });
 });
