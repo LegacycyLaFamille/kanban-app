@@ -45,6 +45,17 @@ const event: TaskCreated = createEvent(
 Declare payloads with `type`, not `interface`, so TypeScript can check that
 they are JSON-serializable.
 
+## Published events
+
+| Type             | When                                                  | Payload |
+| ---------------- | ----------------------------------------------------- | ------- |
+| `task.created`   | After a task is saved                                 | `taskId`, `projectId`, `boardId`, `title`, `status`, `priority` |
+| `task.updated`   | After an update that changed at least one field      | `taskId`, `projectId`, `title`, `changes` (field names), `previousStatus`, `status` |
+| `task.completed` | On a status change from anything else to `DONE`, in addition to `task.updated` | `taskId`, `projectId`, `title`, `previousStatus` |
+
+Types are defined in `src/modules/tasks/task.events.ts`. Consumers:
+[NOTIFICATIONS.md](NOTIFICATIONS.md).
+
 ## Publishing
 
 Modules receive an `EventBus` through their constructor (wired in the
