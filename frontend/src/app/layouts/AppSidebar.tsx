@@ -37,18 +37,6 @@ function SidebarIcon({ children }: { children: ReactNode }) {
 
 const navigationItems: NavigationItem[] = [
   {
-    label: "Dashboard",
-    path: "/",
-    icon: (
-      <SidebarIcon>
-        <rect x="3" y="3" width="7" height="7" rx="1" />
-        <rect x="14" y="3" width="7" height="7" rx="1" />
-        <rect x="3" y="14" width="7" height="7" rx="1" />
-        <rect x="14" y="14" width="7" height="7" rx="1" />
-      </SidebarIcon>
-    ),
-  },
-  {
     label: "Projects",
     path: "/projects",
     icon: (
@@ -91,16 +79,31 @@ const navigationItems: NavigationItem[] = [
   },
 ];
 
-const adminNavigationItem: NavigationItem = {
-  label: "All Tasks (Admin)",
-  path: "/admin/dashboard",
-  icon: (
-    <SidebarIcon>
-      <path d="M9 11.5 11 13.5 15 9" />
-      <path d="M12 3 4 6.5V11c0 4.5 3.2 8.4 8 9.5 4.8-1.1 8-5 8-9.5V6.5Z" />
-    </SidebarIcon>
-  ),
-};
+// Admin-only nav items, appended to navigationItems when isAdmin is true.
+const adminNavigationItems: NavigationItem[] = [
+  {
+    label: "Dashboard",
+    path: "/admin/dashboard",
+    icon: (
+      <SidebarIcon>
+        <path d="M9 11.5 11 13.5 15 9" />
+        <path d="M12 3 4 6.5V11c0 4.5 3.2 8.4 8 9.5 4.8-1.1 8-5 8-9.5V6.5Z" />
+      </SidebarIcon>
+    ),
+  },
+  {
+    label: "Legacy",
+    path: "/",
+    icon: (
+      <SidebarIcon>
+        <rect x="3" y="3" width="7" height="7" rx="1" />
+        <rect x="14" y="3" width="7" height="7" rx="1" />
+        <rect x="3" y="14" width="7" height="7" rx="1" />
+        <rect x="14" y="14" width="7" height="7" rx="1" />
+      </SidebarIcon>
+    ),
+  },
+];
 
 function SettingsIcon() {
   return (
@@ -131,7 +134,7 @@ export function AppSidebar({
   const navigate = useNavigate();
 
   const items = isAdmin
-    ? [...navigationItems, adminNavigationItem]
+    ? [...navigationItems, ...adminNavigationItems]
     : navigationItems;
 
   const isActive = (path: string) => {
