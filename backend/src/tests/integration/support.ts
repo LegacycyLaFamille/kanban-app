@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../../generated/prisma/client.js";
 import { RabbitMqConnection } from "../../shared/events/rabbitmq/RabbitMqConnection.js";
@@ -29,7 +30,8 @@ export async function seedProject(prisma: PrismaClient) {
         data: {
           name,
           email: `${name.toLowerCase()}@integration.test`,
-          passwordHash: "not-a-real-hash",
+          // Never used to log in: any unique value will do.
+          passwordHash: randomUUID(),
         },
       }),
     ),
@@ -93,4 +95,4 @@ export async function waitFor<T>(
 }
 
 // Unique per run, so test consumers never share queues across runs.
-export const runId = Math.random().toString(36).slice(2, 8);
+export const runId = randomUUID().slice(0, 8);

@@ -363,3 +363,86 @@ describe("RabbitMqEventBus.subscribe", () => {
     ).rejects.toThrow("already exists");
   });
 });
+
+describe("RabbitMqEventBus - incidents", () => {
+  it("journalise les erreurs du canal de publication", async () => {
+    const { connection, channels } = fakeConnection();
+    const log = logger();
+    const bus = new RabbitMqEventBus(connection, log);
+    await bus.publish(createEvent("task.created", {}));
+
+    channels[0]!.emit("error", new Error("PRECONDITION_FAILED"));
+
+    expect(log.error).toHaveBeenCalledWith("Publish channel error", {
+      error: "PRECONDITION_FAILED",
+    });
+  });
+
+  it("journalise l'échec de démarrage d'un consumer et le relance à la connexion suivante", async () => {
+    const fake = fakeConnection(false);
+    const log = logger();
+    const bus = new RabbitMqEventBus(fake.connection, log);
+    await bus.subscribe({
+      name: "test.consumer",
+      eventTypes: ["task.created"],
+      handler: vi.fn(),
+    });
+    fake.raw.createConfirmChannel.mockRejectedValueOnce(new Error("boom"));
+
+    await fake.reconnect();
+    expect(log.error).toHaveBeenCalledWith("Could not start consumer", {
+      consumer: "test.consumer",
+      error: "boom",
+    });
+
+    await fake.reconnect();
+    expect(fake.channels[0]!.consume).toHaveBeenCalledOnce();
+  });
+
+  it("journalise les erreurs du canal d'un consumer et son annulation par le broker", async () => {
+    const fake = fakeConnection();
+    const log = logger();
+    const bus = new RabbitMqEventBus(fake.connection, log);
+    await bus.subscribe({
+      name: "test.consumer",
+      eventTypes: ["task.created"],
+      handler: vi.fn(),
+    });
+    const channel = fake.channels[0]!;
+
+    channel.emit("error", new Error("channel reset"));
+    const consume = channel.consume.mock.calls[0]![1];
+    consume(null);
+
+    expect(log.error).toHaveBeenCalledWith("Consumer channel error", {
+      consumer: "test.consumer",
+      error: "channel reset",
+    });
+    expect(log.warn).toHaveBeenCalledWith("Consumer cancelled by broker", {
+      consumer: "test.consumer",
+    });
+  });
+
+  it("n'échoue pas si l'acquittement est impossible (le broker relivrera)", async () => {
+    const fake = fakeConnection();
+    const log = logger();
+    const bus = new RabbitMqEventBus(fake.connection, log);
+    await bus.subscribe({
+      name: "test.consumer",
+      eventTypes: ["task.created"],
+      handler: vi.fn().mockResolvedValue(undefined),
+    });
+    const channel = fake.channels[0]!;
+    channel.ack.mockImplementation(() => {
+      throw new Error("Channel closed");
+    });
+
+    channel.deliver(JSON.stringify(createEvent("task.created", {})));
+    await flush();
+
+    expect(log.warn).toHaveBeenCalledWith(
+      "Could not settle message, it will be redelivered",
+      expect.objectContaining({ error: "Channel closed" }),
+    );
+  });
+});

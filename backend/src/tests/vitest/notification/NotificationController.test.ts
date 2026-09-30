@@ -262,4 +262,41 @@ describe("Notifications API", () => {
       expect(res.body).toEqual({ updated: 0 });
     });
   });
+
+  describe("erreurs inattendues", () => {
+    it.each([
+      ["get", "/notifications"],
+      ["get", "/notifications/unread-count"],
+      ["patch", `/notifications/${randomUUID()}/read`],
+      ["post", "/notifications/read-all"],
+    ] as const)("%s %s répond 500 sans détail interne", async (method, url) => {
+      const broken = new InMemoryNotificationRepository();
+      for (const name of [
+        "findForUser",
+        "countUnread",
+        "markRead",
+        "markAllRead",
+      ] as const) {
+        vi.spyOn(broken, name).mockRejectedValue(
+          new Error("db password=secret"),
+        );
+      }
+      const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      const res = await request(buildApp(broken))
+        [method](url)
+        .set("x-user", BOB);
+
+      expect(res.status).toBe(500);
+      expect(res.body).toEqual({
+        error: {
+          code: "INTERNAL_ERROR",
+          message: "An unexpected error occurred.",
+        },
+      });
+      expect(JSON.stringify(res.body)).not.toContain("secret");
+      expect(errors).toHaveBeenCalled();
+      errors.mockRestore();
+    });
+  });
 });
