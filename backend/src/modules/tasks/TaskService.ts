@@ -59,11 +59,11 @@ export class TaskService {
 
     const newTask = new Task(
       randomUUID(),
-      data.title ?? data.title,
-      data.description ?? data.description,
+      data.title,
+      data.description,
       projectId,
-      data.status ?? data.status,
-      data.priority ?? data.priority,
+      data.status,
+      data.priority,
       data.deadline ? new Date(data.deadline) : null,
       new Date(),
       data.boardId ? data.boardId : null,
