@@ -23,19 +23,21 @@ model User {
   updatedAt     DateTime        @updatedAt
   Project       Project[]
   ProjectMember ProjectMember[]
+  Notification  Notification[]
 }
 
 model Project {
-  id          String          @id @default(uuid())
-  name        String
-  description String
-  ownerId     String
-  owner       User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-  Task        Task[]
-  Board       Board[]
-  Member      ProjectMember[]
+  id           String          @id @default(uuid())
+  name         String
+  description  String
+  ownerId      String
+  owner        User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  Task         Task[]
+  Board        Board[]
+  Member       ProjectMember[]
+  Notification Notification[]
 }
 
 // A project always has exactly one owner (Project.ownerId), who has full
@@ -94,4 +96,28 @@ model Task {
   board       Board?    @relation(fields: [boardId], references: [id], onDelete: SetNull)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+}
+
+// In-app notification for one user, created by the notification consumer
+// from task events (docs/backend/NOTIFICATIONS.md). One row per (event,
+// recipient): the unique constraint makes a duplicate delivery of the same
+// event harmless. `taskTitle` is a snapshot taken when the event happened;
+// `actorId` and `taskId` are plain ids so the notification survives the
+// deletion of the task or of the user who acted.
+model Notification {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  eventId   String
+  actorId   String?
+  projectId String
+  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  taskId    String?
+  taskTitle String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@unique([eventId, userId])
+  @@index([userId, createdAt])
 }

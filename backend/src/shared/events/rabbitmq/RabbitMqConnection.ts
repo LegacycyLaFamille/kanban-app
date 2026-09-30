@@ -1,5 +1,5 @@
 import amqp from "amqplib";
-import type { Channel, ChannelModel } from "amqplib";
+import type { Channel, ChannelModel, ConfirmChannel } from "amqplib";
 import type { RabbitMqConfig } from "../../config/rabbitmq.config.js";
 import { declareTopology, type Topology } from "./topology.js";
 
@@ -60,6 +60,7 @@ export class RabbitMqConnection {
   private readonly connect: (url: string) => Promise<ChannelModel>;
   private readonly initialDelay: number;
   private readonly maxDelay: number;
+  private readonly connectedListeners: Array<() => Promise<void> | void> = [];
 
   constructor(
     private readonly config: RabbitMqConfig | null,
@@ -105,6 +106,20 @@ export class RabbitMqConnection {
     const channel = await this.model.createChannel();
     await channel.prefetch(this.config?.prefetch ?? 10);
     return channel;
+  }
+
+  // Channel whose publishes are acknowledged by the broker.
+  async createConfirmChannel(): Promise<ConfirmChannel> {
+    if (this.model === null || !this.isConnected()) {
+      throw new RabbitMqNotConnectedError(this.current.state);
+    }
+    return this.model.createConfirmChannel();
+  }
+
+  // Runs after every successful (re)connection, once the topology exists.
+  // Consumers use it to re-open their channels after a connection loss.
+  onConnected(listener: () => Promise<void> | void): void {
+    this.connectedListeners.push(listener);
   }
 
   async close(): Promise<void> {
@@ -158,6 +173,16 @@ export class RabbitMqConnection {
       reconnectAttempt: 0,
     });
     this.logger.info("Connected, topology declared");
+
+    for (const listener of this.connectedListeners) {
+      try {
+        await listener();
+      } catch (error) {
+        this.logger.error(
+          `Post-connection setup failed: ${errorMessage(error)}`,
+        );
+      }
+    }
   }
 
   private bind(model: ChannelModel): void {

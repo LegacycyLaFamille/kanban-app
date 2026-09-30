@@ -9,6 +9,7 @@ import { PrismaProjectMemberRepository } from "../projects/PrismaProjectMemberRe
 import { ProjectAccessGuard } from "../../shared/security/ProjectAccessGuard.js";
 import { validateSchema } from "../../shared/http/validateSchema.js";
 import { createTaskSchema, updateTaskSchema } from "./task.schema.js";
+import { eventBus } from "../../shared/events/index.js";
 
 export const taskRouter = Router();
 
@@ -19,7 +20,11 @@ const projectAccessGuard = new ProjectAccessGuard(
   projectRepository,
   projectMemberRepository,
 );
-const taskService = new TaskService(taskRepository, projectAccessGuard);
+const taskService = new TaskService(
+  taskRepository,
+  projectAccessGuard,
+  eventBus,
+);
 const taskController = new TaskController(taskService);
 
 taskRouter.post(
