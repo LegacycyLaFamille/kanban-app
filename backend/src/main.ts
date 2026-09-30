@@ -14,7 +14,7 @@ import { exportRouter } from "./modules/exports/export.routes.js";
 import { rabbitMq } from "./shared/events/rabbitmq/index.js";
 import { createHealthRouter } from "./shared/http/health.routes.js";
 import { eventBus } from "./shared/events/index.js";
-import { startNotificationConsumer } from "./modules/notifications/notification.consumer.js";
+import { startNotificationConsumer } from "./modules/notifications/notification.bootstrap.js";
 
 dotenv.config();
 

@@ -1,11 +1,7 @@
 import type { EventBus } from "../../shared/events/EventBus.js";
-import { prisma } from "../../shared/database/prisma.js";
-import { PrismaProjectRepository } from "../projects/PrismaProjectRepository.js";
-import { PrismaProjectMemberRepository } from "../projects/PrismaProjectMemberRepository.js";
-import { PrismaNotificationRepository } from "./PrismaNotificationRepository.js";
-import {
+import type {
   NotificationService,
-  type NotifiableTaskEvent,
+  NotifiableTaskEvent,
 } from "./NotificationService.js";
 
 export const NOTIFICATION_CONSUMER = "notifications.task-events";
@@ -35,14 +31,4 @@ export function subscribeNotificationConsumer(
       );
     },
   });
-}
-
-// Wiring with the Prisma repositories, called once at startup.
-export function startNotificationConsumer(eventBus: EventBus): Promise<void> {
-  const service = new NotificationService(
-    new PrismaNotificationRepository(prisma),
-    new PrismaProjectRepository(prisma),
-    new PrismaProjectMemberRepository(prisma),
-  );
-  return subscribeNotificationConsumer(eventBus, service);
 }
