@@ -95,6 +95,29 @@ async function fetchTaskFromBackend(
   return task as TaskResponse;
 }
 
+/** Fills the login form, submits it and checks the user lands on /projects. */
+async function logIn(page: Page): Promise<void> {
+  await expect(page).toHaveURL(/\/login$/);
+  await page.locator('input[name="email"]').fill(user.email);
+  await page.locator('input[name="password"]').fill(user.password);
+
+  const body = await expectApiCall<{
+    user: { email: string; name: string };
+  }>(page, "POST", /\/auth\/login$/, 200, () =>
+    page.getByRole("button", { name: "Sign in" }).click(),
+  );
+  expect(body.user).toMatchObject({ email: user.email, name: user.name });
+
+  await expect(page).toHaveURL(/\/projects$/);
+  await expect(
+    page.getByText("No projects yet", { exact: true }),
+  ).toBeVisible();
+
+  // The session cookie must now authenticate API calls.
+  const me = await page.request.get(`${API}/auth/me`);
+  expect(me.status()).toBe(200);
+}
+
 async function expectTaskOnlyIn(
   page: Page,
   title: string,
@@ -200,24 +223,28 @@ test.describe("Kanban end-to-end flow", () => {
     });
 
     test("log in with the new user", async () => {
-      await page.locator('input[name="email"]').fill(user.email);
-      await page.locator('input[name="password"]').fill(user.password);
+      await logIn(page);
+    });
 
-      const body = await expectApiCall<{
-        user: { email: string; name: string };
-      }>(page, "POST", /\/auth\/login$/, 200, () =>
-        page.getByRole("button", { name: "Sign in" }).click(),
+    test("log out", async () => {
+      await expectApiCall(page, "POST", /\/auth\/logout$/, 200, () =>
+        page.getByRole("button", { name: "Log out" }).click(),
       );
-      expect(body.user).toMatchObject({ email: user.email, name: user.name });
 
-      await expect(page).toHaveURL(/\/projects$/);
-      await expect(
-        page.getByText("No projects yet. Create your first project."),
-      ).toBeVisible();
+      await expect(page).toHaveURL(/\/login$/);
+      await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();
 
-      // The session cookie must now authenticate API calls.
+      // The session cookies are cleared: the API rejects the user...
       const me = await page.request.get(`${API}/auth/me`);
-      expect(me.status()).toBe(200);
+      expect(me.status()).toBe(401);
+
+      // ...and protected pages redirect back to the login page.
+      await page.goto("/projects");
+      await expect(page).toHaveURL(/\/login$/);
+    });
+
+    test("log back in with the same credentials", async () => {
+      await logIn(page);
     });
   });
 
@@ -418,8 +445,11 @@ test.describe("Kanban end-to-end flow", () => {
           confirmDialog.getByRole("button", { name: "Confirm Delete" }).click(),
       );
 
+      // With no task left, the board replaces its columns with an empty state.
       await expect(taskCard(page, editedTaskTitle)).toHaveCount(0);
-      await expect(column(page, "todo")).toContainText("(0)");
+      await expect(
+        page.getByText("No tasks yet", { exact: true }),
+      ).toBeVisible();
 
       // Both modals close at once; rather than asserting on modal DOM (Reshaped
       // may keep it briefly while animating out), check the board is usable
@@ -491,7 +521,7 @@ test.describe("Kanban end-to-end flow", () => {
 
       await expect(page).toHaveURL(/\/projects$/);
       await expect(
-        page.getByText("No projects yet. Create your first project."),
+        page.getByText("No projects yet", { exact: true }),
       ).toBeVisible();
 
       const response = await page.request.get(`${API}/projects/${projectId}`);
