@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach, type Mocked } from "vitest";
 import { strFromU8, unzipSync } from "fflate";
-import type { ExportProject } from "../../../modules/exports/DataExport.js";
+import type {
+  ExportBoard,
+  ExportProject,
+  ExportTask,
+} from "../../../modules/exports/DataExport.js";
 import type { DataExportRepository } from "../../../modules/exports/DataExportRepository.js";
 import {
   DataExportService,
@@ -11,6 +15,31 @@ import {
 const OWNER_ID = "11111111-1111-4111-8111-111111111111";
 const NOW = new Date("2026-09-28T12:00:00.000Z");
 
+function task(overrides: Partial<ExportTask> = {}): ExportTask {
+  return {
+    id: "tttttttt-0000-4000-8000-000000000001",
+    title: "Write specs",
+    description: "Draft the spec",
+    status: "DONE",
+    priority: "NORMAL",
+    deadline: null,
+    createdAt: new Date("2026-09-03T09:00:00.000Z"),
+    updatedAt: new Date("2026-09-04T09:00:00.000Z"),
+    ...overrides,
+  };
+}
+
+function board(overrides: Partial<ExportBoard> = {}): ExportBoard {
+  return {
+    id: "bbbbbbbb-0000-4000-8000-000000000001",
+    name: "Sprint 1",
+    createdAt: new Date("2026-09-02T09:00:00.000Z"),
+    updatedAt: new Date("2026-09-02T10:00:00.000Z"),
+    tasks: [task()],
+    ...overrides,
+  };
+}
+
 function project(overrides: Partial<ExportProject> = {}): ExportProject {
   return {
     id: "aaaaaaaa-0000-4000-8000-000000000001",
@@ -20,19 +49,8 @@ function project(overrides: Partial<ExportProject> = {}): ExportProject {
     memberIds: [],
     createdAt: new Date("2026-09-01T09:00:00.000Z"),
     updatedAt: new Date("2026-09-02T09:00:00.000Z"),
-    tasks: [
-      {
-        id: "tttttttt-0000-4000-8000-000000000001",
-        title: "Write specs",
-        description: "Draft the spec",
-        status: "DONE",
-        priority: "NORMAL",
-        deadline: null,
-        boardName: "Sprint 1",
-        createdAt: new Date("2026-09-03T09:00:00.000Z"),
-        updatedAt: new Date("2026-09-04T09:00:00.000Z"),
-      },
-    ],
+    boards: [board()],
+    unassignedTasks: [],
     ...overrides,
   };
 }
@@ -44,6 +62,10 @@ function lines(content: Uint8Array): string[] {
     .split("\r\n");
 }
 
+function column(row: string, name: (typeof EXPORT_COLUMNS)[number]): string {
+  return row.split(",")[EXPORT_COLUMNS.indexOf(name)]!;
+}
+
 describe("DataExportService", () => {
   let repository: Mocked<DataExportRepository>;
   let service: DataExportService;
@@ -53,13 +75,15 @@ describe("DataExportService", () => {
     service = new DataExportService(repository);
   });
 
-  it("exporte tous les projets possédés dans un seul CSV, une ligne par tâche", async () => {
-    const second = project({
-      id: "aaaaaaaa-0000-4000-8000-000000000002",
-      name: "Empty project",
-      tasks: [],
-    });
-    repository.findOwnedProjects.mockResolvedValue([project(), second]);
+  it("exporte tous les projets possédés dans un seul CSV", async () => {
+    repository.findOwnedProjects.mockResolvedValue([
+      project(),
+      project({
+        id: "aaaaaaaa-0000-4000-8000-000000000002",
+        name: "Empty project",
+        boards: [],
+      }),
+    ]);
 
     const file = await service.exportUserData(
       OWNER_ID,
@@ -74,10 +98,61 @@ describe("DataExportService", () => {
     const [header, taskRow, emptyProjectRow] = lines(file.content);
 
     expect(header).toBe(EXPORT_COLUMNS.join(","));
-    expect(taskRow).toContain("Kanban Platform");
-    expect(taskRow).toContain("Write specs");
-    expect(emptyProjectRow).toMatch(/^aaaaaaaa-0000-4000-8000-000000000002,/);
+    expect(column(taskRow!, "project_name")).toBe("Kanban Platform");
+    expect(column(taskRow!, "board_name")).toBe("Sprint 1");
+    expect(column(taskRow!, "task_title")).toBe("Write specs");
+    expect(column(emptyProjectRow!, "project_name")).toBe("Empty project");
+    expect(column(emptyProjectRow!, "board_id")).toBe("");
     expect(emptyProjectRow!.split(",")).toHaveLength(EXPORT_COLUMNS.length);
+  });
+
+  it("décrit chaque tableau du projet, y compris ceux sans tâche", async () => {
+    repository.findOwnedProjects.mockResolvedValue([
+      project({
+        boards: [
+          board({
+            tasks: [
+              task(),
+              task({
+                id: "tttttttt-0000-4000-8000-000000000002",
+                title: "Review specs",
+              }),
+            ],
+          }),
+          board({
+            id: "bbbbbbbb-0000-4000-8000-000000000002",
+            name: "Backlog",
+            tasks: [],
+          }),
+        ],
+        unassignedTasks: [
+          task({
+            id: "tttttttt-0000-4000-8000-000000000003",
+            title: "Orphan task",
+          }),
+        ],
+      }),
+    ]);
+
+    const file = await service.exportUserData(
+      OWNER_ID,
+      { format: "csv", layout: "single" },
+      NOW,
+    );
+    const rows = lines(file.content).slice(1);
+
+    expect(rows).toHaveLength(4);
+    expect(
+      rows.map((row) => [column(row, "board_name"), column(row, "task_title")]),
+    ).toEqual([
+      ["Sprint 1", "Write specs"],
+      ["Sprint 1", "Review specs"],
+      ["Backlog", ""],
+      ["", "Orphan task"],
+    ]);
+    expect(column(rows[2]!, "board_id")).toBe(
+      "bbbbbbbb-0000-4000-8000-000000000002",
+    );
   });
 
   it("remplace les personnes par leur rôle dans le projet", async () => {
@@ -90,12 +165,10 @@ describe("DataExportService", () => {
       { format: "csv", layout: "single" },
       NOW,
     );
-    const row = lines(file.content)[1]!.split(",");
+    const row = lines(file.content)[1]!;
 
-    expect(row[EXPORT_COLUMNS.indexOf("project_owner")]).toBe("owner");
-    expect(row[EXPORT_COLUMNS.indexOf("project_members")]).toBe(
-      "member; member",
-    );
+    expect(column(row, "project_owner")).toBe("owner");
+    expect(column(row, "project_members")).toBe("member; member");
     expect(strFromU8(file.content)).not.toContain(OWNER_ID);
     expect(strFromU8(file.content)).not.toContain("member-1");
   });
@@ -127,7 +200,7 @@ describe("DataExportService", () => {
         {
           format: "csv",
           layout: "single",
-          projectIds: [project().id, "bbbbbbbb-0000-4000-8000-000000000009"],
+          projectIds: [project().id, "cccccccc-0000-4000-8000-000000000009"],
         },
         NOW,
       ),
@@ -152,7 +225,7 @@ describe("DataExportService", () => {
       project({
         id: "aaaaaaaa-0000-4000-8000-000000000002",
         name: "Café & Co!",
-        tasks: [],
+        boards: [],
       }),
     ]);
 
@@ -175,13 +248,20 @@ describe("DataExportService", () => {
     expect(lines(entries["cafe-co-aaaaaaaa.csv"]!)[1]).toContain("Café & Co!");
   });
 
-  it("attribue le rôle owner au propriétaire et member aux autres", () => {
-    expect(roleInProject(OWNER_ID, project())).toBe("owner");
-    expect(roleInProject("someone-else", project())).toBe("member");
-  });
-  it("exporte en JSON structuré avec les rôles à la place des personnes", async () => {
+  it("exporte en JSON projet → tableaux → tâches, avec les tâches sans tableau", async () => {
     repository.findOwnedProjects.mockResolvedValue([
-      project({ memberIds: ["member-1"] }),
+      project({
+        memberIds: ["member-1"],
+        boards: [
+          board(),
+          board({
+            id: "bbbbbbbb-0000-4000-8000-000000000002",
+            name: "Backlog",
+            tasks: [],
+          }),
+        ],
+        unassignedTasks: [task({ title: "Orphan task" })],
+      }),
     ]);
 
     const file = await service.exportUserData(
@@ -201,7 +281,14 @@ describe("DataExportService", () => {
       name: "Kanban Platform",
       owner: "owner",
       members: ["member"],
-      tasks: [{ title: "Write specs", board: "Sprint 1", deadline: null }],
+      boards: [
+        {
+          name: "Sprint 1",
+          tasks: [{ title: "Write specs", deadline: null }],
+        },
+        { name: "Backlog", tasks: [] },
+      ],
+      unassignedTasks: [{ title: "Orphan task" }],
     });
     expect(JSON.stringify(data)).not.toContain(OWNER_ID);
     expect(JSON.stringify(data)).not.toContain("member-1");
@@ -219,9 +306,17 @@ describe("DataExportService", () => {
     const entries = unzipSync(file.content);
 
     expect(Object.keys(entries)).toEqual(["kanban-platform-aaaaaaaa.json"]);
-    expect(
-      JSON.parse(strFromU8(entries["kanban-platform-aaaaaaaa.json"]!))
-        .projects[0].id,
-    ).toBe(project().id);
+
+    const data = JSON.parse(
+      strFromU8(entries["kanban-platform-aaaaaaaa.json"]!),
+    );
+
+    expect(data.projects[0].id).toBe(project().id);
+    expect(data.projects[0].boards[0].tasks).toHaveLength(1);
+  });
+
+  it("attribue le rôle owner au propriétaire et member aux autres", () => {
+    expect(roleInProject(OWNER_ID, project())).toBe("owner");
+    expect(roleInProject("someone-else", project())).toBe("member");
   });
 });
