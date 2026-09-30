@@ -51,7 +51,11 @@ export function Column({
   }, [dropRef]);
 
   return (
-    <div ref={ref} style={{ height: "100%" }}>
+    <div
+      ref={ref}
+      data-testid={`column-${columnId}`}
+      style={{ height: "100%" }}
+    >
       <Card padding={4}>
         <div
           style={{
