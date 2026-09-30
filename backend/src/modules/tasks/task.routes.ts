@@ -7,6 +7,8 @@ import { prisma } from "../../shared/database/prisma.js";
 import { PrismaProjectRepository } from "../projects/PrismaProjectRepository.js";
 import { PrismaProjectMemberRepository } from "../projects/PrismaProjectMemberRepository.js";
 import { ProjectAccessGuard } from "../../shared/security/ProjectAccessGuard.js";
+import { validateSchema } from "../../shared/http/validateSchema.js";
+import { createTaskSchema, updateTaskSchema } from "./task.schema.js";
 
 export const taskRouter = Router();
 
@@ -23,6 +25,7 @@ const taskController = new TaskController(taskService);
 taskRouter.post(
   "/projects/:projectId/tasks",
   requireAuth,
+  validateSchema(createTaskSchema),
   (req: Request<{ projectId: string }>, res: Response) =>
     taskController.createTask(req, res),
 );
@@ -44,6 +47,7 @@ taskRouter.get(
 taskRouter.patch(
   "/tasks/:taskId",
   requireAuth,
+  validateSchema(updateTaskSchema),
   (req: Request<{ taskId: string }>, res: Response) =>
     taskController.updateTask(req, res),
 );
