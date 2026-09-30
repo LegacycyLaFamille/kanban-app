@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 
-import { ApiError } from "../../../shared/api";
+import { ApiError, toUserMessage } from "../../../shared/api";
 
 import { register } from "../api/auth.api";
 
@@ -21,10 +21,15 @@ export function useRegister() {
 
         return true;
       } catch (requestError) {
-        if (requestError instanceof ApiError) {
-          setError(requestError.message);
+        if (requestError instanceof ApiError && requestError.status === 409) {
+          setError("An account with this email already exists.");
         } else {
-          setError("Unable to create your account. Please try again.");
+          setError(
+            toUserMessage(
+              requestError,
+              "Unable to create your account. Please try again.",
+            ),
+          );
         }
 
         return false;

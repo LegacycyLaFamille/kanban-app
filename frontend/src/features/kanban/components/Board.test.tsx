@@ -84,6 +84,49 @@ describe("Board", () => {
     expect(getTasksByProject).toHaveBeenCalledWith("project-1");
   });
 
+  it("shows a loading state until the tasks are fetched", async () => {
+    vi.mocked(getTasksByProject).mockResolvedValue([task]);
+
+    renderBoard();
+
+    expect(screen.getByRole("status", { name: "Loading tasks" })).toBeTruthy();
+
+    await screen.findByText(task.title);
+
+    expect(screen.queryByRole("status", { name: "Loading tasks" })).toBeNull();
+  });
+
+  it("replaces the board with an error and recovers on retry", async () => {
+    const user = userEvent.setup();
+    vi.mocked(getTasksByProject)
+      .mockRejectedValueOnce(new Error("network down"))
+      .mockResolvedValueOnce([task]);
+
+    renderBoard();
+
+    expect(
+      await screen.findByText("Unable to load tasks. Please try again."),
+    ).toBeTruthy();
+    expect(screen.queryByTestId("column-todo")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Retry" }));
+
+    expect(await screen.findByText(task.title)).toBeTruthy();
+  });
+
+  it("invites the user to create a task when the board is empty", async () => {
+    const user = userEvent.setup();
+    vi.mocked(getTasksByProject).mockResolvedValue([]);
+
+    renderBoard();
+
+    expect(await screen.findByText("No tasks yet")).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "Create a task" }));
+
+    expect(await screen.findByPlaceholderText("Task title...")).toBeTruthy();
+  });
+
   it("persists a drop by calling the API with the right payload and moves the card immediately", async () => {
     const user = userEvent.setup();
     vi.mocked(getTasksByProject)

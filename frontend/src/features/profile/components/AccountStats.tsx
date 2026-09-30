@@ -2,6 +2,12 @@ import { Button, Skeleton } from "reshaped";
 
 import { useNavigate } from "react-router-dom";
 
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from "../../../shared/components/Feedback";
+
 import { useProfileStats } from "../hooks/useProfileStats";
 
 import { ProfileSection } from "./ProfileSection";
@@ -54,40 +60,34 @@ export function AccountStats({ memberSince }: AccountStatsProps) {
       )}
 
       {isLoading && (
-        <div
+        <LoadingState
+          label="Loading your activity"
           className={styles.statsGrid}
-          role="status"
-          aria-label="Loading your activity"
         >
           {STAT_PLACEHOLDERS.map((key) => (
             <Skeleton key={key} height={19} borderRadius="medium" />
           ))}
-        </div>
+        </LoadingState>
       )}
 
       {!isLoading && error && (
-        <div className={styles.state}>
-          <p role="alert">{error}</p>
-
-          <Button
-            variant="outline"
-            onClick={() => {
-              void reload();
-            }}
-          >
-            Retry
-          </Button>
-        </div>
+        <ErrorState
+          message={error}
+          onRetry={() => {
+            void reload();
+          }}
+        />
       )}
 
       {!isLoading && !error && stats?.projectCount === 0 && (
-        <div className={styles.state}>
-          <p>You don&apos;t own any projects yet.</p>
-
-          <Button variant="outline" onClick={() => navigate("/projects")}>
-            Go to projects
-          </Button>
-        </div>
+        <EmptyState
+          title="You don't own any projects yet."
+          action={
+            <Button variant="outline" onClick={() => navigate("/projects")}>
+              Go to projects
+            </Button>
+          }
+        />
       )}
 
       {!isLoading && !error && stats && stats.projectCount > 0 && (
