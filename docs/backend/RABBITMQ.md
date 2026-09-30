@@ -3,7 +3,7 @@
 RabbitMQ is the message broker of the event-driven workflows
 ([ADR-008](../adr/ADR-008-rabbitmq-events.md)). This page covers the broker
 setup and the backend connection. Publishing and consuming events goes through
-the Event Bus (S1-26).
+the Event Bus, see [EVENTS.md](EVENTS.md).
 
 ## Configuration
 
