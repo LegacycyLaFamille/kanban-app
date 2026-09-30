@@ -1,3 +1,4 @@
+import { recordError } from "../../shared/observability/recordError.js";
 import type { Request, Response } from "express";
 import { TaskService } from "./TaskService.js";
 
@@ -101,7 +102,7 @@ export class TaskController {
       });
     }
 
-    console.error("[TaskController Error]", error);
+    recordError(error, "Task request failed");
     return res.status(500).json({
       error: {
         code: "INTERNAL_SERVER_ERROR",
