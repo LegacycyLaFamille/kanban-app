@@ -260,6 +260,39 @@ Frontend visibility rules are never considered a security boundary.
 
 New business data must be created in an authenticated and authorized context.
 
+### Session lifecycle
+
+Auth uses two httpOnly cookies: `accessToken` (JWT, 15 minute lifetime) and
+`refreshToken` (JWT, 7 day lifetime, also persisted on `User` and rotated on
+every use — see `AuthService.refreshSession`/`generateAuthTokens` in
+`backend/src/modules/auth/AuthService.ts`). `requireAuth`
+(`backend/src/shared/security/requireAuth.ts`) rejects a missing or
+invalid/expired `accessToken` with `401` using the standard error shape from
+§8 (`code: "UNAUTHENTICATED"`), the same shape `requireAdmin` uses for `403`.
+
+The frontend never reimplements this per feature. Every authenticated call
+goes through `httpClient` (`frontend/src/shared/api/httpClient.ts`), which:
+
+- on any `401` (except calls that opt out via `skipAuthRefresh`, e.g. login),
+  attempts one silent `POST /auth/refresh` and retries the original request
+  once;
+- if that retry still comes back `401` — refresh failed, or the refreshed
+  session still can't satisfy the request — notifies a single registered
+  "session expired" handler, then lets the `401` surface as an `ApiError` as
+  usual.
+
+`AuthProvider` (`frontend/src/features/auth/context/AuthProvider.tsx`) is the
+sole subscriber to that handler: it clears `user`/`sessionError` (via
+`clearSession`), which is the same context state that also drives startup
+session restoration (`getCurrentUser()` on mount, gating the app behind
+`isInitializing`) and `signOut`. Because `AuthProvider` sits above
+`RouterProvider` in the tree, it never navigates itself — `ProtectedRoute`
+and `RequireAdmin` react to `isAuthenticated`/`user` changing and redirect on
+their own, so a session dying mid-use (or a fresh login) updates the UI
+without a page reload. Do not add ad hoc `401`/session-clearing logic in
+individual features or hooks; extend the handler in `httpClient`/
+`AuthProvider` instead.
+
 ### System-wide roles
 
 `User.role` (`USER` | `ADMIN`, defaults to `USER`) is a system-wide role,

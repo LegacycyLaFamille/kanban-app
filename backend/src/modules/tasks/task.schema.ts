@@ -54,5 +54,10 @@ export const updateTaskSchema = z
     { message: "At least one field must be provided" },
   );
 
+// Query string of GET /tasks/my.
+export const myTasksQuerySchema = z.strictObject({
+  status: statusSchema.optional(),
+});
+
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;
 export type UpdateTaskInput = z.infer<typeof updateTaskSchema>;

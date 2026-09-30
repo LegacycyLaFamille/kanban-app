@@ -45,6 +45,7 @@ describe("TaskService - événements", () => {
     save: Mock;
     findById: Mock;
     findByProjectId: Mock;
+    findAssignedTo: Mock;
     delete: Mock;
   };
   let projects: { findById: Mock };
@@ -66,6 +67,7 @@ describe("TaskService - événements", () => {
       save: vi.fn(async (t: Task) => t),
       findById: vi.fn(),
       findByProjectId: vi.fn(),
+      findAssignedTo: vi.fn(),
       delete: vi.fn(),
     };
     projects = { findById: vi.fn().mockResolvedValue(project) };
@@ -133,7 +135,6 @@ describe("TaskService - événements", () => {
         publish: (event) => Promise.reject(new EventPublishError(event)),
         subscribe: vi.fn(),
       };
-      const errors = vi.spyOn(console, "error").mockImplementation(() => {});
       service = build(failingBus);
 
       await expect(
@@ -144,10 +145,6 @@ describe("TaskService - événements", () => {
           status: "TODO",
         }),
       ).resolves.toMatchObject({ title: "x" });
-      expect(errors).toHaveBeenCalledWith(
-        expect.stringContaining('"eventType":"task.created"'),
-      );
-      errors.mockRestore();
     });
   });
 

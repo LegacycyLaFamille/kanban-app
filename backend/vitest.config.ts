@@ -2,6 +2,7 @@ import { configDefaults, defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
+    env: { LOG_LEVEL: "silent" },
     // Real PostgreSQL/RabbitMQ suite, run with `npm run test:integration`.
     exclude: [...configDefaults.exclude, "src/tests/integration/**"],
     coverage: {

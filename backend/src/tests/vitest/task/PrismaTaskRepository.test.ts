@@ -46,4 +46,68 @@ describe("PrismaTaskRepository", () => {
       expect(result).toEqual(task);
     });
   });
+
+  describe("findAssignedTo", () => {
+    const row = {
+      id: "task-1",
+      title: "Relire la PR",
+      description: "",
+      projectId: "proj-1",
+      status: "TODO",
+      priority: "High",
+      deadline: new Date("2026-10-02T00:00:00.000Z"),
+      createdAt: new Date("2026-09-01T00:00:00.000Z"),
+      boardId: null,
+      assigneeId: "user-1",
+      project: { id: "proj-1", name: "Kanban" },
+    };
+
+    it("ne renvoie que les tâches assignées dans les projets encore accessibles", async () => {
+      const findMany = vi.fn().mockResolvedValue([row]);
+      const repository = new PrismaTaskRepository({
+        task: { findMany },
+      } as unknown as PrismaClient);
+
+      const result = await repository.findAssignedTo("user-1");
+
+      expect(findMany).toHaveBeenCalledWith({
+        where: {
+          assigneeId: "user-1",
+          project: {
+            OR: [
+              { ownerId: "user-1" },
+              { Member: { some: { userId: "user-1" } } },
+            ],
+          },
+        },
+        include: { project: { select: { id: true, name: true } } },
+        orderBy: [
+          { deadline: { sort: "asc", nulls: "last" } },
+          { createdAt: "asc" },
+        ],
+      });
+      expect(result).toHaveLength(1);
+      expect(result[0]!.task).toBeInstanceOf(Task);
+      expect(result[0]!.task).toMatchObject({
+        id: "task-1",
+        assigneeId: "user-1",
+        deadline: row.deadline,
+      });
+      expect(result[0]!.project).toEqual({ id: "proj-1", name: "Kanban" });
+    });
+
+    it("applique le filtre de statut", async () => {
+      const findMany = vi.fn().mockResolvedValue([]);
+      const repository = new PrismaTaskRepository({
+        task: { findMany },
+      } as unknown as PrismaClient);
+
+      await repository.findAssignedTo("user-1", { status: "DONE" });
+
+      expect(findMany.mock.calls[0]![0].where).toMatchObject({
+        assigneeId: "user-1",
+        status: "DONE",
+      });
+    });
+  });
 });

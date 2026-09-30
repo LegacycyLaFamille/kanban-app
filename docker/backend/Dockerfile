@@ -28,4 +28,4 @@ USER node
 HEALTHCHECK --interval=10s --timeout=5s --start-period=15s --retries=5 \
   CMD node -e "require('http').get('http://127.0.0.1:3000/',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
 
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main.js"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node --import ./dist/instrumentation.js dist/main.js"]
