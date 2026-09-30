@@ -83,3 +83,9 @@ npx prisma generate
 
 
 *Note: This will bring your local database fully up to date and ensure your code recognizes any new models or fields introduced in the new issue.*
+
+---
+
+### 3. Observability
+
+`docker compose up -d` also starts the observability stack (OpenTelemetry Collector, Prometheus, Loki, Tempo and Grafana on <http://localhost:3001>). See [OBSERVABILITY.md](OBSERVABILITY.md).
