@@ -1,10 +1,12 @@
 import { strToU8, zipSync } from "fflate";
 import { toCsv, type CsvValue } from "../../shared/export/csv.js";
 import type {
+  ExportBoard,
   ExportFile,
   ExportFormat,
   ExportOptions,
   ExportProject,
+  ExportTask,
 } from "./DataExport.js";
 import type { DataExportRepository } from "./DataExportRepository.js";
 
@@ -27,7 +29,9 @@ export const EXPORT_COLUMNS = [
   "project_created_at",
   "project_owner",
   "project_members",
+  "board_id",
   "board_name",
+  "board_created_at",
   "task_id",
   "task_title",
   "task_description",
@@ -52,6 +56,25 @@ export function roleInProject(
   return userId === project.ownerId ? "owner" : "member";
 }
 
+function boardColumns(board: ExportBoard | null): CsvValue[] {
+  return board ? [board.id, board.name, board.createdAt] : [null, null, null];
+}
+
+function taskColumns(task: ExportTask | null): CsvValue[] {
+  return task
+    ? [
+        task.id,
+        task.title,
+        task.description,
+        task.status,
+        task.priority,
+        task.deadline,
+        task.createdAt,
+        task.updatedAt,
+      ]
+    : Array<CsvValue>(8).fill(null);
+}
+
 function toRows(project: ExportProject): CsvValue[][] {
   const projectColumns: CsvValue[] = [
     project.id,
@@ -64,29 +87,35 @@ function toRows(project: ExportProject): CsvValue[][] {
       .join("; "),
   ];
 
-  if (project.tasks.length === 0) {
-    return [
-      [
-        ...projectColumns,
-        ...Array<CsvValue>(EXPORT_COLUMNS.length - projectColumns.length).fill(
-          null,
-        ),
-      ],
-    ];
-  }
-
-  return project.tasks.map((task) => [
+  const row = (board: ExportBoard | null, task: ExportTask | null) => [
     ...projectColumns,
-    task.boardName,
-    task.id,
-    task.title,
-    task.description,
-    task.status,
-    task.priority,
-    task.deadline,
-    task.createdAt,
-    task.updatedAt,
-  ]);
+    ...boardColumns(board),
+    ...taskColumns(task),
+  ];
+
+  const rows = [
+    ...project.boards.flatMap((board) =>
+      board.tasks.length === 0
+        ? [row(board, null)]
+        : board.tasks.map((task) => row(board, task)),
+    ),
+    ...project.unassignedTasks.map((task) => row(null, task)),
+  ];
+
+  return rows.length > 0 ? rows : [row(null, null)];
+}
+
+function toJsonTask(task: ExportTask) {
+  return {
+    id: task.id,
+    title: task.title,
+    description: task.description,
+    status: task.status,
+    priority: task.priority,
+    deadline: task.deadline,
+    createdAt: task.createdAt,
+    updatedAt: task.updatedAt,
+  };
 }
 
 function toJsonProject(project: ExportProject) {
@@ -100,17 +129,14 @@ function toJsonProject(project: ExportProject) {
     members: project.memberIds.map((memberId) =>
       roleInProject(memberId, project),
     ),
-    tasks: project.tasks.map((task) => ({
-      id: task.id,
-      title: task.title,
-      description: task.description,
-      status: task.status,
-      priority: task.priority,
-      deadline: task.deadline,
-      board: task.boardName,
-      createdAt: task.createdAt,
-      updatedAt: task.updatedAt,
+    boards: project.boards.map((board) => ({
+      id: board.id,
+      name: board.name,
+      createdAt: board.createdAt,
+      updatedAt: board.updatedAt,
+      tasks: board.tasks.map(toJsonTask),
     })),
+    unassignedTasks: project.unassignedTasks.map(toJsonTask),
   };
 }
 

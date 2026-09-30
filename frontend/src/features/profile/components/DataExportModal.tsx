@@ -108,8 +108,9 @@ function DataExportForm({ onClose, onExported }: DataExportFormProps) {
         <Modal.Title>Export your data</Modal.Title>
 
         <Modal.Subtitle>
-          Download a copy of the projects you own and their tasks. People are
-          listed by their role (owner or member), never by name or email.
+          Download a copy of the projects you own, with their boards and tasks.
+          People are listed by their role (owner or member), never by name or
+          email.
         </Modal.Subtitle>
       </View>
 

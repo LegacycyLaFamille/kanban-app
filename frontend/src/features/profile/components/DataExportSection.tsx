@@ -30,7 +30,7 @@ export function DataExportSection() {
   return (
     <ProfileSection
       title="Your data"
-      description="Download a copy of the projects and tasks you own, as CSV or JSON."
+      description="Download a copy of the projects, boards and tasks you own, as CSV or JSON."
     >
       <div aria-live="polite">
         {isExported && (

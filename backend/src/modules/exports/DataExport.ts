@@ -9,9 +9,16 @@ export interface ExportTask {
   status: string;
   priority: string;
   deadline: Date | null;
-  boardName: string | null;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface ExportBoard {
+  id: string;
+  name: string;
+  createdAt: Date;
+  updatedAt: Date;
+  tasks: ExportTask[];
 }
 
 export interface ExportProject {
@@ -22,7 +29,8 @@ export interface ExportProject {
   memberIds: string[];
   createdAt: Date;
   updatedAt: Date;
-  tasks: ExportTask[];
+  boards: ExportBoard[];
+  unassignedTasks: ExportTask[];
 }
 
 export interface ExportOptions {
