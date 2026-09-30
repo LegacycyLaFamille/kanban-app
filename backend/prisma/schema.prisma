@@ -68,6 +68,19 @@ model Board {
   updatedAt DateTime @updatedAt
 }
 
+// Read-only archive of the legacy `todo_items` table, filled by the one-shot
+// script `src/scripts/migrate-legacy-data.ts`. Per ADR-007 these rows carry
+// no ownership: they are intentionally NOT linked to User/Project/Task and
+// are not exposed by any API route. `id` is the legacy id kept as-is so the
+// script can be re-run safely (upsert).
+model LegacyTodoItem {
+  id         String   @id
+  name       String?
+  completed  Boolean  @default(false)
+  source     String
+  migratedAt DateTime @default(now())
+}
+
 model Task {
   id          String    @id @default(uuid())
   title       String
