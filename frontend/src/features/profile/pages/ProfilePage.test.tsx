@@ -310,7 +310,6 @@ describe("ProfilePage", () => {
 
     expect((confirm as HTMLButtonElement).disabled).toBe(true);
 
-    // Email comparison is case-insensitive.
     await user.type(within(dialog).getByRole("textbox"), "Jane@Example.com");
 
     expect((confirm as HTMLButtonElement).disabled).toBe(false);

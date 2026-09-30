@@ -13,7 +13,6 @@ const loginSchema = z.object({
   password: z.string(),
 });
 
-// Only these fields can be changed through PATCH /auth/me; any other key is rejected.
 const updateProfileSchema = z
   .strictObject({
     name: z.string().trim().min(2).max(100).optional(),

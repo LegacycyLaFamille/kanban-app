@@ -45,14 +45,9 @@ export function useUpdateProfile() {
         return false;
       }
 
-      try {
-        // Keeps the sidebar and every other consumer of the session in sync.
-        await refreshUser();
-      } catch {
-        // The update itself succeeded; a failed refresh only leaves stale data.
-      } finally {
-        setIsSubmitting(false);
-      }
+      await refreshUser().catch(() => undefined);
+
+      setIsSubmitting(false);
 
       return true;
     },

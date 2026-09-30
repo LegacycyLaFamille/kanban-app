@@ -27,3 +27,20 @@ export interface ChangePasswordFormValues {
 export type ChangePasswordFieldErrors = Partial<
   Record<keyof ChangePasswordFormValues, string>
 >;
+
+export type ExportFormat = "csv" | "json";
+
+export type ExportLayout = "single" | "per-project";
+
+export type ExportScope = "all" | "selected";
+
+export interface DataExportOptions {
+  format: ExportFormat;
+  layout: ExportLayout;
+  projectIds?: string[];
+}
+
+export interface OwnedProject {
+  id: string;
+  name: string;
+}

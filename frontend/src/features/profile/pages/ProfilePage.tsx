@@ -2,6 +2,7 @@ import { useAuth } from "../../auth/hooks/useAuth";
 
 import { AccountStats } from "../components/AccountStats";
 import { DangerZone } from "../components/DangerZone";
+import { DataExportSection } from "../components/DataExportSection";
 import { ProfileDetailsForm } from "../components/ProfileDetailsForm";
 
 import styles from "./ProfilePage.module.css";
@@ -20,8 +21,6 @@ function getInitials(name: string): string {
 export function ProfilePage() {
   const { user } = useAuth();
 
-  // ProtectedRoute guarantees a session; this only guards against a
-  // session that ends while the page is open.
   if (!user) {
     return null;
   }
@@ -42,16 +41,24 @@ export function ProfilePage() {
         </header>
 
         <div className={styles.grid}>
-          <div className={styles.details}>
-            <ProfileDetailsForm user={user} />
+          <div className={styles.column}>
+            <div className={styles.details}>
+              <ProfileDetailsForm user={user} />
+            </div>
+
+            <div className={styles.danger}>
+              <DangerZone email={user.email} />
+            </div>
           </div>
 
-          <div className={styles.overview}>
-            <AccountStats memberSince={user.createdAt} />
-          </div>
+          <div className={styles.column}>
+            <div className={styles.overview}>
+              <AccountStats memberSince={user.createdAt} />
+            </div>
 
-          <div className={styles.danger}>
-            <DangerZone email={user.email} />
+            <div className={styles.data}>
+              <DataExportSection />
+            </div>
           </div>
         </div>
       </div>

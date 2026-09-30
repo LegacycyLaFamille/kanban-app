@@ -12,7 +12,6 @@ import styles from "./ProfileSections.module.css";
 
 interface DangerZoneProps {
   email: string;
-  // Not wired yet: password change needs a backend endpoint, deletion is S2-16.
   onChangePassword?: (values: ChangePasswordFormValues) => Promise<void>;
   onDeleteAccount?: () => Promise<void>;
 }
