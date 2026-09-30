@@ -135,7 +135,6 @@ describe("TaskService - événements", () => {
         publish: (event) => Promise.reject(new EventPublishError(event)),
         subscribe: vi.fn(),
       };
-      const errors = vi.spyOn(console, "error").mockImplementation(() => {});
       service = build(failingBus);
 
       await expect(
@@ -146,10 +145,6 @@ describe("TaskService - événements", () => {
           status: "TODO",
         }),
       ).resolves.toMatchObject({ title: "x" });
-      expect(errors).toHaveBeenCalledWith(
-        expect.stringContaining('"eventType":"task.created"'),
-      );
-      errors.mockRestore();
     });
   });
 

@@ -1,3 +1,4 @@
+import { recordError } from "../../shared/observability/recordError.js";
 import type { Request, Response } from "express";
 import type { BoardService } from "./BoardService.js";
 
@@ -110,7 +111,7 @@ export class BoardController {
       }
     }
 
-    console.error("[BoardController Error]", error);
+    recordError(error, "Board request failed");
 
     return res.status(500).json({
       error: {

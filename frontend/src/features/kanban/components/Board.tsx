@@ -116,6 +116,26 @@ function toFrontendPriority(
   }
 }
 
+// --- Deadline conversion helpers ---
+// The API exchanges ISO 8601 UTC strings (e.g. "2026-09-30T17:35:44.633Z");
+// the datetime-local input works with "YYYY-MM-DDTHH:mm" in local time.
+function toDateTimeLocalValue(deadline?: string): string {
+  if (!deadline) return "";
+  const date = new Date(deadline);
+  if (Number.isNaN(date.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return (
+    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
+    `T${pad(date.getHours())}:${pad(date.getMinutes())}`
+  );
+}
+
+function toIsoDeadline(value: string): string | undefined {
+  if (!value) return undefined;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
+}
+
 function toFrontendTask(task: BackendTask): FrontendTask {
   return {
     id: task.id,
@@ -124,6 +144,7 @@ function toFrontendTask(task: BackendTask): FrontendTask {
     projectId: task.projectId,
     columnId: toColumnId(task.status),
     priority: toFrontendPriority(task.priority),
+    deadline: task.deadline ?? undefined,
     assignee: { id: "", name: "" },
   };
 }
@@ -229,6 +250,7 @@ export function Board({ projectId }: BoardProps) {
       description: activeTask.description,
       priority: toBackendPriority(activeTask.priority),
       status: toBackendStatus(activeTask.columnId),
+      deadline: activeTask.deadline ?? null,
     };
 
     if (isEditing) {
@@ -504,6 +526,27 @@ export function Board({ projectId }: BoardProps) {
                       );
                     })}
                   </View>
+                </View>
+
+                {/* Deadline */}
+                <View gap={1}>
+                  <Text variant="caption-1" color="neutral-faded">
+                    Deadline
+                  </Text>
+                  <TextField
+                    name="deadline"
+                    value={toDateTimeLocalValue(activeTask.deadline)}
+                    inputAttributes={{
+                      type: "datetime-local",
+                      "aria-label": "Deadline",
+                    }}
+                    onChange={({ value }) =>
+                      setActiveTask((prev) => ({
+                        ...prev,
+                        deadline: toIsoDeadline(value),
+                      }))
+                    }
+                  />
                 </View>
 
                 {/* Description */}

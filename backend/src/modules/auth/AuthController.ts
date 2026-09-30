@@ -1,3 +1,4 @@
+import { recordError } from "../../shared/observability/recordError.js";
 import type { Request, Response } from "express";
 import { AuthService } from "./AuthService.js";
 import type {
@@ -38,7 +39,7 @@ export class AuthController {
         return;
       }
 
-      console.error("[Register Error]", error);
+      recordError(error, "Register failed");
       res.status(500).json({
         error: { code: "INTERNAL_ERROR", message: "Unexpected server error" },
       });
@@ -76,7 +77,7 @@ export class AuthController {
         return;
       }
 
-      console.error("[Login Error]", error);
+      recordError(error, "Login failed");
       res.status(500).json({
         error: { code: "INTERNAL_ERROR", message: "Unexpected server error" },
       });
@@ -128,7 +129,7 @@ export class AuthController {
         createdAt: user.createdAt,
       });
     } catch (error) {
-      console.error("[Profile Error]", error);
+      recordError(error, "Profile request failed");
       res.status(500).json({
         error: { code: "INTERNAL_ERROR", message: "Unexpected server error" },
       });
@@ -168,7 +169,7 @@ export class AuthController {
         return;
       }
 
-      console.error("[Update Profile Error]", error);
+      recordError(error, "Profile update failed");
       res.status(500).json({
         error: { code: "INTERNAL_ERROR", message: "Unexpected server error" },
       });
@@ -181,7 +182,7 @@ export class AuthController {
 
       res.status(200).json(stats);
     } catch (error) {
-      console.error("[Profile Stats Error]", error);
+      recordError(error, "Profile stats request failed");
       res.status(500).json({
         error: { code: "INTERNAL_ERROR", message: "Unexpected server error" },
       });

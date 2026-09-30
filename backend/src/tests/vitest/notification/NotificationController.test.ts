@@ -6,6 +6,7 @@ import express, {
 } from "express";
 import request from "supertest";
 import { randomUUID } from "node:crypto";
+import { logger } from "../../../shared/observability/logger.js";
 import { NotificationController } from "../../../modules/notifications/NotificationController.js";
 import { NotificationService } from "../../../modules/notifications/NotificationService.js";
 import { Notification } from "../../../modules/notifications/Notification.js";
@@ -281,7 +282,7 @@ describe("Notifications API", () => {
           new Error("db password=secret"),
         );
       }
-      const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+      const errors = vi.spyOn(logger, "error").mockImplementation(() => {});
 
       const res = await request(buildApp(broken))
         [method](url)
