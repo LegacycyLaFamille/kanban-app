@@ -1,18 +1,42 @@
+import { useState } from "react";
+
 import { Navigate, Outlet, useLocation } from "react-router-dom";
+
+import { ErrorState, LoadingState } from "../../../shared/components/Feedback";
 
 import { useAuth } from "../hooks/useAuth";
 
 export function ProtectedRoute() {
   const location = useLocation();
 
-  const { isAuthenticated, isInitializing, sessionError } = useAuth();
+  const { isAuthenticated, isInitializing, sessionError, refreshUser } =
+    useAuth();
 
-  if (isInitializing) {
-    return <div role="status">Loading session...</div>;
+  const [isRetrying, setIsRetrying] = useState(false);
+
+  async function retry() {
+    setIsRetrying(true);
+
+    await refreshUser().catch(() => undefined);
+
+    setIsRetrying(false);
+  }
+
+  if (isInitializing || isRetrying) {
+    return <LoadingState label="Loading your session" />;
   }
 
   if (sessionError) {
-    return <div role="alert">{sessionError}</div>;
+    return (
+      <ErrorState
+        size="screen"
+        title="Unable to verify your session"
+        message="Check your connection and try again."
+        onRetry={() => {
+          void retry();
+        }}
+      />
+    );
   }
 
   if (!isAuthenticated) {

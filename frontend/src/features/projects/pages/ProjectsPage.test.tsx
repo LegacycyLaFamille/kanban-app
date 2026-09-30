@@ -88,6 +88,93 @@ describe("ProjectsPage", () => {
     expect(screen.getByText("No projects match your search.")).toBeTruthy();
   });
 
+  it("shows a loading state while projects are fetched", () => {
+    vi.mocked(useProjects).mockReturnValue({
+      projects: [],
+      isLoading: true,
+      isCreating: false,
+      error: null,
+      mutationError: null,
+      reload,
+      createProject,
+      resetMutationError,
+    });
+
+    renderPage();
+
+    expect(
+      screen.getByRole("status", { name: "Loading projects" }),
+    ).toBeTruthy();
+    expect(screen.queryByText("No projects yet")).toBeNull();
+  });
+
+  it("shows the load error with a retry", async () => {
+    const user = userEvent.setup();
+
+    vi.mocked(useProjects).mockReturnValue({
+      projects: [],
+      isLoading: false,
+      isCreating: false,
+      error: "Unable to load projects.",
+      mutationError: null,
+      reload,
+      createProject,
+      resetMutationError,
+    });
+
+    renderPage();
+
+    expect(screen.getByRole("alert").textContent).toContain(
+      "Unable to load projects.",
+    );
+
+    await user.click(screen.getByRole("button", { name: "Retry" }));
+
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it("invites the user to create a first project when there are none", async () => {
+    const user = userEvent.setup();
+
+    vi.mocked(useProjects).mockReturnValue({
+      projects: [],
+      isLoading: false,
+      isCreating: false,
+      error: null,
+      mutationError: null,
+      reload,
+      createProject,
+      resetMutationError,
+    });
+
+    renderPage();
+
+    expect(screen.getByText("No projects yet")).toBeTruthy();
+
+    await user.click(
+      screen.getByRole("button", { name: "Create your first project" }),
+    );
+
+    expect(screen.getByLabelText("Project name")).toBeTruthy();
+  });
+
+  it("clears the search from the no-results state", async () => {
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await user.type(
+      screen.getByRole("searchbox", { name: "Search projects" }),
+      "something else",
+    );
+
+    await user.click(screen.getByRole("button", { name: "Clear search" }));
+
+    expect(
+      screen.getByRole("link", { name: "Open project Kanban" }),
+    ).toBeTruthy();
+  });
+
   it("opens the created project after a successful POST", async () => {
     const user = userEvent.setup();
 

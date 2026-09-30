@@ -1,7 +1,13 @@
 import { useState } from "react";
 
-import { Button, Card, Text, View } from "reshaped";
+import { Button, Card, Skeleton, Text, View } from "reshaped";
 import { Link, useNavigate, useParams } from "react-router-dom";
+
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from "../../../shared/components/Feedback";
 
 import { useAuth } from "../../auth/hooks/useAuth";
 
@@ -22,6 +28,8 @@ import styles from "./ProjectDetailsPage.module.css";
 
 type BoardFormState =
   { kind: "create" } | { kind: "edit"; board: ProjectBoard };
+
+const BOARD_PLACEHOLDERS = ["first", "second", "third"];
 
 function formatDate(date: string): string {
   return new Intl.DateTimeFormat("en-GB", {
@@ -73,9 +81,16 @@ export function ProjectDetailsPage() {
   if (isLoading) {
     return (
       <section className={styles.page}>
-        <div className={styles.state} role="status">
-          Loading project...
-        </div>
+        <LoadingState label="Loading project">
+          <View gap={7}>
+            <Skeleton height={20} borderRadius="medium" />
+
+            <div className={styles.mainGrid}>
+              <Skeleton height={80} borderRadius="medium" />
+              <Skeleton height={50} borderRadius="medium" />
+            </div>
+          </View>
+        </LoadingState>
       </section>
     );
   }
@@ -83,13 +98,16 @@ export function ProjectDetailsPage() {
   if (notFound) {
     return (
       <section className={styles.page}>
-        <div className={styles.state}>
-          <h1>Project not found</h1>
-          <p>This project does not exist or is no longer available.</p>
-          <Button onClick={() => navigate("/projects")}>
-            Back to projects
-          </Button>
-        </div>
+        <EmptyState
+          size="page"
+          title="Project not found"
+          description="This project does not exist or is no longer available."
+          action={
+            <Button onClick={() => navigate("/projects")}>
+              Back to projects
+            </Button>
+          }
+        />
       </section>
     );
   }
@@ -97,18 +115,19 @@ export function ProjectDetailsPage() {
   if (error || !project) {
     return (
       <section className={styles.page}>
-        <div className={styles.state}>
-          <h1>Unable to load project</h1>
-          <p role="alert">{error || "The project could not be loaded."}</p>
-          <Button
-            variant="outline"
-            onClick={() => {
-              void reload();
-            }}
-          >
-            Retry
-          </Button>
-        </div>
+        <ErrorState
+          size="page"
+          title="Unable to load project"
+          message={error || "The project could not be loaded."}
+          onRetry={() => {
+            void reload();
+          }}
+          action={
+            <Button variant="ghost" onClick={() => navigate("/projects")}>
+              Back to projects
+            </Button>
+          }
+        />
       </section>
     );
   }
@@ -447,28 +466,47 @@ export function ProjectDetailsPage() {
                 )}
 
                 {boardsLoading && (
-                  <div className={styles.empty} role="status">
-                    Loading boards...
-                  </div>
+                  <LoadingState
+                    label="Loading boards"
+                    className={styles.memberList}
+                  >
+                    {BOARD_PLACEHOLDERS.map((key) => (
+                      <Skeleton key={key} height={9} borderRadius="medium" />
+                    ))}
+                  </LoadingState>
                 )}
 
                 {!boardsLoading && boardsError && (
-                  <div className={styles.empty}>
-                    <p role="alert">{boardsError}</p>
-
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        void reloadBoards();
-                      }}
-                    >
-                      Retry loading boards
-                    </Button>
-                  </div>
+                  <ErrorState
+                    message={boardsError}
+                    retryLabel="Retry loading boards"
+                    onRetry={() => {
+                      void reloadBoards();
+                    }}
+                  />
                 )}
 
                 {!boardsLoading && !boardsError && boards.length === 0 && (
-                  <div className={styles.empty}>No boards yet.</div>
+                  <EmptyState
+                    title="No boards yet."
+                    description={
+                      isOwner
+                        ? "Create a board to start adding tasks."
+                        : "The project owner has not created any boards yet."
+                    }
+                    action={
+                      isOwner &&
+                      !boardForm && (
+                        <Button
+                          variant="outline"
+                          disabled={isMutatingBoard}
+                          onClick={openCreateBoard}
+                        >
+                          Create your first board
+                        </Button>
+                      )
+                    }
+                  />
                 )}
 
                 {!boardsLoading && !boardsError && boards.length > 0 && (
