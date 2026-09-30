@@ -16,6 +16,7 @@ type ColumnProps = {
   tasks: Task[];
   onDropTask: (taskId: string, targetColumnId: ColumnId) => void;
   onAddTask: () => void;
+  isTaskPending?: (taskId: string) => boolean;
 };
 
 export function Column({
@@ -24,6 +25,7 @@ export function Column({
   tasks,
   onDropTask,
   onAddTask,
+  isTaskPending,
 }: ColumnProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [{ isOver, canDrop }, dropRef] = useDrop<
@@ -83,7 +85,11 @@ export function Column({
             <View.Item grow>
               <View gap={3}>
                 {tasks.map((task) => (
-                  <DraggableTaskCard key={task.id} task={task} />
+                  <DraggableTaskCard
+                    key={task.id}
+                    task={task}
+                    isPending={isTaskPending?.(task.id) ?? false}
+                  />
                 ))}
               </View>
             </View.Item>
