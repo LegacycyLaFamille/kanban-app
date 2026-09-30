@@ -45,6 +45,7 @@ describe("TaskService - événements", () => {
     save: Mock;
     findById: Mock;
     findByProjectId: Mock;
+    findAssignedTo: Mock;
     delete: Mock;
   };
   let projects: { findById: Mock };
@@ -66,6 +67,7 @@ describe("TaskService - événements", () => {
       save: vi.fn(async (t: Task) => t),
       findById: vi.fn(),
       findByProjectId: vi.fn(),
+      findAssignedTo: vi.fn(),
       delete: vi.fn(),
     };
     projects = { findById: vi.fn().mockResolvedValue(project) };
