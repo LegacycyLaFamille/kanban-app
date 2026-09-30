@@ -1,7 +1,10 @@
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
+    env: { LOG_LEVEL: "silent" },
+    // Real PostgreSQL/RabbitMQ suite, run with `npm run test:integration`.
+    exclude: [...configDefaults.exclude, "src/tests/integration/**"],
     coverage: {
       provider: "v8",
       // Measure coverage across the whole TypeScript codebase, not only the

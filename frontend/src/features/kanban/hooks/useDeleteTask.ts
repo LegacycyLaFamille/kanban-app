@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 
-import { ApiError } from "../../../shared/api";
+import { toUserMessage } from "../../../shared/api";
 import { deleteTask } from "../api/tasks.api";
 
 export function useDeleteTask() {
@@ -15,11 +15,9 @@ export function useDeleteTask() {
       await deleteTask(taskId);
       return true;
     } catch (requestError) {
-      if (requestError instanceof ApiError) {
-        setError(requestError.message);
-      } else {
-        setError("Unable to delete task. Please try again.");
-      }
+      setError(
+        toUserMessage(requestError, "Unable to delete task. Please try again."),
+      );
       return false;
     } finally {
       setIsSubmitting(false);

@@ -185,10 +185,21 @@ Tasks:
 ```text
 POST   /api/projects/:projectId/tasks
 GET    /api/projects/:projectId/tasks
+GET    /api/tasks/my            tasks assigned to the current user, across all their projects
 GET    /api/tasks/:taskId
 PATCH  /api/tasks/:taskId
 DELETE /api/tasks/:taskId
 ```
+
+`GET /tasks/my` is declared before `/tasks/:taskId` so `my` is never read as
+a task id. It requires only `requireAuth` — a user can always see what's
+assigned to them, so this is not `ProjectAccessGuard`- or `requireAdmin`-gated
+like `/admin/tasks` is. It's restricted to tasks in projects the requesting
+user still owns or is a member of: `Task.assigneeId` isn't cleared when a
+user is removed from a project, so the repository query re-checks access
+itself (same rule as `ProjectAccessGuard.assertCanView`) rather than trusting
+the stored assignment. Supports an optional `?status=` filter and sorts by
+closest deadline first (tasks without a deadline last), then creation date.
 
 ---
 
@@ -260,6 +271,88 @@ Frontend visibility rules are never considered a security boundary.
 
 New business data must be created in an authenticated and authorized context.
 
+### Session lifecycle
+
+Auth uses two httpOnly cookies: `accessToken` (JWT, 15 minute lifetime) and
+`refreshToken` (JWT, 7 day lifetime, also persisted on `User` and rotated on
+every use — see `AuthService.refreshSession`/`generateAuthTokens` in
+`backend/src/modules/auth/AuthService.ts`). `requireAuth`
+(`backend/src/shared/security/requireAuth.ts`) rejects a missing or
+invalid/expired `accessToken` with `401` using the standard error shape from
+§8 (`code: "UNAUTHENTICATED"`), the same shape `requireAdmin` uses for `403`.
+
+The frontend never reimplements this per feature. Every authenticated call
+goes through `httpClient` (`frontend/src/shared/api/httpClient.ts`), which:
+
+- on any `401` (except calls that opt out via `skipAuthRefresh`, e.g. login),
+  attempts one silent `POST /auth/refresh` and retries the original request
+  once;
+- if that retry still comes back `401` — refresh failed, or the refreshed
+  session still can't satisfy the request — notifies a single registered
+  "session expired" handler, then lets the `401` surface as an `ApiError` as
+  usual.
+
+`AuthProvider` (`frontend/src/features/auth/context/AuthProvider.tsx`) is the
+sole subscriber to that handler: it clears `user`/`sessionError` (via
+`clearSession`), which is the same context state that also drives startup
+session restoration (`getCurrentUser()` on mount, gating the app behind
+`isInitializing`) and `signOut`. Because `AuthProvider` sits above
+`RouterProvider` in the tree, it never navigates itself — `ProtectedRoute`
+and `RequireAdmin` react to `isAuthenticated`/`user` changing and redirect on
+their own, so a session dying mid-use (or a fresh login) updates the UI
+without a page reload. Do not add ad hoc `401`/session-clearing logic in
+individual features or hooks; extend the handler in `httpClient`/
+`AuthProvider` instead.
+
+### System-wide roles
+
+`User.role` (`USER` | `ADMIN`, defaults to `USER`) is a system-wide role,
+orthogonal to per-project ownership/membership (`ProjectAccessGuard`,
+`Project.ownerId`, `ProjectMember`): a user can be an app-wide admin while
+still being just a member — or nothing at all — on any given project. The
+two authorization systems never overlap and are checked independently.
+
+`requireAdmin(userRepository)` (`backend/src/shared/security/requireAdmin.ts`)
+is the reusable guard for "is this user an admin" checks, following the same
+shape as `ProjectAccessGuard`: it looks the role up fresh from the database
+on every request rather than trusting a JWT claim, so a promotion or
+demotion takes effect immediately. It must run after `requireAuth` in the
+middleware chain (it reads `req.userId`, which `requireAuth` sets) and
+rejects with the standard error shape from §8:
+
+```json
+{ "error": { "code": "FORBIDDEN", "message": "This action requires administrator access." } }
+```
+
+`GET /auth/me` includes `role` in its response, alongside `id`/`email`/`name`/`createdAt`.
+
+There is no admin-management UI yet — promoting the first admin is a manual
+step, see [`../backend/ADMIN_ROLE.md`](../backend/ADMIN_ROLE.md).
+
+### Admin dashboard endpoints
+
+Every route under `/admin` requires `requireAuth` + `requireAdmin`, in that
+order:
+
+```text
+GET   /admin/tasks                    all tasks across all projects, grouped by project
+PATCH /admin/tasks/:taskId/assignee   set (assigneeId: <uuid>) or clear (assigneeId: null) a task's assignee
+```
+
+`GET /admin/tasks` returns tasks grouped by project (not a flat list), each
+group carrying its `assignableUsers` (owner + members) so the frontend can
+render the assignment control without a second request per project — see
+`backend/src/modules/admin/AdminTask.ts` for the exact shape.
+
+**Assignment permission decision:** a task may only be assigned to a user
+who already has access to its project (the owner or an existing
+`ProjectMember`). Assigning to someone with no project access would create
+a task nobody but an admin could ever see or act on, breaking the
+`ProjectAccessGuard` invariant that only a project's owner/members may view
+or act on its tasks. Rejected with `400 ASSIGNEE_NOT_PROJECT_MEMBER`. To
+assign to someone new, add them as a project member first via the existing
+`POST /projects/:projectId/members`.
+
 ---
 
 ## 10. Input Validation
@@ -285,6 +378,13 @@ Controller
     ↓
 Service
 ```
+
+Implemented as a shared `validateSchema(schema)` Express middleware
+(`backend/src/shared/http/validateSchema.ts`), applied per route ahead of the
+controller. Each module colocates its own Zod schemas next to its service
+(e.g. `backend/src/modules/projects/project.schema.ts`). A schema failure
+short-circuits with the `VALIDATION_ERROR` shape from §8 and never reaches
+the controller or service.
 
 ---
 

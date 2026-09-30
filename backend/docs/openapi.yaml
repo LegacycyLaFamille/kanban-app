@@ -31,13 +31,25 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/ValidationError'
+              example:
+                error:
+                  code: VALIDATION_ERROR
+                  message: Invalid request
+                  details:
+                    email: ["Invalid email address"]
         '409':
           description: Conflit (L'email existe déjà).
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/ValidationError'
+              example:
+                error:
+                  code: EMAIL_ALREADY_IN_USE
+                  message: This email is already used by another account.
+                  details:
+                    email: ["This email is already in use"]
 
   /api/v1/auth/login:
     post:
@@ -67,13 +79,17 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/ValidationError'
         '401':
           description: Identifiants invalides.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/StandardError'
+              example:
+                error:
+                  code: INVALID_CREDENTIALS
+                  message: Invalid credentials.
 
   /api/v1/auth/refresh:
     post:
@@ -98,7 +114,11 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/StandardError'
+              example:
+                error:
+                  code: SESSION_EXPIRED
+                  message: Session expired, please sign in again.
 
   /api/v1/auth/me:
     get:
@@ -120,7 +140,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/StandardError'
     patch:
       summary: Mettre à jour le profil de l'utilisateur connecté
       description: >
@@ -160,7 +180,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/StandardError'
         '404':
           description: Utilisateur introuvable.
           content:
@@ -200,7 +220,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/StandardError'
 
   /api/v1/auth/me/export:
     get:
@@ -278,7 +298,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/StandardError'
         '404':
           description: >
             Un projet sélectionné est introuvable ou n'appartient pas à
@@ -312,7 +332,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/StandardError'
 
   # ==========================================
   # MODULE PROJECTS
@@ -357,7 +377,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/ValidationError'
 
   /api/v1/projects/{projectId}:
     get:
@@ -413,6 +433,10 @@ paths:
                 $ref: '#/components/schemas/Project'
         '400':
           description: Données invalides (Zod)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
         '403':
           $ref: '#/components/responses/ForbiddenError'
         '404':
@@ -434,6 +458,112 @@ paths:
       responses:
         '204':
           description: Projet supprimé avec succès
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/projects/{projectId}/members:
+    get:
+      summary: Liste les membres d'un projet (hors propriétaire)
+      tags:
+        - Projects
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Liste des membres
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProjectMember'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    post:
+      summary: Ajoute un membre au projet (lecture seule) par email
+      description: Réservé au propriétaire du projet.
+      tags:
+        - Projects
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddProjectMemberDto'
+      responses:
+        '201':
+          description: Membre ajouté
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectMember'
+        '400':
+          description: Données invalides (Zod)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: Projet introuvable, ou aucun utilisateur avec cet email.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+        '409':
+          description: >
+            L'utilisateur est déjà le propriétaire ou déjà membre du projet.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+
+  /api/v1/projects/{projectId}/members/{memberUserId}:
+    delete:
+      summary: Retire un membre du projet
+      description: Réservé au propriétaire du projet.
+      tags:
+        - Projects
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: memberUserId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Membre retiré avec succès
         '403':
           $ref: '#/components/responses/ForbiddenError'
         '404':
@@ -617,10 +747,71 @@ paths:
                 $ref: '#/components/schemas/Task'
         '400':
           description: Données invalides (Zod)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
         '403':
           $ref: '#/components/responses/ForbiddenError'
         '404':
           $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/tasks/my:
+    get:
+      summary: Tâches assignées à l'utilisateur connecté, tous projets confondus
+      description: >
+        Page "My tasks". Ne renvoie que les tâches des projets dont
+        l'utilisateur est propriétaire ou membre : une tâche restée assignée
+        après le retrait du projet n'apparaît plus. Tri par échéance la plus
+        proche, les tâches sans échéance en dernier, puis par date de
+        création.
+      tags:
+        - Tasks
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [TODO, IN_PROGRESS, DONE]
+      responses:
+        '200':
+          description: Tâches assignées avec leur projet.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  allOf:
+                    - $ref: '#/components/schemas/Task'
+                    - type: object
+                      properties:
+                        assigneeId:
+                          type: string
+                          format: uuid
+                          nullable: true
+                        project:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              format: uuid
+                            name:
+                              type: string
+        '400':
+          description: Paramètre de requête invalide ou inconnu.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          description: Non authentifié.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
 
   /api/v1/tasks/{taskId}:
     patch:
@@ -651,6 +842,10 @@ paths:
                 $ref: '#/components/schemas/Task'
         '400':
           description: Données invalides (Zod)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
         '403':
           $ref: '#/components/responses/ForbiddenError'
         '404':
@@ -677,6 +872,287 @@ paths:
         '404':
           $ref: '#/components/responses/NotFoundError'
 
+  # ==========================================
+  # MODULE ADMIN
+  # ==========================================
+  # Every route below requires requireAuth + requireAdmin — a system-wide
+  # role check, independent of ProjectAccessGuard's per-project
+  # owner/member authorization. See
+  # docs/standards/API_CONVENTIONS.md#admin-dashboard-endpoints.
+  /api/v1/admin/tasks:
+    get:
+      summary: Liste toutes les tâches de tous les projets, groupées par projet
+      description: >
+        Vue globale admin, non filtrée par appartenance/rôle projet. Chaque
+        groupe inclut assignableUsers (propriétaire + membres) pour permettre
+        l'assignation sans requête supplémentaire.
+      tags:
+        - Admin
+      security:
+        - CookieAuth: []
+      responses:
+        '200':
+          description: Tâches groupées par projet
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AdminProjectTasks'
+        '401':
+          description: Non authentifié.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+        '403':
+          description: Authentifié mais non administrateur.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+              example:
+                error:
+                  code: FORBIDDEN
+                  message: This action requires administrator access.
+
+  /api/v1/admin/tasks/{taskId}/assignee:
+    patch:
+      summary: Assigne (ou désassigne) une tâche à un utilisateur
+      description: >
+        L'utilisateur cible doit déjà avoir accès au projet de la tâche
+        (propriétaire ou ProjectMember) ; sinon 400
+        ASSIGNEE_NOT_PROJECT_MEMBER. Ajoutez d'abord l'utilisateur comme
+        membre via POST /projects/{projectId}/members.
+      tags:
+        - Admin
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignTaskDto'
+      responses:
+        '200':
+          description: Tâche mise à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          description: >
+            Données invalides (Zod), ou utilisateur cible non membre du
+            projet (ASSIGNEE_NOT_PROJECT_MEMBER).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              examples:
+                validation:
+                  value:
+                    error:
+                      code: VALIDATION_ERROR
+                      message: Invalid request
+                      details:
+                        assigneeId: ["Invalid UUID"]
+                notAMember:
+                  value:
+                    error:
+                      code: ASSIGNEE_NOT_PROJECT_MEMBER
+                      message: The selected user is not a member of this task's project.
+        '401':
+          description: Non authentifié.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+        '403':
+          description: Authentifié mais non administrateur.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+              example:
+                error:
+                  code: FORBIDDEN
+                  message: This action requires administrator access.
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  # ==========================================
+  # NOTIFICATIONS
+  # ==========================================
+  /api/v1/notifications:
+    get:
+      summary: Liste les notifications de l'utilisateur connecté
+      description: >
+        Uniquement les notifications de l'utilisateur authentifié, des plus
+        récentes aux plus anciennes, paginées par curseur.
+      tags:
+        - Notifications
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: unread
+          in: query
+          description: Ne renvoyer que les notifications non lues.
+          schema:
+            type: string
+            enum: ['true', 'false']
+            default: 'false'
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: cursor
+          in: query
+          description: Valeur `nextCursor` de la page précédente.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Une page de notifications.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPage'
+        '400':
+          description: Paramètres invalides (`VALIDATION_ERROR`) ou curseur inconnu (`INVALID_CURSOR`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          description: Non authentifié.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+
+  /api/v1/notifications/unread-count:
+    get:
+      summary: Nombre de notifications non lues
+      tags:
+        - Notifications
+      security:
+        - CookieAuth: []
+      responses:
+        '200':
+          description: Nombre de notifications non lues.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+        '401':
+          description: Non authentifié.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+
+  /api/v1/notifications/{notificationId}/read:
+    patch:
+      summary: Marque une notification comme lue
+      description: >
+        Idempotent : une notification déjà lue garde sa date de lecture.
+        La notification d'un autre utilisateur répond 404.
+      tags:
+        - Notifications
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: notificationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: La notification mise à jour.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+        '401':
+          description: Non authentifié.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+        '404':
+          description: Notification introuvable ou appartenant à un autre utilisateur (`NOTIFICATION_NOT_FOUND`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+
+  /api/v1/notifications/read-all:
+    post:
+      summary: Marque toutes les notifications de l'utilisateur comme lues
+      tags:
+        - Notifications
+      security:
+        - CookieAuth: []
+      responses:
+        '200':
+          description: Nombre de notifications marquées comme lues.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  updated:
+                    type: integer
+        '401':
+          description: Non authentifié.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+
+  # ==========================================
+  # HEALTH
+  # ==========================================
+  /api/v1/health:
+    get:
+      summary: État du backend et de ses dépendances (PostgreSQL, RabbitMQ)
+      description: >
+        Public, sans authentification. `degraded` signifie que l'API fonctionne
+        mais que le broker est injoignable (les traitements asynchrones sont
+        retardés). N'expose ni URL ni message d'erreur du broker.
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Base disponible (`status` vaut `ok` ou `degraded`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: Base de données indisponible (`status` vaut `down`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
 components:
   securitySchemes:
     CookieAuth:
@@ -685,6 +1161,86 @@ components:
       name: accessToken
 
   schemas:
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [task.created, task.completed]
+        readAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+          description: Date de l'événement à l'origine de la notification.
+        project:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+        task:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+              format: uuid
+            title:
+              type: string
+              nullable: true
+              description: Titre au moment de l'événement.
+        actor:
+          type: object
+          nullable: true
+          description: Utilisateur à l'origine de l'événement, null s'il a été supprimé.
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+
+    NotificationPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Notification'
+        nextCursor:
+          type: string
+          format: uuid
+          nullable: true
+          description: À passer en `cursor` pour la page suivante, null sur la dernière page.
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded, down]
+        database:
+          type: string
+          enum: [up, down]
+        rabbitmq:
+          type: object
+          properties:
+            state:
+              type: string
+              enum: [disabled, connecting, connected, disconnected, closed]
+            connectedAt:
+              type: string
+              format: date-time
+            reconnectAttempt:
+              type: integer
     # --- AUTHENTICATION SCHEMAS ---
     RegisterRequest:
       type: object
@@ -781,6 +1337,25 @@ components:
             $ref: '#/components/schemas/Board'
           description: Liste des tableaux liés (peut être omis si non peuplé)
 
+    ProjectMember:
+      type: object
+      description: >
+        Read-only access grant; the owner is not duplicated here (see
+        Project.ownerId).
+      properties:
+        id:
+          type: string
+          format: uuid
+        projectId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+
     Board:
       type: object
       properties:
@@ -816,7 +1391,7 @@ components:
           enum: [TODO, IN_PROGRESS, DONE]
         priority:
           type: string
-          enum: [LOW, NORMAL, HIGH]
+          enum: [Low, Medium, High]
         description:
           type: string
         createdAt:
@@ -826,24 +1401,130 @@ components:
           type: string
           format: date-time
           nullable: true
+        assigneeId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Set via PATCH /admin/tasks/{taskId}/assignee (admin-only).
+
+    # --- ADMIN DASHBOARD ---
+    AdminAssignableUser:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+
+    AdminTask:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        status:
+          type: string
+          enum: [TODO, IN_PROGRESS, DONE]
+        priority:
+          type: string
+          enum: [Low, Medium, High]
+        deadline:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        boardId:
+          type: string
+          format: uuid
+          nullable: true
+        assigneeId:
+          type: string
+          format: uuid
+          nullable: true
+        assigneeName:
+          type: string
+          nullable: true
+        assigneeEmail:
+          type: string
+          format: email
+          nullable: true
+
+    AdminProjectTasks:
+      type: object
+      properties:
+        projectId:
+          type: string
+          format: uuid
+        projectName:
+          type: string
+        assignableUsers:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminAssignableUser'
+          description: Project owner + members — the only valid assignment targets.
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminTask'
+
+    AssignTaskDto:
+      type: object
+      additionalProperties: false
+      required: [assigneeId]
+      properties:
+        assigneeId:
+          type: string
+          format: uuid
+          nullable: true
+          description: null clears the assignment.
 
     # --- DTOs ---
     CreateProjectDto:
       type: object
+      additionalProperties: false
       required: [name]
       properties:
         name:
           type: string
+          minLength: 1
+          maxLength: 200
         description:
           type: string
+          maxLength: 2000
+          default: ""
 
     UpdateProjectDto:
       type: object
+      additionalProperties: false
+      minProperties: 1
       properties:
         name:
           type: string
+          minLength: 1
+          maxLength: 200
         description:
           type: string
+          maxLength: 2000
+
+    AddProjectMemberDto:
+      type: object
+      additionalProperties: false
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
 
     CreateBoardDto:
       type: object
@@ -860,15 +1541,28 @@ components:
 
     CreateTaskDto:
       type: object
+      additionalProperties: false
       required: [title]
       properties:
         title:
           type: string
+          minLength: 1
+          maxLength: 200
         description:
           type: string
+          maxLength: 5000
+          default: ""
+        status:
+          description: >
+            Normally omitted — new tasks start in TODO. Accepted for
+            completeness/defense-in-depth if a client sends it explicitly.
+          type: string
+          enum: [TODO, IN_PROGRESS, DONE]
+          default: TODO
         priority:
           type: string
-          enum: [LOW, NORMAL, HIGH]
+          enum: [Low, Medium, High]
+          default: Medium
         deadline:
           type: string
           format: date-time
@@ -880,17 +1574,22 @@ components:
 
     UpdateTaskDto:
       type: object
+      additionalProperties: false
+      minProperties: 1
       properties:
         title:
           type: string
+          minLength: 1
+          maxLength: 200
         status:
           type: string
           enum: [TODO, IN_PROGRESS, DONE]
         priority:
           type: string
-          enum: [LOW, NORMAL, HIGH]
+          enum: [Low, Medium, High]
         description:
           type: string
+          maxLength: 5000
         deadline:
           type: string
           format: date-time
@@ -901,18 +1600,8 @@ components:
           nullable: true
 
     # --- ERRORS ---
-    ErrorResponse:
-      type: object
-      properties:
-        error:
-          type: string
-          example: Message d'erreur
-        details:
-          type: array
-          items:
-            type: object
-          description: Présent uniquement pour les erreurs 400 (Zod).
-
+    # Every error response uses one of the two shapes below (never a bare
+    # string), matching docs/standards/API_CONVENTIONS.md §8.
     StandardError:
       type: object
       properties:
@@ -954,6 +1643,12 @@ components:
           format: email
         name:
           type: string
+        role:
+          type: string
+          enum: [USER, ADMIN]
+          description: >
+            System-wide role, orthogonal to per-project ownership/membership.
+            See docs/backend/ADMIN_ROLE.md.
         createdAt:
           type: string
           format: date-time

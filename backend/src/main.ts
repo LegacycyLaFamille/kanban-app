@@ -11,6 +11,13 @@ import { projectRouter } from "./modules/projects/project.routes.js";
 import { taskRouter } from "./modules/tasks/task.routes.js";
 import { boardRouter } from "./modules/boards/board.routes.js";
 import { exportRouter } from "./modules/exports/export.routes.js";
+import { adminRouter } from "./modules/admin/admin.routes.js";
+import { notificationRouter } from "./modules/notifications/notification.routes.js";
+import { rabbitMq } from "./shared/events/rabbitmq/index.js";
+import { createHealthRouter } from "./shared/http/health.routes.js";
+import { eventBus } from "./shared/events/index.js";
+import { startNotificationConsumer } from "./modules/notifications/notification.bootstrap.js";
+import { logger } from "./shared/observability/logger.js";
 
 dotenv.config();
 
@@ -40,6 +47,17 @@ app.use("/api/v1", projectRouter);
 app.use("/api/v1", taskRouter);
 app.use("/api/v1", boardRouter);
 app.use("/api/v1", exportRouter);
+app.use("/api/v1", adminRouter);
+app.use("/api/v1", notificationRouter);
+app.use(
+  "/api/v1",
+  createHealthRouter({
+    checkDatabase: async () => {
+      await prisma.$queryRaw`SELECT 1`;
+    },
+    rabbitMqStatus: () => rabbitMq.status(),
+  }),
+);
 
 app.get("/", (_req: Request, res: Response) => {
   res.send("Hello from ts backend");
@@ -48,17 +66,23 @@ app.get("/", (_req: Request, res: Response) => {
 async function main() {
   try {
     await prisma.$connect();
-    console.log("Connexion à PostgreSQL établie avec succès.");
+    logger.info("Connexion à PostgreSQL établie avec succès.");
+
+    // Registered before connecting so consumers start on the first
+    // (re)connection.
+    await startNotificationConsumer(eventBus);
+
+    // Not awaited on purpose: the API must start even when the broker is
+    // down; the connection keeps retrying in the background.
+    void rabbitMq.start();
 
     app.listen(port, () => {
-      console.log(`Example app listening on port ${port}`);
+      logger.info(`Example app listening on port ${port}`);
     });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    console.error(
+    logger.error(
+      { err: error },
       "Échec critique de connexion à la base de données :",
-      message,
-      { cause: error },
     );
     process.exit(1);
   }

@@ -1,3 +1,4 @@
+import { recordError } from "../../shared/observability/recordError.js";
 import type { Request, Response } from "express";
 import { ProjectService } from "./ProjectService.js";
 
@@ -144,7 +145,7 @@ export class ProjectController {
       });
     }
 
-    console.error("[ProjectController Error]", error);
+    recordError(error, "Project request failed");
     return res.status(500).json({
       error: {
         code: "INTERNAL_SERVER_ERROR",

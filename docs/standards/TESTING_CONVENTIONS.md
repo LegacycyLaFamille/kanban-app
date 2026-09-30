@@ -131,6 +131,8 @@ React Testing Library
 
 Prefer accessible selectors such as roles, labels, and visible text.
 
+See [`docs/frontend/TESTING.md`](../frontend/TESTING.md) for how to run and write frontend unit and E2E (Playwright) tests.
+
 ---
 
 ## 6. Backend Testing

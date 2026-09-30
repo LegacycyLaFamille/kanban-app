@@ -7,6 +7,7 @@ import { ProjectAccessGuard } from "../../../shared/security/ProjectAccessGuard.
 import { randomUUID } from "node:crypto";
 import type { ProjectRepository } from "../../../modules/projects/ProjectRepository.js";
 import type { ProjectMemberRepository } from "../../../modules/projects/ProjectMemberRepository.js";
+import { InMemoryEventBus } from "../../../shared/events/InMemoryEventBus.js";
 
 describe("TaskService", () => {
   let taskService: TaskService;
@@ -14,6 +15,7 @@ describe("TaskService", () => {
     save: Mock;
     findById: Mock;
     findByProjectId: Mock;
+    findAssignedTo: Mock;
     delete: Mock;
   };
   let mockProjectRepository: {
@@ -46,6 +48,7 @@ describe("TaskService", () => {
       save: vi.fn(),
       findById: vi.fn(),
       findByProjectId: vi.fn(),
+      findAssignedTo: vi.fn(),
       delete: vi.fn(),
     };
     mockProjectRepository = {
@@ -60,7 +63,11 @@ describe("TaskService", () => {
       mockProjectMemberRepository as unknown as ProjectMemberRepository,
     );
 
-    taskService = new TaskService(mockTaskRepository, projectAccessGuard);
+    taskService = new TaskService(
+      mockTaskRepository,
+      projectAccessGuard,
+      new InMemoryEventBus(),
+    );
   });
 
   describe("create", () => {
@@ -198,6 +205,53 @@ describe("TaskService", () => {
       expect(mockTaskRepository.save).toHaveBeenCalled();
     });
 
+    it("clears an existing deadline when the payload sends deadline: null", async () => {
+      const taskWithDeadline = new Task(
+        "task-1",
+        "Test",
+        "",
+        "proj-1",
+        "TODO",
+        "",
+        new Date("2026-12-01T00:00:00.000Z"),
+        new Date(),
+        null,
+      );
+      mockTaskRepository.findById.mockResolvedValue(taskWithDeadline);
+      mockProjectRepository.findById.mockResolvedValue(project);
+
+      const result = await taskService.update("task-1", ownerId, {
+        deadline: null,
+      });
+
+      expect(result.deadline).toBeNull();
+      expect(mockTaskRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ deadline: null }),
+      );
+    });
+
+    it("keeps the existing deadline when the payload omits it", async () => {
+      const taskWithDeadline = new Task(
+        "task-1",
+        "Test",
+        "",
+        "proj-1",
+        "TODO",
+        "",
+        new Date("2026-12-01T00:00:00.000Z"),
+        new Date(),
+        null,
+      );
+      mockTaskRepository.findById.mockResolvedValue(taskWithDeadline);
+      mockProjectRepository.findById.mockResolvedValue(project);
+
+      const result = await taskService.update("task-1", ownerId, {
+        title: "Renamed",
+      });
+
+      expect(result.deadline).toEqual(taskWithDeadline.deadline);
+    });
+
     it("rejects an update from a member (read-only access)", async () => {
       mockTaskRepository.findById.mockResolvedValue(task);
       mockProjectRepository.findById.mockResolvedValue(project);
@@ -243,6 +297,20 @@ describe("TaskService", () => {
       await expect(taskService.delete("task-1", outsiderId)).rejects.toThrow(
         "Forbidden",
       );
+    });
+  });
+
+  describe("readAssigned", () => {
+    it("délègue au repository avec l'utilisateur et le filtre", async () => {
+      const assigned = [{ task, project: { id: "proj-1", name: "P" } }];
+      mockTaskRepository.findAssignedTo.mockResolvedValue(assigned);
+
+      await expect(
+        taskService.readAssigned(ownerId, { status: "TODO" }),
+      ).resolves.toBe(assigned);
+      expect(mockTaskRepository.findAssignedTo).toHaveBeenCalledWith(ownerId, {
+        status: "TODO",
+      });
     });
   });
 });

@@ -131,6 +131,8 @@ React Testing Library
 
 Préférer les sélecteurs accessibles : rôles, labels et texte visible.
 
+Voir [`docs/frontend/TESTING.md`](../frontend/TESTING.md) pour lancer et écrire les tests frontend unitaires et E2E (Playwright).
+
 ---
 
 ## 6. Tests backend

@@ -1,7 +1,27 @@
-import { useState, useCallback, type MouseEvent } from "react";
+import {
+  useState,
+  useCallback,
+  type CSSProperties,
+  type MouseEvent,
+} from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
-import { Button, Card, Modal, Text, TextArea, TextField, View } from "reshaped";
+import {
+  Button,
+  Card,
+  Modal,
+  Skeleton,
+  Text,
+  TextArea,
+  TextField,
+  View,
+} from "reshaped";
+
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from "../../../shared/components/Feedback";
 
 import type { ColumnId, Task as FrontendTask } from "../types";
 import { Column } from "./Column";
@@ -29,6 +49,14 @@ const COLUMNS: { id: ColumnId; title: string; backendStatus: TaskStatus }[] = [
   { id: "in-progress", title: "In Progress", backendStatus: "IN_PROGRESS" },
   { id: "done", title: "Done", backendStatus: "DONE" },
 ];
+
+const COLUMNS_GRID_STYLE: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(3, 1fr)",
+  gap: "20px",
+  alignItems: "start",
+  width: "100%",
+};
 
 // --- Status conversion helpers ---
 function toColumnId(status: string | TaskStatus): ColumnId {
@@ -88,6 +116,26 @@ function toFrontendPriority(
   }
 }
 
+// --- Deadline conversion helpers ---
+// The API exchanges ISO 8601 UTC strings (e.g. "2026-09-30T17:35:44.633Z");
+// the datetime-local input works with "YYYY-MM-DDTHH:mm" in local time.
+function toDateTimeLocalValue(deadline?: string): string {
+  if (!deadline) return "";
+  const date = new Date(deadline);
+  if (Number.isNaN(date.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return (
+    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
+    `T${pad(date.getHours())}:${pad(date.getMinutes())}`
+  );
+}
+
+function toIsoDeadline(value: string): string | undefined {
+  if (!value) return undefined;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
+}
+
 function toFrontendTask(task: BackendTask): FrontendTask {
   return {
     id: task.id,
@@ -96,6 +144,7 @@ function toFrontendTask(task: BackendTask): FrontendTask {
     projectId: task.projectId,
     columnId: toColumnId(task.status),
     priority: toFrontendPriority(task.priority),
+    deadline: task.deadline ?? undefined,
     assignee: { id: "", name: "" },
   };
 }
@@ -115,6 +164,7 @@ export function Board({ projectId }: BoardProps) {
   const {
     tasks: backendTasks,
     isLoading,
+    hasLoaded,
     error: fetchError,
     refetch,
   } = useGetTasks(projectId);
@@ -149,6 +199,7 @@ export function Board({ projectId }: BoardProps) {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [activeTask, setActiveTask] = useState<FrontendTask>(EMPTY_TASK);
   const [isEditing, setIsEditing] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   // Map API items to frontend tasks, applying any in-flight optimistic status
   const tasks: FrontendTask[] = backendTasks.map((task) =>
@@ -173,23 +224,33 @@ export function Board({ projectId }: BoardProps) {
       columnId,
     });
     setIsEditing(false);
+    setValidationError(null);
     setIsModalOpen(true);
   };
 
   const handleOpenEdit = (task: FrontendTask) => {
     setActiveTask({ ...task });
     setIsEditing(true);
+    setValidationError(null);
     setIsModalOpen(true);
   };
 
   const handleSave = async () => {
-    if (!activeTask.title.trim()) return;
+    const trimmedTitle = activeTask.title.trim();
+
+    if (!trimmedTitle) {
+      setValidationError("Task title is required.");
+      return;
+    }
+
+    setValidationError(null);
 
     const payload = {
-      title: activeTask.title,
+      title: trimmedTitle,
       description: activeTask.description,
       priority: toBackendPriority(activeTask.priority),
       status: toBackendStatus(activeTask.columnId),
+      deadline: activeTask.deadline ?? null,
     };
 
     if (isEditing) {
@@ -226,7 +287,8 @@ export function Board({ projectId }: BoardProps) {
     }
   };
 
-  const currentActionError = createError || updateError || deleteError;
+  const currentActionError =
+    validationError || createError || updateError || deleteError;
 
   return (
     <DndProvider backend={HTML5Backend}>
@@ -270,13 +332,6 @@ export function Board({ projectId }: BoardProps) {
           </View>
         </Card>
 
-        {/* Global Fetch Error Banner */}
-        {fetchError && (
-          <Card padding={3}>
-            <Text color="critical">{fetchError}</Text>
-          </Card>
-        )}
-
         {/* Drag-and-drop Persistence Error Banner */}
         {dragError && (
           <Card padding={3}>
@@ -286,31 +341,67 @@ export function Board({ projectId }: BoardProps) {
           </Card>
         )}
 
-        {/* Board Columns Grid */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
-            gap: "20px",
-            alignItems: "start",
-            width: "100%",
-            flex: 1,
-            opacity: isLoading ? 0.6 : 1,
-          }}
-        >
-          {COLUMNS.map((column) => (
-            <div key={column.id} onClick={handleColumnClick}>
-              <Column
-                columnId={column.id}
-                title={column.title}
-                tasks={tasks.filter((task) => task.columnId === column.id)}
-                onDropTask={handleDropTask}
-                onAddTask={() => handleOpenCreate(column.id)}
-                isTaskPending={isTaskPending}
-              />
+        {!hasLoaded && !fetchError && (
+          <LoadingState label="Loading tasks">
+            <div style={COLUMNS_GRID_STYLE}>
+              {COLUMNS.map((column) => (
+                <Skeleton key={column.id} height={100} borderRadius="medium" />
+              ))}
             </div>
-          ))}
-        </div>
+          </LoadingState>
+        )}
+
+        {fetchError && (
+          <Card padding={3}>
+            <ErrorState
+              size={hasLoaded ? "section" : "page"}
+              title="Unable to load tasks"
+              message={fetchError}
+              onRetry={() => {
+                void refetch();
+              }}
+            />
+          </Card>
+        )}
+
+        {hasLoaded && !fetchError && tasks.length === 0 && (
+          <Card padding={3}>
+            <EmptyState
+              size="page"
+              title="No tasks yet"
+              description="Create your first task to get this board started."
+              action={
+                <Button color="primary" onClick={() => handleOpenCreate()}>
+                  Create a task
+                </Button>
+              }
+            />
+          </Card>
+        )}
+
+        {/* Board Columns Grid */}
+        {hasLoaded && tasks.length > 0 && (
+          <div
+            style={{
+              ...COLUMNS_GRID_STYLE,
+              flex: 1,
+              opacity: isLoading ? 0.6 : 1,
+            }}
+          >
+            {COLUMNS.map((column) => (
+              <div key={column.id} onClick={handleColumnClick}>
+                <Column
+                  columnId={column.id}
+                  title={column.title}
+                  tasks={tasks.filter((task) => task.columnId === column.id)}
+                  onDropTask={handleDropTask}
+                  onAddTask={() => handleOpenCreate(column.id)}
+                  isTaskPending={isTaskPending}
+                />
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Modal: Task Creation and Edition */}
         <Modal
@@ -349,9 +440,10 @@ export function Board({ projectId }: BoardProps) {
                     name="title"
                     placeholder="Task title..."
                     value={activeTask.title}
-                    onChange={({ value }) =>
-                      setActiveTask((prev) => ({ ...prev, title: value }))
-                    }
+                    onChange={({ value }) => {
+                      setActiveTask((prev) => ({ ...prev, title: value }));
+                      setValidationError(null);
+                    }}
                   />
                 </View>
 
@@ -434,6 +526,27 @@ export function Board({ projectId }: BoardProps) {
                       );
                     })}
                   </View>
+                </View>
+
+                {/* Deadline */}
+                <View gap={1}>
+                  <Text variant="caption-1" color="neutral-faded">
+                    Deadline
+                  </Text>
+                  <TextField
+                    name="deadline"
+                    value={toDateTimeLocalValue(activeTask.deadline)}
+                    inputAttributes={{
+                      type: "datetime-local",
+                      "aria-label": "Deadline",
+                    }}
+                    onChange={({ value }) =>
+                      setActiveTask((prev) => ({
+                        ...prev,
+                        deadline: toIsoDeadline(value),
+                      }))
+                    }
+                  />
                 </View>
 
                 {/* Description */}

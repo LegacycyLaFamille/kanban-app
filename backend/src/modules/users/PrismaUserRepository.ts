@@ -15,6 +15,7 @@ export class PrismaUserRepository implements UserRepository {
       prismaUser.email,
       prismaUser.name,
       prismaUser.createdAt,
+      prismaUser.role,
     );
   }
 
@@ -90,7 +91,13 @@ export class PrismaUserRepository implements UserRepository {
     const record = await this.prisma.user.findUnique({ where: { email } });
     if (!record) return null;
 
-    const user = User.create(record.email, record.name, record.id);
+    const user = User.create(
+      record.email,
+      record.name,
+      record.id,
+      undefined,
+      record.role,
+    );
     return { user, passwordHash: record.passwordHash };
   }
 
@@ -109,7 +116,13 @@ export class PrismaUserRepository implements UserRepository {
       where: { refreshToken: token },
     });
     if (!record) return null;
-    return User.create(record.email, record.name, record.id, record.createdAt);
+    return User.create(
+      record.email,
+      record.name,
+      record.id,
+      record.createdAt,
+      record.role,
+    );
   }
 
   async getActivityStats(userId: string): Promise<UserActivityStats> {

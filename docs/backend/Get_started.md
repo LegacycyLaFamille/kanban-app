@@ -30,8 +30,8 @@ cp .env.example .env
 ```
 
 
-3. **Start the local PostgreSQL database:**
-   Navigate into the backend directory and launch the local development database container in the background:
+3. **Start the local PostgreSQL database and RabbitMQ:**
+   Navigate into the backend directory and launch the local development containers in the background. `RABBITMQ_USER` and `RABBITMQ_PASSWORD` must be set in `.env` (see [RABBITMQ.md](RABBITMQ.md)):
 ```bash
 cd backend
 docker compose up -d
@@ -83,3 +83,9 @@ npx prisma generate
 
 
 *Note: This will bring your local database fully up to date and ensure your code recognizes any new models or fields introduced in the new issue.*
+
+---
+
+### 3. Observability
+
+`docker compose up -d` also starts the observability stack (OpenTelemetry Collector, Prometheus, Loki, Tempo and Grafana on <http://localhost:3001>). See [OBSERVABILITY.md](OBSERVABILITY.md) and the [demo scenario](OBSERVABILITY_DEMO.md).

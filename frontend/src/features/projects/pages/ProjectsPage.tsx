@@ -1,8 +1,14 @@
 import { useMemo, useState } from "react";
 
-import { Button, Card, Text, View } from "reshaped";
+import { Button, Card, Skeleton, Text, View } from "reshaped";
 
 import { useNavigate } from "react-router-dom";
+
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from "../../../shared/components/Feedback";
 
 import { ProjectCard } from "../components/ProjectCard";
 import { ProjectForm } from "../components/ProjectForm";
@@ -16,6 +22,8 @@ import type {
 import styles from "./ProjectsPage.module.css";
 
 type ProjectSort = "NEWEST" | "OLDEST" | "NAME";
+
+const PROJECT_PLACEHOLDERS = ["first", "second", "third"];
 
 export function ProjectsPage() {
   const navigate = useNavigate();
@@ -169,33 +177,53 @@ export function ProjectsPage() {
         </div>
 
         {isLoading && (
-          <div className={styles.state} role="status">
-            Loading projects...
-          </div>
+          <LoadingState label="Loading projects" className={styles.grid}>
+            {PROJECT_PLACEHOLDERS.map((key) => (
+              <Skeleton key={key} height={45} borderRadius="medium" />
+            ))}
+          </LoadingState>
         )}
 
         {!isLoading && error && (
-          <div className={styles.state}>
-            <p role="alert">{error}</p>
-
-            <Button
-              variant="outline"
-              onClick={() => {
-                void reload();
-              }}
-            >
-              Retry
-            </Button>
-          </div>
+          <ErrorState
+            size="page"
+            title="Unable to load projects"
+            message={error}
+            onRetry={() => {
+              void reload();
+            }}
+          />
         )}
 
-        {!isLoading && !error && filteredProjects.length === 0 && (
-          <div className={styles.state}>
-            {projects.length === 0
-              ? "No projects yet. Create your first project."
-              : "No projects match your search."}
-          </div>
+        {!isLoading && !error && projects.length === 0 && (
+          <EmptyState
+            size="page"
+            title="No projects yet"
+            description="Create your first project to start organizing your work."
+            action={
+              !isCreateOpen && (
+                <Button color="primary" onClick={openCreateForm}>
+                  Create your first project
+                </Button>
+              )
+            }
+          />
         )}
+
+        {!isLoading &&
+          !error &&
+          projects.length > 0 &&
+          filteredProjects.length === 0 && (
+            <EmptyState
+              size="page"
+              title="No projects match your search."
+              action={
+                <Button variant="outline" onClick={() => setSearch("")}>
+                  Clear search
+                </Button>
+              }
+            />
+          )}
 
         {!isLoading && !error && filteredProjects.length > 0 && (
           <div className={styles.grid}>

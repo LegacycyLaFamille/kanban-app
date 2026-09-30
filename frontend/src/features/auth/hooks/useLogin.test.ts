@@ -55,9 +55,9 @@ describe("useLogin", () => {
     expect(result.current.isSubmitting).toBe(false);
   });
 
-  it("exposes backend authentication errors", async () => {
+  it("reports rejected credentials without exposing the raw response", async () => {
     signIn.mockRejectedValue(
-      new ApiError(401, "INVALID_CREDENTIALS", "Invalid credentials."),
+      new ApiError(401, "UNKNOWN_ERROR", "Unauthorized"),
     );
 
     const { result } = renderHook(() => useLogin());
@@ -73,6 +73,6 @@ describe("useLogin", () => {
 
     expect(success).toBe(false);
 
-    expect(result.current.error).toBe("Invalid credentials.");
+    expect(result.current.error).toBe("Invalid email or password.");
   });
 });

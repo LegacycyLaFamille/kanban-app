@@ -21,6 +21,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # compose.yaml requires RabbitMQ and Grafana passwords; the CI stack is
+      # throwaway, so a random one per run avoids storing a secret.
+      - name: Generate throwaway credentials
+        run: |
+          password="$(openssl rand -hex 24)"
+          echo "::add-mask::$password"
+          echo "RABBITMQ_PASSWORD=$password" >> "$GITHUB_ENV"
+          grafana_password="$(openssl rand -hex 24)"
+          echo "::add-mask::$grafana_password"
+          echo "GRAFANA_ADMIN_PASSWORD=$grafana_password" >> "$GITHUB_ENV"
+
       - name: Build & wait for healthcehecks
         run: |
           docker compose build
@@ -38,6 +49,20 @@ jobs:
             -H 'Content-Type: application/json' \
             -d '{"name":"ci smoke test"}' -o /dev/null
           curl -fsS http://localhost:8080/api/legacy/items | grep -q 'ci smoke test'
+          curl -fsS http://localhost:8080/grafana/api/health -o /dev/null
+
+      - name: Backend connected to PostgreSQL and RabbitMQ
+        run: |
+          set -euo pipefail
+          # The broker connection is opened in the background after startup.
+          for _ in $(seq 1 30); do
+            if curl -fsS http://localhost:8080/api/v1/health | grep -q '"status":"ok"'; then
+              exit 0
+            fi
+            sleep 2
+          done
+          curl -sS http://localhost:8080/api/v1/health
+          exit 1
 
       - name: Dump logs on failure
         if: failure()

@@ -4,7 +4,11 @@ import {
   type Task as PrismaTask,
 } from "../../generated/prisma/client.js";
 import { Task } from "./Task.js";
-import type { TaskRepository } from "./TaskRepository.js";
+import type {
+  AssignedTask,
+  AssignedTaskFilter,
+  TaskRepository,
+} from "./TaskRepository.js";
 
 export class PrismaTaskRepository implements TaskRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -20,6 +24,7 @@ export class PrismaTaskRepository implements TaskRepository {
       prismaTask.deadline,
       prismaTask.createdAt,
       prismaTask.boardId,
+      prismaTask.assigneeId,
     );
   }
 
@@ -36,8 +41,34 @@ export class PrismaTaskRepository implements TaskRepository {
     return tasks.map((task) => this.toDomain(task));
   }
 
-  async save(task: Task): Promise<Task | void> {
-    await this.prisma.task.upsert({
+  async findAssignedTo(
+    userId: string,
+    filter: AssignedTaskFilter = {},
+  ): Promise<AssignedTask[]> {
+    const rows = await this.prisma.task.findMany({
+      where: {
+        assigneeId: userId,
+        ...(filter.status === undefined ? {} : { status: filter.status }),
+        // Same rule as ProjectAccessGuard.assertCanView: owner or member.
+        project: {
+          OR: [{ ownerId: userId }, { Member: { some: { userId } } }],
+        },
+      },
+      include: { project: { select: { id: true, name: true } } },
+      // Closest deadline first, tasks without deadline last.
+      orderBy: [
+        { deadline: { sort: "asc", nulls: "last" } },
+        { createdAt: "asc" },
+      ],
+    });
+    return rows.map(({ project, ...task }) => ({
+      task: this.toDomain(task),
+      project,
+    }));
+  }
+
+  async save(task: Task): Promise<Task> {
+    const saved = await this.prisma.task.upsert({
       where: { id: task.id },
       update: {
         title: task.title,
@@ -47,6 +78,7 @@ export class PrismaTaskRepository implements TaskRepository {
         deadline: task.deadline,
         projectId: task.projectId,
         boardId: task.boardId,
+        assigneeId: task.assigneeId,
       },
       create: {
         id: task.id,
@@ -58,9 +90,12 @@ export class PrismaTaskRepository implements TaskRepository {
         projectId: task.projectId,
         createdAt: task.createdAt,
         boardId: task.boardId,
+        assigneeId: task.assigneeId,
       },
     });
+    return this.toDomain(saved);
   }
+
   async delete(task: Task): Promise<void> {
     await this.prisma.task.delete({ where: { id: task.id } });
   }

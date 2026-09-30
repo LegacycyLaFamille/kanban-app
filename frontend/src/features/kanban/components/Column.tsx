@@ -51,7 +51,11 @@ export function Column({
   }, [dropRef]);
 
   return (
-    <div ref={ref} style={{ height: "100%" }}>
+    <div
+      ref={ref}
+      data-testid={`column-${columnId}`}
+      style={{ height: "100%" }}
+    >
       <Card padding={4}>
         <div
           style={{
@@ -84,6 +88,12 @@ export function Column({
             {/* Cards List */}
             <View.Item grow>
               <View gap={3}>
+                {tasks.length === 0 && (
+                  <Text variant="caption-1" color="neutral-faded">
+                    No tasks
+                  </Text>
+                )}
+
                 {tasks.map((task) => (
                   <DraggableTaskCard
                     key={task.id}

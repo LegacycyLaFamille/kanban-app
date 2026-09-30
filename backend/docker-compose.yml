@@ -1,3 +1,7 @@
+include:
+  - path:
+      - ../docker/observability/compose.yaml
+      - ../docker/observability/compose.dev.yaml
 
 services:
   db:
@@ -11,5 +15,25 @@ services:
     volumes:
       - kanban_db_data:/var/lib/postgresql/data
 
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    container_name: kanban_rabbitmq
+    hostname: rabbitmq
+    restart: always
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:?RABBITMQ_USER must be set in .env}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD must be set in .env}
+    ports:
+      - "5672:5672"   # AMQP
+      - "15672:15672" # Management UI: http://localhost:15672
+    volumes:
+      - kanban_rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
 volumes:
   kanban_db_data:
+  kanban_rabbitmq_data:
