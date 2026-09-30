@@ -1,7 +1,27 @@
-import { useState, useCallback, type MouseEvent } from "react";
+import {
+  useState,
+  useCallback,
+  type CSSProperties,
+  type MouseEvent,
+} from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
-import { Button, Card, Modal, Text, TextArea, TextField, View } from "reshaped";
+import {
+  Button,
+  Card,
+  Modal,
+  Skeleton,
+  Text,
+  TextArea,
+  TextField,
+  View,
+} from "reshaped";
+
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from "../../../shared/components/Feedback";
 
 import type { ColumnId, Task as FrontendTask } from "../types";
 import { Column } from "./Column";
@@ -29,6 +49,14 @@ const COLUMNS: { id: ColumnId; title: string; backendStatus: TaskStatus }[] = [
   { id: "in-progress", title: "In Progress", backendStatus: "IN_PROGRESS" },
   { id: "done", title: "Done", backendStatus: "DONE" },
 ];
+
+const COLUMNS_GRID_STYLE: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(3, 1fr)",
+  gap: "20px",
+  alignItems: "start",
+  width: "100%",
+};
 
 // --- Status conversion helpers ---
 function toColumnId(status: string | TaskStatus): ColumnId {
@@ -115,6 +143,7 @@ export function Board({ projectId }: BoardProps) {
   const {
     tasks: backendTasks,
     isLoading,
+    hasLoaded,
     error: fetchError,
     refetch,
   } = useGetTasks(projectId);
@@ -270,13 +299,6 @@ export function Board({ projectId }: BoardProps) {
           </View>
         </Card>
 
-        {/* Global Fetch Error Banner */}
-        {fetchError && (
-          <Card padding={3}>
-            <Text color="critical">{fetchError}</Text>
-          </Card>
-        )}
-
         {/* Drag-and-drop Persistence Error Banner */}
         {dragError && (
           <Card padding={3}>
@@ -286,31 +308,67 @@ export function Board({ projectId }: BoardProps) {
           </Card>
         )}
 
-        {/* Board Columns Grid */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
-            gap: "20px",
-            alignItems: "start",
-            width: "100%",
-            flex: 1,
-            opacity: isLoading ? 0.6 : 1,
-          }}
-        >
-          {COLUMNS.map((column) => (
-            <div key={column.id} onClick={handleColumnClick}>
-              <Column
-                columnId={column.id}
-                title={column.title}
-                tasks={tasks.filter((task) => task.columnId === column.id)}
-                onDropTask={handleDropTask}
-                onAddTask={() => handleOpenCreate(column.id)}
-                isTaskPending={isTaskPending}
-              />
+        {!hasLoaded && !fetchError && (
+          <LoadingState label="Loading tasks">
+            <div style={COLUMNS_GRID_STYLE}>
+              {COLUMNS.map((column) => (
+                <Skeleton key={column.id} height={100} borderRadius="medium" />
+              ))}
             </div>
-          ))}
-        </div>
+          </LoadingState>
+        )}
+
+        {fetchError && (
+          <Card padding={3}>
+            <ErrorState
+              size={hasLoaded ? "section" : "page"}
+              title="Unable to load tasks"
+              message={fetchError}
+              onRetry={() => {
+                void refetch();
+              }}
+            />
+          </Card>
+        )}
+
+        {hasLoaded && !fetchError && tasks.length === 0 && (
+          <Card padding={3}>
+            <EmptyState
+              size="page"
+              title="No tasks yet"
+              description="Create your first task to get this board started."
+              action={
+                <Button color="primary" onClick={() => handleOpenCreate()}>
+                  Create a task
+                </Button>
+              }
+            />
+          </Card>
+        )}
+
+        {/* Board Columns Grid */}
+        {hasLoaded && tasks.length > 0 && (
+          <div
+            style={{
+              ...COLUMNS_GRID_STYLE,
+              flex: 1,
+              opacity: isLoading ? 0.6 : 1,
+            }}
+          >
+            {COLUMNS.map((column) => (
+              <div key={column.id} onClick={handleColumnClick}>
+                <Column
+                  columnId={column.id}
+                  title={column.title}
+                  tasks={tasks.filter((task) => task.columnId === column.id)}
+                  onDropTask={handleDropTask}
+                  onAddTask={() => handleOpenCreate(column.id)}
+                  isTaskPending={isTaskPending}
+                />
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Modal: Task Creation and Edition */}
         <Modal
