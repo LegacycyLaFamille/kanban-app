@@ -206,8 +206,9 @@ paths:
     get:
       summary: Exporter les données de l'utilisateur connecté (CSV ou JSON)
       description: >
-        Télécharge les projets possédés par l'utilisateur, avec leurs tâches,
-        en CSV (UTF-8 avec BOM, une ligne par tâche) ou en JSON. Les personnes ne
+        Télécharge les projets possédés par l'utilisateur, avec leurs tableaux
+        et leurs tâches, en CSV (UTF-8 avec BOM, une ligne par tâche) ou en JSON
+        (projet → tableaux → tâches). Les personnes ne
         sont jamais exportées par nom ou email, uniquement par leur rôle dans
         le projet (`owner` ou `member`). Format détaillé :
         `docs/backend/DATA_EXPORT.md`.

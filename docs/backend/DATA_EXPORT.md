@@ -45,9 +45,13 @@ data.
 
 Included, for each project **owned** by the user:
 
-- the project (id, name, description, creation date);
-- its tasks (id, title, description, status, priority, deadline, board name,
-  creation and last update dates).
+- the project (id, name, description, creation and last update dates);
+- its boards (id, name, creation and last update dates) — a project can hold
+  several boards;
+- the tasks of each board (id, title, description, status, priority, deadline,
+  creation and last update dates);
+- tasks that belong to the project but to no board, for example because their
+  board was deleted.
 
 Excluded:
 
@@ -86,8 +90,12 @@ project, they are replaced by their **role in that project**:
 
 ### Columns
 
-One row per task. A project without tasks still appears once, with empty task
-columns.
+One row per task, grouped by project then board. Nothing is left out:
+
+- a board without tasks appears once, with empty task columns;
+- a task without a board appears with empty board columns;
+- a project without boards or tasks appears once, with empty board and task
+  columns.
 
 | Column | Description |
 |---|---|
@@ -97,7 +105,9 @@ columns.
 | `project_created_at` | Project creation date |
 | `project_owner` | Always `owner` (see [Redaction](#redaction)) |
 | `project_members` | Other people with access, as roles separated by `; ` (e.g. `member; member`) |
-| `board_name` | Board the task belongs to, if any |
+| `board_id` | Board identifier (UUID), empty for a task without a board |
+| `board_name` | Board name |
+| `board_created_at` | Board creation date |
 | `task_id` | Task identifier (UUID) |
 | `task_title` | Task title |
 | `task_description` | Task description |
@@ -124,25 +134,41 @@ UTF-8, indented with 2 spaces. Dates use ISO 8601 in UTC; empty values are
       "updatedAt": "2026-09-02T09:00:00.000Z",
       "owner": "owner",
       "members": [],
-      "tasks": [
+      "boards": [
         {
-          "id": "fce1bba7-7873-4289-8c47-f11dee68dc63",
-          "title": "Write specs",
-          "description": "Draft the spec",
-          "status": "DONE",
-          "priority": "NORMAL",
-          "deadline": null,
-          "board": "Sprint 1",
-          "createdAt": "2026-09-03T09:00:00.000Z",
-          "updatedAt": "2026-09-04T09:00:00.000Z"
+          "id": "3c9d2b1e-5a4f-4e8b-9c7d-2f1e0a9b8c7d",
+          "name": "Sprint 1",
+          "createdAt": "2026-09-02T09:00:00.000Z",
+          "updatedAt": "2026-09-02T10:00:00.000Z",
+          "tasks": [
+            {
+              "id": "fce1bba7-7873-4289-8c47-f11dee68dc63",
+              "title": "Write specs",
+              "description": "Draft the spec",
+              "status": "DONE",
+              "priority": "NORMAL",
+              "deadline": null,
+              "createdAt": "2026-09-03T09:00:00.000Z",
+              "updatedAt": "2026-09-04T09:00:00.000Z"
+            }
+          ]
+        },
+        {
+          "id": "7a6b5c4d-3e2f-4a1b-8c9d-0e1f2a3b4c5d",
+          "name": "Backlog",
+          "createdAt": "2026-09-05T09:00:00.000Z",
+          "updatedAt": "2026-09-05T09:00:00.000Z",
+          "tasks": []
         }
-      ]
+      ],
+      "unassignedTasks": []
     }
   ]
 }
 ```
 
-In a per-project ZIP, each file has the same structure with a single project.
+`unassignedTasks` holds the project's tasks that belong to no board. In a
+per-project ZIP, each file has the same structure with a single project.
 
 ## File names
 
