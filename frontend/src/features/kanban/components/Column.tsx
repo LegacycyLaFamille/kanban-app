@@ -84,6 +84,12 @@ export function Column({
             {/* Cards List */}
             <View.Item grow>
               <View gap={3}>
+                {tasks.length === 0 && (
+                  <Text variant="caption-1" color="neutral-faded">
+                    No tasks
+                  </Text>
+                )}
+
                 {tasks.map((task) => (
                   <DraggableTaskCard
                     key={task.id}

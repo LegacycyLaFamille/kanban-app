@@ -815,6 +815,32 @@ paths:
         '404':
           $ref: '#/components/responses/NotFoundError'
 
+  # ==========================================
+  # HEALTH
+  # ==========================================
+  /api/v1/health:
+    get:
+      summary: État du backend et de ses dépendances (PostgreSQL, RabbitMQ)
+      description: >
+        Public, sans authentification. `degraded` signifie que l'API fonctionne
+        mais que le broker est injoignable (les traitements asynchrones sont
+        retardés). N'expose ni URL ni message d'erreur du broker.
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Base disponible (`status` vaut `ok` ou `degraded`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: Base de données indisponible (`status` vaut `down`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
 components:
   securitySchemes:
     CookieAuth:
@@ -823,6 +849,26 @@ components:
       name: accessToken
 
   schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded, down]
+        database:
+          type: string
+          enum: [up, down]
+        rabbitmq:
+          type: object
+          properties:
+            state:
+              type: string
+              enum: [disabled, connecting, connected, disconnected, closed]
+            connectedAt:
+              type: string
+              format: date-time
+            reconnectAttempt:
+              type: integer
     # --- AUTHENTICATION SCHEMAS ---
     RegisterRequest:
       type: object
