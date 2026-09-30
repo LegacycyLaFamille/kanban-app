@@ -18,7 +18,8 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
     "db:migrate-legacy": "node dist/scripts/migrate-legacy-data.js",
-    "db:migrate-legacy:dev": "tsx src/scripts/migrate-legacy-data.ts"
+    "db:migrate-legacy:dev": "tsx src/scripts/migrate-legacy-data.ts",
+    "test:integration": "vitest run --config vitest.integration.config.ts"
   },
   "keywords": [],
   "author": "",

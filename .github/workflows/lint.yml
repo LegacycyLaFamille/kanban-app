@@ -111,6 +111,54 @@ jobs:
       - run: npm run test:coverage
         working-directory: backend
 
+  # Real PostgreSQL + RabbitMQ suite (docs/backend/INTEGRATION_TESTS.md).
+  integration-backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: integration
+          POSTGRES_PASSWORD: integration
+          POSTGRES_DB: kanban_integration_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U integration"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      rabbitmq:
+        image: rabbitmq:4-alpine
+        env:
+          RABBITMQ_DEFAULT_USER: integration
+          RABBITMQ_DEFAULT_PASS: integration
+        ports:
+          - 5672:5672
+        options: >-
+          --health-cmd "rabbitmq-diagnostics -q ping"
+          --health-interval 10s
+          --health-timeout 10s
+          --health-retries 10
+    env:
+      # Throwaway service credentials, only reachable from this job.
+      DATABASE_URL: postgresql://integration:integration@localhost:5432/kanban_integration_test
+      INTEGRATION_DATABASE_URL: postgresql://integration:integration@localhost:5432/kanban_integration_test
+      INTEGRATION_RABBITMQ_URL: amqp://integration:integration@localhost:5672/%2F
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+        working-directory: backend
+      - run: npx prisma generate
+        working-directory: backend
+      - run: npm run test:integration
+        working-directory: backend
+
   sonarqube:
     runs-on: ubuntu-latest
     steps:
