@@ -1,45 +1,45 @@
 import { useMemo, useState } from "react";
 
-import { Button, Text, View } from "reshaped";
+import { Button, Card, Text, View } from "reshaped";
 
 import { useNavigate } from "react-router-dom";
 
 import { ProjectCard } from "../components/ProjectCard";
+import { ProjectForm } from "../components/ProjectForm";
 import { useProjects } from "../hooks/useProjects";
 
-import type { Project, ProjectStatus } from "../types/project.types";
+import type {
+  CreateProjectPayload,
+  ProjectResponse,
+} from "../types/project-api.types";
 
 import styles from "./ProjectsPage.module.css";
 
-type ProjectFilter = "ALL" | ProjectStatus;
-
-type ProjectSort = "UPDATED" | "NAME" | "PROGRESS";
+type ProjectSort = "NEWEST" | "OLDEST" | "NAME";
 
 export function ProjectsPage() {
   const navigate = useNavigate();
 
-  const { projects, isLoading, isCreating, error, reload, createProject } =
-    useProjects();
-
-  const [filter, setFilter] = useState<ProjectFilter>("ALL");
+  const {
+    projects,
+    isLoading,
+    isCreating,
+    error,
+    mutationError,
+    reload,
+    createProject,
+    resetMutationError,
+  } = useProjects();
 
   const [search, setSearch] = useState("");
-
-  const [sort, setSort] = useState<ProjectSort>("UPDATED");
+  const [sort, setSort] = useState<ProjectSort>("NEWEST");
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   const filteredProjects = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
 
     return [...projects]
       .filter((project) => {
-        if (filter !== "ALL" && project.status !== filter) {
-          return false;
-        }
-
-        if (!normalizedSearch) {
-          return true;
-        }
-
         return (
           project.name.toLowerCase().includes(normalizedSearch) ||
           project.description.toLowerCase().includes(normalizedSearch)
@@ -50,40 +50,45 @@ export function ProjectsPage() {
           case "NAME":
             return a.name.localeCompare(b.name);
 
-          case "PROGRESS":
-            return b.progress - a.progress;
+          case "OLDEST":
+            return (
+              new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+            );
 
-          case "UPDATED":
+          case "NEWEST":
           default:
             return (
-              new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
             );
         }
       });
-  }, [filter, projects, search, sort]);
+  }, [projects, search, sort]);
 
-  const activeCount = projects.filter(
-    (project) => project.status === "ACTIVE",
-  ).length;
+  function openCreateForm() {
+    resetMutationError();
+    setIsCreateOpen(true);
+  }
 
-  const archivedCount = projects.filter(
-    (project) => project.status === "ARCHIVED",
-  ).length;
+  function closeCreateForm() {
+    resetMutationError();
+    setIsCreateOpen(false);
+  }
 
-  const handleProjectClick = (project: Project) => {
-    navigate(`/projects/${project.id}`);
-  };
+  async function handleCreateProject(
+    payload: CreateProjectPayload,
+  ): Promise<boolean> {
+    const createdProject: ProjectResponse | null = await createProject(payload);
 
-  const handleCreateProject = async () => {
-    const project = await createProject({
-      name: "Untitled project",
-      description: "New project",
-    });
-
-    if (project) {
-      navigate(`/projects/${project.id}`);
+    if (!createdProject) {
+      return false;
     }
-  };
+
+    setIsCreateOpen(false);
+
+    navigate(`/projects/${createdProject.id}`);
+
+    return true;
+  }
 
   return (
     <section className={styles.page}>
@@ -110,58 +115,42 @@ export function ProjectsPage() {
                 value={search}
                 placeholder="Search projects..."
                 aria-label="Search projects"
-                onChange={(event) => {
-                  setSearch(event.target.value);
-                }}
+                onChange={(event) => setSearch(event.target.value)}
               />
             </div>
 
             <Button
               color="primary"
-              loading={isCreating}
-              loadingAriaLabel="Creating project"
               onClick={() => {
-                void handleCreateProject();
+                if (isCreateOpen) {
+                  closeCreateForm();
+                } else {
+                  openCreateForm();
+                }
               }}
             >
-              + New Project
+              {isCreateOpen ? "Close form" : "+ New Project"}
             </Button>
           </div>
         </header>
 
+        {isCreateOpen && (
+          <Card padding={5}>
+            <ProjectForm
+              title="Create project"
+              submitLabel="Create project"
+              isSubmitting={isCreating}
+              serverError={mutationError}
+              onSubmit={handleCreateProject}
+              onCancel={closeCreateForm}
+            />
+          </Card>
+        )}
+
         <div className={styles.toolbar}>
-          <div className={styles.filters}>
-            <button
-              type="button"
-              className={filter === "ALL" ? styles.filterActive : styles.filter}
-              onClick={() => setFilter("ALL")}
-            >
-              All
-              <span>{projects.length}</span>
-            </button>
-
-            <button
-              type="button"
-              className={
-                filter === "ACTIVE" ? styles.filterActive : styles.filter
-              }
-              onClick={() => setFilter("ACTIVE")}
-            >
-              Active
-              <span>{activeCount}</span>
-            </button>
-
-            <button
-              type="button"
-              className={
-                filter === "ARCHIVED" ? styles.filterActive : styles.filter
-              }
-              onClick={() => setFilter("ARCHIVED")}
-            >
-              Archived
-              <span>{archivedCount}</span>
-            </button>
-          </div>
+          <Text color="neutral-faded">
+            {projects.length} {projects.length === 1 ? "project" : "projects"}
+          </Text>
 
           <label className={styles.sort}>
             <span>Sort by</span>
@@ -172,20 +161,22 @@ export function ProjectsPage() {
                 setSort(event.target.value as ProjectSort);
               }}
             >
-              <option value="UPDATED">Last updated</option>
-
+              <option value="NEWEST">Newest first</option>
+              <option value="OLDEST">Oldest first</option>
               <option value="NAME">Name</option>
-
-              <option value="PROGRESS">Progress</option>
             </select>
           </label>
         </div>
 
-        {isLoading && <div className={styles.state}>Loading projects...</div>}
+        {isLoading && (
+          <div className={styles.state} role="status">
+            Loading projects...
+          </div>
+        )}
 
         {!isLoading && error && (
           <div className={styles.state}>
-            <p>{error}</p>
+            <p role="alert">{error}</p>
 
             <Button
               variant="outline"
@@ -199,7 +190,11 @@ export function ProjectsPage() {
         )}
 
         {!isLoading && !error && filteredProjects.length === 0 && (
-          <div className={styles.state}>No projects found.</div>
+          <div className={styles.state}>
+            {projects.length === 0
+              ? "No projects yet. Create your first project."
+              : "No projects match your search."}
+          </div>
         )}
 
         {!isLoading && !error && filteredProjects.length > 0 && (
@@ -209,7 +204,6 @@ export function ProjectsPage() {
                 key={project.id}
                 project={project}
                 accentIndex={index}
-                onClick={handleProjectClick}
               />
             ))}
           </div>
