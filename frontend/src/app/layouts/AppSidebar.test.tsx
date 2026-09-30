@@ -40,6 +40,12 @@ describe("AppSidebar", () => {
     expect(screen.queryByText("Admin")).toBeNull();
   });
 
+  it("does not show a Settings entry", () => {
+    renderSidebar(false);
+
+    expect(screen.queryByText("Settings")).toBeNull();
+  });
+
   it("shows no Dashboard entry for a regular user", () => {
     renderSidebar(false);
 
