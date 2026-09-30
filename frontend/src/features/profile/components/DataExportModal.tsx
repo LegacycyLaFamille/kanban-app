@@ -10,6 +10,8 @@ import {
   View,
 } from "reshaped";
 
+import { ErrorState, LoadingState } from "../../../shared/components/Feedback";
+
 import { useDataExport } from "../hooks/useDataExport";
 import { useOwnedProjects } from "../hooks/useOwnedProjects";
 
@@ -124,25 +126,21 @@ function DataExportForm({ onClose, onExported }: DataExportFormProps) {
         <legend>Projects</legend>
 
         {isLoading && (
-          <View gap={2} attributes={{ "aria-label": "Loading your projects" }}>
-            <Skeleton height={6} borderRadius="medium" />
-            <Skeleton height={6} borderRadius="medium" />
-          </View>
+          <LoadingState label="Loading your projects">
+            <View gap={2}>
+              <Skeleton height={6} borderRadius="medium" />
+              <Skeleton height={6} borderRadius="medium" />
+            </View>
+          </LoadingState>
         )}
 
         {!isLoading && loadError && (
-          <div className={styles.state}>
-            <p role="alert">{loadError}</p>
-
-            <Button
-              variant="outline"
-              onClick={() => {
-                void reload();
-              }}
-            >
-              Retry
-            </Button>
-          </div>
+          <ErrorState
+            message={loadError}
+            onRetry={() => {
+              void reload();
+            }}
+          />
         )}
 
         {!isLoading && !loadError && !hasProjects && (
