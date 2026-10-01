@@ -21,7 +21,6 @@ import { LandingPage } from "../features/landing/pages/LandingPage";
 import { LegalNoticePage } from "../features/legal/pages/LegalNoticePage";
 import { PrivacyPolicyPage } from "../features/legal/pages/PrivacyPolicyPage";
 
-import { LegacyApp } from "./legacy/LegacyApp";
 import { MainLayout } from "./layouts/MainLayout";
 import { KanbanPage } from "../features/kanban/pages/KanbanPage.tsx";
 import NotFound from "../features/errors/NotFound/NotFound.tsx";
