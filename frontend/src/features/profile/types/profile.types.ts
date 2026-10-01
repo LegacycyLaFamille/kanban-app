@@ -18,6 +18,11 @@ export interface ProfileStats {
   tasksByStatus: Record<string, number>;
 }
 
+export interface ChangePasswordPayload {
+  currentPassword: string;
+  newPassword: string;
+}
+
 export interface ChangePasswordFormValues {
   currentPassword: string;
   newPassword: string;

@@ -13,6 +13,7 @@ export interface AuthContextValue {
   signIn: (payload: LoginPayload) => Promise<void>;
   signOut: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null);

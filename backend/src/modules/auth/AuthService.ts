@@ -81,6 +81,34 @@ export class AuthService {
     return updated;
   }
 
+  // Rotates the session: the new refresh token replaces the stored one, so
+  // every other session of the user is revoked along with the old password.
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<{ accessToken: string; refreshToken: string }> {
+    const user = await this.userRepository.findById(userId);
+    const passwordHash = await this.userRepository.findPasswordHash(userId);
+    if (!user || !passwordHash) throw new Error("Utilisateur introuvable");
+
+    if (!(await bcrypt.compare(currentPassword, passwordHash))) {
+      throw new Error("Mot de passe actuel invalide");
+    }
+
+    await this.userRepository.updatePassword(
+      userId,
+      await bcrypt.hash(newPassword, 12),
+    );
+
+    return this.generateAuthTokens(user);
+  }
+
+  // GDPR right to erasure (art. 17).
+  async deleteAccount(userId: string): Promise<void> {
+    await this.userRepository.deleteById(userId);
+  }
+
   async getActivityStats(userId: string): Promise<UserActivityStats> {
     return this.userRepository.getActivityStats(userId);
   }

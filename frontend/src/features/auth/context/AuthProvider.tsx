@@ -8,7 +8,12 @@ import {
 
 import { ApiError, setSessionExpiredHandler } from "../../../shared/api";
 
-import { getCurrentUser, login, logout } from "../api/auth.api";
+import {
+  deleteCurrentUser,
+  getCurrentUser,
+  login,
+  logout,
+} from "../api/auth.api";
 
 import type { AuthUser, LoginPayload } from "../types/auth.types";
 
@@ -122,6 +127,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, [clearSession]);
 
+  // The backend clears the session cookies along with the account.
+  const deleteAccount = useCallback(async () => {
+    await deleteCurrentUser();
+
+    clearSession();
+  }, [clearSession]);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
@@ -134,8 +146,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
       signIn,
       signOut,
       refreshUser,
+      deleteAccount,
     }),
-    [user, isInitializing, sessionError, signIn, signOut, refreshUser],
+    [
+      user,
+      isInitializing,
+      sessionError,
+      signIn,
+      signOut,
+      refreshUser,
+      deleteAccount,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

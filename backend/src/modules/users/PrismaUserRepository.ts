@@ -85,6 +85,25 @@ export class PrismaUserRepository implements UserRepository {
     }
   }
 
+  async updatePassword(userId: string, passwordHash: string): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash },
+    });
+  }
+
+  async findPasswordHash(userId: string): Promise<string | null> {
+    const record = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { passwordHash: true },
+    });
+    return record?.passwordHash ?? null;
+  }
+
+  async deleteById(userId: string): Promise<void> {
+    await this.prisma.user.delete({ where: { id: userId } });
+  }
+
   async getCredentials(
     email: string,
   ): Promise<{ user: User; passwordHash: string } | null> {

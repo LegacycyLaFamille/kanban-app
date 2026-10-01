@@ -200,6 +200,110 @@ paths:
                   details:
                     email: ["This email is already in use"]
 
+    delete:
+      summary: Supprimer le compte de l'utilisateur connecté (RGPD art. 17)
+      description: >
+        Supprime définitivement le compte, ainsi que les projets possédés
+        (tableaux, tâches, membres, invitations) et les notifications de
+        l'utilisateur. Les tâches qui lui étaient assignées dans d'autres
+        projets sont conservées mais désassignées. Les cookies de session
+        sont effacés.
+      tags:
+        - Auth
+      security:
+        - CookieAuth: []
+      responses:
+        '204':
+          description: Compte supprimé, cookies effacés.
+        '401':
+          description: Non authentifié.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+
+  /api/v1/auth/me/password:
+    patch:
+      summary: Changer le mot de passe de l'utilisateur connecté
+      description: >
+        Vérifie le mot de passe actuel puis enregistre le nouveau (8 caractères
+        minimum, différent de l'actuel). La session est renouvelée : les autres
+        sessions de l'utilisateur sont révoquées. Limité à 10 échecs par IP
+        toutes les 15 minutes.
+      tags:
+        - Auth
+      security:
+        - CookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword:
+                  type: string
+                newPassword:
+                  type: string
+                  minLength: 8
+      responses:
+        '204':
+          description: Mot de passe changé, nouveaux cookies de session posés.
+        '400':
+          description: >
+            Données invalides (`VALIDATION_ERROR`) ou mot de passe actuel
+            incorrect (`INVALID_CURRENT_PASSWORD`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          description: Non authentifié.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+        '429':
+          description: Trop de tentatives (`TOO_MANY_REQUESTS`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+
+  /api/v1/auth/me/personal-data:
+    get:
+      summary: Télécharger toutes les données personnelles (RGPD art. 15 et 20)
+      description: >
+        Fichier JSON contenant le compte (sans mot de passe ni token), les
+        projets possédés, les adhésions, les tâches assignées, les invitations
+        envoyées et reçues et les notifications. Les autres personnes ne sont
+        référencées que par identifiant. Voir `docs/backend/GDPR.md`.
+      tags:
+        - Auth
+      security:
+        - CookieAuth: []
+      responses:
+        '200':
+          description: Pièce jointe JSON, envoyée avec `Cache-Control: no-store`.
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          description: Non authentifié.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+        '404':
+          description: Utilisateur introuvable (`USER_NOT_FOUND`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+
   /api/v1/auth/me/stats:
     get:
       summary: Statistiques d'activité de l'utilisateur connecté

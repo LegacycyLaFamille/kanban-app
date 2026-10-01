@@ -18,6 +18,9 @@ import { NotificationsPage } from "../features/notifications/pages/Notifications
 
 import { LandingPage } from "../features/landing/pages/LandingPage";
 
+import { LegalNoticePage } from "../features/legal/pages/LegalNoticePage";
+import { PrivacyPolicyPage } from "../features/legal/pages/PrivacyPolicyPage";
+
 import { LegacyApp } from "./legacy/LegacyApp";
 import { MainLayout } from "./layouts/MainLayout";
 import { KanbanPage } from "../features/kanban/pages/KanbanPage.tsx";
@@ -31,17 +34,20 @@ export const router = createBrowserRouter([
     errorElement: <NotFound />,
   },
   {
-    // The original TodoList, kept reachable while it is being phased out.
-    path: "/legacy",
-    element: <LegacyApp />,
-  },
-  {
     path: "/login",
     element: <LoginPage />,
   },
   {
     path: "/register",
     element: <RegisterPage />,
+  },
+  {
+    path: "/privacy",
+    element: <PrivacyPolicyPage />,
+  },
+  {
+    path: "/legal-notice",
+    element: <LegalNoticePage />,
   },
   {
     path: "/403",

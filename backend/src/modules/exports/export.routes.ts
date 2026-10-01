@@ -16,3 +16,9 @@ exportRouter.get(
   requireAuth,
   dataExportController.exportUserData,
 );
+
+exportRouter.get(
+  "/auth/me/personal-data",
+  requireAuth,
+  dataExportController.exportPersonalData,
+);

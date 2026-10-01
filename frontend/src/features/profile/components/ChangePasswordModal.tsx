@@ -9,6 +9,8 @@ import {
   View,
 } from "reshaped";
 
+import { ApiError } from "../../../shared/api";
+
 import type {
   ChangePasswordFieldErrors,
   ChangePasswordFormValues,
@@ -69,6 +71,7 @@ export function ChangePasswordModal({
   const [errors, setErrors] = useState<ChangePasswordFieldErrors>({});
   const [showPasswords, setShowPasswords] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   function handleClose() {
     if (isSubmitting) {
@@ -77,6 +80,7 @@ export function ChangePasswordModal({
 
     setValues(EMPTY_VALUES);
     setErrors({});
+    setFormError(null);
     setShowPasswords(false);
     onClose();
   }
@@ -103,8 +107,22 @@ export function ChangePasswordModal({
 
     try {
       setIsSubmitting(true);
+      setFormError(null);
 
       await onConfirm?.(values);
+    } catch (error) {
+      if (
+        error instanceof ApiError &&
+        error.code === "INVALID_CURRENT_PASSWORD"
+      ) {
+        setErrors({ currentPassword: "The current password is incorrect." });
+      } else if (error instanceof ApiError && error.status === 429) {
+        setFormError(error.message);
+      } else {
+        setFormError("Unable to update your password. Please try again.");
+      }
+
+      return;
     } finally {
       setIsSubmitting(false);
     }
@@ -129,6 +147,12 @@ export function ChangePasswordModal({
             Enter your current password, then choose a new one.
           </Modal.Subtitle>
         </View>
+
+        {formError && (
+          <div className={styles.errorMessage} role="alert">
+            {formError}
+          </div>
+        )}
 
         {FIELDS.map((field) => {
           const error = errors[field.name];

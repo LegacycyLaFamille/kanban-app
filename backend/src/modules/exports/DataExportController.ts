@@ -1,5 +1,6 @@
 import { recordError } from "../../shared/observability/recordError.js";
 import type { Request, Response } from "express";
+import type { ExportFile } from "./DataExport.js";
 import { z } from "zod";
 import {
   DataExportError,
@@ -29,6 +30,17 @@ const exportQuerySchema = z.strictObject({
     .pipe(z.array(z.uuid()).min(1).max(MAX_SELECTED_PROJECTS).optional()),
 });
 
+function sendFile(res: Response, file: ExportFile): void {
+  res
+    .status(200)
+    .set({
+      "Content-Type": file.contentType,
+      "Content-Disposition": `attachment; filename="${file.filename}"`,
+      "Cache-Control": "no-store",
+    })
+    .send(Buffer.from(file.content));
+}
+
 export class DataExportController {
   constructor(private readonly dataExportService: DataExportService) {}
 
@@ -41,14 +53,7 @@ export class DataExportController {
         options,
       );
 
-      res
-        .status(200)
-        .set({
-          "Content-Type": file.contentType,
-          "Content-Disposition": `attachment; filename="${file.filename}"`,
-          "Cache-Control": "no-store",
-        })
-        .send(Buffer.from(file.content));
+      sendFile(res, file);
     } catch (error: unknown) {
       if (error instanceof z.ZodError) {
         const { formErrors, fieldErrors } = z.flattenError(error);
@@ -71,6 +76,26 @@ export class DataExportController {
       }
 
       recordError(error, "Data export failed");
+      res.status(500).json({
+        error: { code: "INTERNAL_ERROR", message: "Unexpected server error" },
+      });
+    }
+  };
+
+  exportPersonalData = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const file = await this.dataExportService.exportPersonalData(req.userId!);
+
+      sendFile(res, file);
+    } catch (error: unknown) {
+      if (error instanceof DataExportError) {
+        res
+          .status(404)
+          .json({ error: { code: error.code, message: error.message } });
+        return;
+      }
+
+      recordError(error, "Personal data export failed");
       res.status(500).json({
         error: { code: "INTERNAL_ERROR", message: "Unexpected server error" },
       });

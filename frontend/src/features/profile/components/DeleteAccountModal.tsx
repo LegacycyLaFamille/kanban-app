@@ -19,6 +19,7 @@ export function DeleteAccountModal({
 }: DeleteAccountModalProps) {
   const [confirmation, setConfirmation] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const isConfirmed =
     confirmation.trim().toLowerCase() === email.trim().toLowerCase();
@@ -29,6 +30,7 @@ export function DeleteAccountModal({
     }
 
     setConfirmation("");
+    setError(null);
     onClose();
   }
 
@@ -41,8 +43,13 @@ export function DeleteAccountModal({
 
     try {
       setIsSubmitting(true);
+      setError(null);
 
       await onConfirm?.();
+    } catch {
+      setError("Unable to delete your account. Please try again.");
+
+      return;
     } finally {
       setIsSubmitting(false);
     }
@@ -62,6 +69,12 @@ export function DeleteAccountModal({
             tasks you own. This action cannot be undone.
           </Modal.Subtitle>
         </View>
+
+        {error && (
+          <div className={styles.errorMessage} role="alert">
+            {error}
+          </div>
+        )}
 
         <FormControl>
           <FormControl.Label>

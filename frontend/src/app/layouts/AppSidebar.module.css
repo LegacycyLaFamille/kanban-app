@@ -153,7 +153,31 @@
  * Compact sidebar on medium screens.
  * A mobile drawer can be implemented later if required.
  */
+.legalLinks {
+  display: flex;
+  gap: 12px;
+
+  padding: 0 8px;
+
+  font-size: 12px;
+}
+
+.legalLinks a {
+  color: rgba(255, 255, 255, 0.5);
+  text-decoration: none;
+}
+
+.legalLinks a:hover,
+.legalLinks a:focus-visible {
+  color: rgba(255, 255, 255, 0.85);
+  text-decoration: underline;
+}
+
 @media (max-width: 900px) {
+  .legalLinks {
+    display: none;
+  }
+
   .sidebar {
     width: 76px;
     min-width: 76px;

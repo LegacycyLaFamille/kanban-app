@@ -29,6 +29,7 @@ describe("ProtectedRoute", () => {
       signIn: vi.fn(),
       signOut: vi.fn(),
       refreshUser,
+      deleteAccount: vi.fn(),
       ...overrides,
     });
   }

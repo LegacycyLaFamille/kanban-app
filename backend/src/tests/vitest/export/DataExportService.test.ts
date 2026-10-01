@@ -71,7 +71,7 @@ describe("DataExportService", () => {
   let service: DataExportService;
 
   beforeEach(() => {
-    repository = { findOwnedProjects: vi.fn() };
+    repository = { findOwnedProjects: vi.fn(), findPersonalData: vi.fn() };
     service = new DataExportService(repository);
   });
 
