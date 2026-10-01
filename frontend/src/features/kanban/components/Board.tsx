@@ -1,14 +1,10 @@
-import {
-  useState,
-  useCallback,
-  type CSSProperties,
-  type MouseEvent,
-} from "react";
+import { useState, useCallback, type CSSProperties } from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import {
   Button,
   Card,
+  FormControl,
   Modal,
   Skeleton,
   Text,
@@ -277,16 +273,6 @@ export function Board({ projectId }: BoardProps) {
     }
   };
 
-  const handleColumnClick = (e: MouseEvent<HTMLDivElement>) => {
-    const target = e.target as HTMLElement;
-    const cardEl = target.closest<HTMLElement>("[data-task-id]");
-    if (cardEl) {
-      const taskId = cardEl.getAttribute("data-task-id");
-      const found = tasks.find((t) => t.id === taskId);
-      if (found) handleOpenEdit(found);
-    }
-  };
-
   const currentActionError =
     validationError || createError || updateError || deleteError;
 
@@ -313,7 +299,7 @@ export function Board({ projectId }: BoardProps) {
                 K
               </div>
               <View>
-                <Text variant="featured-3" weight="bold">
+                <Text as="h1" variant="featured-3" weight="bold">
                   Project Board
                 </Text>
                 <Text variant="caption-1" color="neutral-faded">
@@ -389,16 +375,16 @@ export function Board({ projectId }: BoardProps) {
             }}
           >
             {COLUMNS.map((column) => (
-              <div key={column.id} onClick={handleColumnClick}>
-                <Column
-                  columnId={column.id}
-                  title={column.title}
-                  tasks={tasks.filter((task) => task.columnId === column.id)}
-                  onDropTask={handleDropTask}
-                  onAddTask={() => handleOpenCreate(column.id)}
-                  isTaskPending={isTaskPending}
-                />
-              </div>
+              <Column
+                key={column.id}
+                columnId={column.id}
+                title={column.title}
+                tasks={tasks.filter((task) => task.columnId === column.id)}
+                onDropTask={handleDropTask}
+                onAddTask={() => handleOpenCreate(column.id)}
+                onOpenTask={handleOpenEdit}
+                isTaskPending={isTaskPending}
+              />
             ))}
           </div>
         )}
@@ -412,13 +398,14 @@ export function Board({ projectId }: BoardProps) {
           <Card padding={6}>
             <View gap={5}>
               <View direction="row" justify="space-between" align="center">
-                <Text variant="featured-3" weight="bold">
+                <Modal.Title>
                   {isEditing ? "Edit Task" : "Create Task"}
-                </Text>
+                </Modal.Title>
                 <Button
                   variant="ghost"
                   size="small"
                   onClick={() => setIsModalOpen(false)}
+                  attributes={{ "aria-label": "Close dialog" }}
                 >
                   ✕
                 </Button>
@@ -426,16 +413,14 @@ export function Board({ projectId }: BoardProps) {
 
               {currentActionError && (
                 <Text color="critical" variant="caption-1">
-                  {currentActionError}
+                  <span role="alert">{currentActionError}</span>
                 </Text>
               )}
 
               <View gap={4}>
                 {/* Title */}
-                <View gap={1}>
-                  <Text variant="caption-1" color="neutral-faded">
-                    Title
-                  </Text>
+                <FormControl>
+                  <FormControl.Label>Title</FormControl.Label>
                   <TextField
                     name="title"
                     placeholder="Task title..."
@@ -445,13 +430,11 @@ export function Board({ projectId }: BoardProps) {
                       setValidationError(null);
                     }}
                   />
-                </View>
+                </FormControl>
 
                 {/* Assignee */}
-                <View gap={1}>
-                  <Text variant="caption-1" color="neutral-faded">
-                    Assignee
-                  </Text>
+                <FormControl>
+                  <FormControl.Label>Assignee</FormControl.Label>
                   <TextField
                     name="assignee"
                     placeholder="Assignee name"
@@ -466,14 +449,18 @@ export function Board({ projectId }: BoardProps) {
                       }))
                     }
                   />
-                </View>
+                </FormControl>
 
                 {/* Priority */}
                 <View gap={1}>
                   <Text variant="caption-1" color="neutral-faded">
                     Priority
                   </Text>
-                  <View direction="row" gap={2}>
+                  <View
+                    direction="row"
+                    gap={2}
+                    attributes={{ role: "group", "aria-label": "Priority" }}
+                  >
                     {PRIORITIES.map((p) => {
                       const isSelected = activeTask.priority === p;
                       return (
@@ -483,6 +470,7 @@ export function Board({ projectId }: BoardProps) {
                             fullWidth
                             variant={isSelected ? "solid" : "outline"}
                             color={isSelected ? "primary" : "neutral"}
+                            attributes={{ "aria-pressed": isSelected }}
                             onClick={() =>
                               setActiveTask((prev) => ({
                                 ...prev,
@@ -503,7 +491,11 @@ export function Board({ projectId }: BoardProps) {
                   <Text variant="caption-1" color="neutral-faded">
                     Status
                   </Text>
-                  <View direction="row" gap={2}>
+                  <View
+                    direction="row"
+                    gap={2}
+                    attributes={{ role: "group", "aria-label": "Status" }}
+                  >
                     {COLUMNS.map((col) => {
                       const isSelected = activeTask.columnId === col.id;
                       return (
@@ -513,6 +505,7 @@ export function Board({ projectId }: BoardProps) {
                             fullWidth
                             variant={isSelected ? "solid" : "outline"}
                             color={isSelected ? "primary" : "neutral"}
+                            attributes={{ "aria-pressed": isSelected }}
                             onClick={() =>
                               setActiveTask((prev) => ({
                                 ...prev,
@@ -529,16 +522,13 @@ export function Board({ projectId }: BoardProps) {
                 </View>
 
                 {/* Deadline */}
-                <View gap={1}>
-                  <Text variant="caption-1" color="neutral-faded">
-                    Deadline
-                  </Text>
+                <FormControl>
+                  <FormControl.Label>Deadline</FormControl.Label>
                   <TextField
                     name="deadline"
                     value={toDateTimeLocalValue(activeTask.deadline)}
                     inputAttributes={{
                       type: "datetime-local",
-                      "aria-label": "Deadline",
                     }}
                     onChange={({ value }) =>
                       setActiveTask((prev) => ({
@@ -547,13 +537,11 @@ export function Board({ projectId }: BoardProps) {
                       }))
                     }
                   />
-                </View>
+                </FormControl>
 
                 {/* Description */}
-                <View gap={1}>
-                  <Text variant="caption-1" color="neutral-faded">
-                    Description
-                  </Text>
+                <FormControl>
+                  <FormControl.Label>Description</FormControl.Label>
                   <TextArea
                     name="description"
                     placeholder="Add details about this task..."
@@ -565,7 +553,7 @@ export function Board({ projectId }: BoardProps) {
                       }))
                     }
                   />
-                </View>
+                </FormControl>
               </View>
 
               {/* Bottom Actions */}
@@ -617,9 +605,7 @@ export function Board({ projectId }: BoardProps) {
           <Card padding={6}>
             <View gap={4}>
               <View gap={2}>
-                <Text variant="featured-3" weight="bold">
-                  Delete Task
-                </Text>
+                <Modal.Title>Delete Task</Modal.Title>
                 <Text color="neutral-faded">
                   Are you sure you want to delete{" "}
                   <strong>"{activeTask.title}"</strong>? This action cannot be

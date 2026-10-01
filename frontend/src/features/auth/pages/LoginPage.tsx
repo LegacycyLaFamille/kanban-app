@@ -73,7 +73,7 @@ export function LoginPage() {
               <AppLogo />
 
               <View gap={1}>
-                <Text variant="featured-3" weight="bold">
+                <Text as="h1" variant="featured-3" weight="bold">
                   Welcome back
                 </Text>
 

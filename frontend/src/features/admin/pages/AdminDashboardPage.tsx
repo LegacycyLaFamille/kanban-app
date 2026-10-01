@@ -51,7 +51,7 @@ export function AdminDashboardPage() {
     <section className={styles.page}>
       <View gap={6}>
         <header>
-          <Text variant="featured-2" weight="bold">
+          <Text as="h1" variant="featured-2" weight="bold">
             All Tasks
           </Text>
           <Text color="neutral-faded">
