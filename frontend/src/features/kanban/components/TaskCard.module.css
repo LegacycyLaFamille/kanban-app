@@ -1,0 +1,175 @@
+.card {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Priority stripe on the left edge. Decorative: the badge says it in words. */
+.accent {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+
+  width: 4px;
+
+  background: var(--task-neutral-bg);
+}
+
+.accent[data-priority="low"] {
+  background: var(--task-low);
+}
+
+.accent[data-priority="medium"] {
+  background: var(--task-medium);
+}
+
+.accent[data-priority="high"] {
+  background: var(--task-high);
+}
+
+/* Colour-blind mode: the stripe also gets a pattern per priority. */
+:global(:root[data-color-vision="colorblind"]) .accent {
+  width: 6px;
+}
+
+:global(:root[data-color-vision="colorblind"]) .accent[data-priority="medium"] {
+  background: repeating-linear-gradient(
+    180deg,
+    var(--task-medium) 0 6px,
+    transparent 6px 10px
+  );
+}
+
+:global(:root[data-color-vision="colorblind"]) .accent[data-priority="high"] {
+  background: repeating-linear-gradient(
+    135deg,
+    var(--task-high) 0 3px,
+    rgb(0 0 0 / 35%) 3px 5px
+  );
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  padding: 12px 12px 12px 16px;
+}
+
+.title {
+  color: var(--rs-color-foreground-neutral);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.description {
+  color: var(--rs-color-foreground-neutral-faded);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+
+  margin-top: 2px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+
+  padding: 3px 8px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.badge[data-tone="low"] {
+  border-color: var(--task-low-bg);
+  background: var(--task-low-bg);
+  color: var(--task-low);
+}
+
+.badge[data-tone="medium"],
+.badge[data-tone="soon"] {
+  border-color: var(--task-medium-bg);
+  background: var(--task-medium-bg);
+  color: var(--task-medium);
+}
+
+.badge[data-tone="high"],
+.badge[data-tone="overdue"] {
+  border-color: var(--task-high-bg);
+  background: var(--task-high-bg);
+  color: var(--task-high);
+}
+
+.badge[data-tone="neutral"] {
+  background: var(--task-neutral-bg);
+  color: var(--task-neutral);
+}
+
+/* Overdue also gets a solid outline, so it stands out beyond its hue. */
+.badge[data-tone="overdue"] {
+  border-color: var(--task-high);
+}
+
+.assignee {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  margin-left: auto;
+
+  color: var(--rs-color-foreground-neutral-faded);
+  font-size: 12px;
+}
+
+.avatar {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* White text passes 4.5:1 on each of these. */
+.avatar[data-color="0"] {
+  background: #4f46e5;
+}
+
+.avatar[data-color="1"] {
+  background: #0e7490;
+}
+
+.avatar[data-color="2"] {
+  background: #7e22ce;
+}
+
+.avatar[data-color="3"] {
+  background: #be185d;
+}
+
+.avatar[data-color="4"] {
+  background: #15803d;
+}
+
+.avatar[data-color="5"] {
+  background: #b45309;
+}

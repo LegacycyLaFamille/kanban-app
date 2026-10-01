@@ -316,6 +316,51 @@ describe("Board", () => {
     // Types text and drives a dropdown: slow under a full parallel run.
   }, 15_000);
 
+  it("shows only the tasks of the opened board, under its name", async () => {
+    vi.mocked(getTasksByProject).mockResolvedValue([
+      { ...task, boardId: "board-1" },
+      { ...task, id: "task-2", title: "Other board task", boardId: "board-2" },
+      { ...task, id: "task-3", title: "Task without board", boardId: null },
+    ]);
+
+    render(
+      <Reshaped theme="slate" defaultColorMode="dark">
+        <Board projectId="project-1" boardId="board-1" boardName="Sprint 1" />
+      </Reshaped>,
+    );
+
+    expect(await screen.findByText(task.title)).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Sprint 1" })).toBeTruthy();
+    expect(screen.queryByText("Other board task")).toBeNull();
+    expect(screen.queryByText("Task without board")).toBeNull();
+  });
+
+  it("creates the task on the opened board", async () => {
+    const user = userEvent.setup();
+    vi.mocked(getTasksByProject).mockResolvedValue([]);
+    vi.mocked(createTask).mockResolvedValue(task);
+
+    render(
+      <Reshaped theme="slate" defaultColorMode="dark">
+        <Board projectId="project-1" boardId="board-1" />
+      </Reshaped>,
+    );
+    await user.click(await screen.findByRole("button", { name: "+ Add Task" }));
+    await user.type(screen.getByPlaceholderText("Task title..."), "Write docs");
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Create Task",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(createTask).toHaveBeenCalledWith(
+        "project-1",
+        expect.objectContaining({ title: "Write docs", boardId: "board-1" }),
+      );
+    });
+  }, 15_000);
+
   it("hides editing controls from a VIEWER member", async () => {
     vi.mocked(getTasksByProject).mockResolvedValue([task]);
     vi.mocked(getProjectTeam).mockResolvedValue({

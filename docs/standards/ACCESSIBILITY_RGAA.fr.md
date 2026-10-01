@@ -69,6 +69,13 @@ Si une autre interaction de glisser-déposer est ajoutée ailleurs dans l'applic
 
 - Une règle globale `:focus-visible` (`frontend/src/styles/index.css`) dessine un contour visible sur tout élément recevant le focus clavier. Ne pas la surcharger avec `outline: none` sans fournir un remplacement tout aussi visible.
 
+### 3.8 Couleurs (thématique 3) et palette daltonienne
+
+- Les couleurs des tâches (priorité, urgence de l'échéance, statut de colonne) sont des variables CSS dans `frontend/src/styles/index.css` (`--task-*`, `--status-*`). Les utiliser plutôt que des valeurs hexadécimales en dur, pour que la palette daltonienne s'applique partout.
+- La couleur n'est jamais le seul indice : chaque badge de priorité a un libellé et une forme (▼ faible, ● moyenne, ▲ haute), chaque badge d'échéance dit ce qu'il signifie (« Overdue · 28 Sep », « Due tomorrow »), et un badge en retard a en plus un contour plein. Chaque texte atteint 4.5:1 sur son fond teinté.
+- **Profil > Accessibility** propose une palette *Colour-blind friendly* (teintes Okabe-Ito : bleu / jaune / rose, qui diffèrent aussi en luminosité) qui ajoute des motifs sur la bande de priorité des cartes. Elle pose `data-color-vision="colorblind"` sur `<html>` ; le choix est mémorisé par appareil (`localStorage`) et appliqué avant le premier rendu (`frontend/src/shared/preferences/colorVision.ts`).
+- Les cartes interactives sont nommées « Open task … » et pointent `aria-describedby` vers leurs badges : les lecteurs d'écran annoncent toujours la priorité, l'échéance et l'assigné.
+
 ---
 
 ## 4. Checklist pour toute nouvelle interface

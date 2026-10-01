@@ -18,6 +18,10 @@ export function getBoards(projectId: string): Promise<ProjectBoard[]> {
   return httpClient.get<ProjectBoard[]>(projectBoardsEndpoint(projectId));
 }
 
+export function getBoard(boardId: string): Promise<ProjectBoard> {
+  return httpClient.get<ProjectBoard>(boardEndpoint(boardId));
+}
+
 export function createBoard(
   projectId: string,
   payload: CreateBoardPayload,

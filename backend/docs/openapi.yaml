@@ -987,7 +987,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Task'
         '400':
-          description: Données invalides (Zod)
+          description: Données invalides (Zod), assigné non membre du projet, ou board d'un autre projet (BOARD_NOT_IN_PROJECT)
           content:
             application/json:
               schema:
@@ -1082,7 +1082,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Task'
         '400':
-          description: Données invalides (Zod) ou assigné non membre du projet
+          description: Données invalides (Zod), assigné non membre du projet, ou board d'un autre projet
           content:
             application/json:
               schema:
@@ -1100,6 +1100,11 @@ paths:
                     error:
                       code: ASSIGNEE_NOT_PROJECT_MEMBER
                       message: The selected user is not a member of this task's project.
+                boardNotInProject:
+                  value:
+                    error:
+                      code: BOARD_NOT_IN_PROJECT
+                      message: The selected board does not belong to this task's project.
         '403':
           $ref: '#/components/responses/ForbiddenError'
         '404':

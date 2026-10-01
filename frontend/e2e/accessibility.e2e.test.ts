@@ -327,6 +327,18 @@ test.describe("Accessibility (axe, WCAG 2.1 AA)", () => {
     await context?.close();
   });
 
+  test("landing page", async ({ browser }) => {
+    const guestContext = await browser.newContext({
+      // Audit the settled page, not a frame of the intro animations.
+      reducedMotion: "reduce",
+    });
+    const guest = await guestContext.newPage();
+    await guest.goto("/");
+    await expect(guest.getByRole("heading", { level: 1 })).toBeVisible();
+    await audit(guest);
+    await guestContext.close();
+  });
+
   test("login page", async ({ browser }) => {
     const guestContext = await browser.newContext();
     const guest = await guestContext.newPage();

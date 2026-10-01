@@ -16,6 +16,8 @@ import { MyTasksPage } from "../features/tasks/pages/MyTasksPage";
 
 import { NotificationsPage } from "../features/notifications/pages/NotificationsPage";
 
+import { LandingPage } from "../features/landing/pages/LandingPage";
+
 import { LegacyApp } from "./legacy/LegacyApp";
 import { MainLayout } from "./layouts/MainLayout";
 import { KanbanPage } from "../features/kanban/pages/KanbanPage.tsx";
@@ -25,8 +27,13 @@ import Forbidden from "../features/errors/Forbidden/Forbidden.tsx";
 export const router = createBrowserRouter([
   {
     path: "/",
-    element: <LegacyApp />,
+    element: <LandingPage />,
     errorElement: <NotFound />,
+  },
+  {
+    // The original TodoList, kept reachable while it is being phased out.
+    path: "/legacy",
+    element: <LegacyApp />,
   },
   {
     path: "/login",

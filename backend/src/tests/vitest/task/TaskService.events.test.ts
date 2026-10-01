@@ -60,6 +60,7 @@ describe("TaskService - événements", () => {
         { findByProjectAndUser: vi.fn() } as unknown as ProjectMemberRepository,
       ),
       bus,
+      { findbyId: vi.fn() },
     );
 
   beforeEach(() => {

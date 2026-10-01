@@ -1,4 +1,4 @@
-import { useRef, useEffect, type KeyboardEvent } from "react";
+import { useRef, useEffect, useId, type KeyboardEvent } from "react";
 import { useDrag } from "react-dnd";
 
 import { DND_ITEM_TYPE, type DragItem, type Task } from "../types";
@@ -22,6 +22,10 @@ export function DraggableTaskCard({
   isPending = false,
 }: DraggableTaskCardProps) {
   const ref = useRef<HTMLDivElement>(null);
+  const detailsId = useId();
+  const hasDetails = Boolean(
+    task.priority || task.deadline || task.assignee?.name,
+  );
   const [{ isDragging }, dragRef] = useDrag<
     DragItem,
     void,
@@ -54,6 +58,8 @@ export function DraggableTaskCard({
         role: "button",
         tabIndex: 0,
         "aria-label": `Open task ${task.title}`,
+        // The label replaces the card's content: keep its badges audible.
+        "aria-describedby": hasDetails ? detailsId : undefined,
         onClick: onOpen,
         onKeyDown: handleKeyDown,
       }
@@ -71,7 +77,7 @@ export function DraggableTaskCard({
         transition: "opacity 0.15s ease",
       }}
     >
-      <TaskCard task={task} />
+      <TaskCard task={task} detailsId={detailsId} />
     </div>
   );
 }

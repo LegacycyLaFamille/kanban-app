@@ -69,6 +69,13 @@ If you add another drag-and-drop interaction anywhere in the app, it needs the s
 
 - A global `:focus-visible` rule (`frontend/src/styles/index.css`) draws a visible outline on every keyboard-focused element. Don't override it with `outline: none` anywhere without providing an equally visible replacement.
 
+### 3.8 Colour (theme 3) and the colour-blind palette
+
+- Task colours (priority, deadline urgency, column status) are CSS custom properties in `frontend/src/styles/index.css` (`--task-*`, `--status-*`). Use them rather than hard-coded hex values, so the colour-blind palette applies everywhere.
+- Colour is never the only cue: every priority badge has a text label and a shape (▼ low, ● medium, ▲ high), every deadline badge says what it means ("Overdue · 28 Sep", "Due tomorrow"), and an overdue badge also gets a solid outline. Each foreground passes 4.5:1 on its tinted background.
+- **Profile > Accessibility** offers a *Colour-blind friendly* palette (Okabe-Ito hues: blue / yellow / pink, which differ in lightness too) that also adds patterns to the priority stripe of task cards. It sets `data-color-vision="colorblind"` on `<html>`; the choice is stored per device (`localStorage`) and applied before the first render (`frontend/src/shared/preferences/colorVision.ts`).
+- Interactive task cards are named "Open task …" and point `aria-describedby` at their badges, so screen readers still hear the priority, deadline and assignee.
+
 ---
 
 ## 4. Checklist for new UI

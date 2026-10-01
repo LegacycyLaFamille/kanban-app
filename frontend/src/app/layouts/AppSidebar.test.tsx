@@ -95,12 +95,12 @@ describe("AppSidebar", () => {
     expect(screen.queryByText(/unread notifications/)).toBeNull();
   });
 
-  it("navigates the admin's Legacy entry to /", async () => {
+  it("navigates the admin's Legacy entry to /legacy", async () => {
     const user = userEvent.setup();
     renderSidebar(true);
 
     await user.click(screen.getByText("Legacy"));
 
-    expect(screen.getByTestId("current-path").textContent).toBe("/");
+    expect(screen.getByTestId("current-path").textContent).toBe("/legacy");
   });
 });

@@ -95,7 +95,7 @@ const adminNavigationItems: NavigationItem[] = [
   },
   {
     label: "Legacy",
-    path: "/",
+    path: "/legacy",
     icon: (
       <SidebarIcon>
         <rect x="3" y="3" width="7" height="7" rx="1" />
@@ -132,10 +132,6 @@ export function AppSidebar({
     : navigationItems;
 
   const isActive = (path: string) => {
-    if (path === "/") {
-      return location.pathname === "/";
-    }
-
     return (
       location.pathname === path || location.pathname.startsWith(`${path}/`)
     );

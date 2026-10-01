@@ -54,6 +54,51 @@
 }
 
 /* =========================================================
+   Task colours (priority, deadline, status)
+
+   Meaning is always carried by text and a shape too (RGAA 3.1);
+   each foreground passes 4.5:1 on its tinted background over the
+   dark card surface.
+   ========================================================= */
+
+:root {
+  --task-low: #6ee7b7;
+  --task-low-bg: rgb(52 211 153 / 14%);
+  --task-medium: #fcd34d;
+  --task-medium-bg: rgb(251 191 36 / 14%);
+  --task-high: #fca5a5;
+  --task-high-bg: rgb(248 113 113 / 16%);
+
+  --task-overdue: var(--task-high);
+  --task-overdue-bg: var(--task-high-bg);
+  --task-soon: var(--task-medium);
+  --task-soon-bg: var(--task-medium-bg);
+  --task-neutral: #d4d4d8;
+  --task-neutral-bg: rgb(161 161 170 / 14%);
+
+  --status-todo: #a1a1aa;
+  --status-in-progress: #93c5fd;
+  --status-done: #6ee7b7;
+}
+
+/* Colour-blind friendly palette (Profile > Accessibility): Okabe-Ito
+   hues, picked to differ in lightness as well as in hue. */
+:root[data-color-vision="colorblind"] {
+  --task-low: #8fd3f7;
+  --task-low-bg: rgb(86 180 233 / 16%);
+  --task-medium: #f0e442;
+  --task-medium-bg: rgb(240 228 66 / 13%);
+  --task-high: #f5a3cf;
+  --task-high-bg: rgb(204 121 167 / 22%);
+
+  --task-neutral: #e4e4e7;
+
+  --status-todo: #d4d4d8;
+  --status-in-progress: #f0e442;
+  --status-done: #8fd3f7;
+}
+
+/* =========================================================
    Reset
    ========================================================= */
 
