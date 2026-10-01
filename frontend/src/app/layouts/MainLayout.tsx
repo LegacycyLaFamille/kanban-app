@@ -18,6 +18,10 @@ export function MainLayout() {
 
   return (
     <div className={styles.layout}>
+      <a href="#main-content" className={styles.skipLink}>
+        Skip to main content
+      </a>
+
       <AppSidebar
         {...(user && {
           userName: user.name,
@@ -27,7 +31,7 @@ export function MainLayout() {
         onLogout={handleLogout}
       />
 
-      <main className={styles.content}>
+      <main id="main-content" className={styles.content}>
         <Outlet />
       </main>
     </div>
