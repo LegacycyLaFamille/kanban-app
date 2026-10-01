@@ -4,7 +4,13 @@ import type { Task } from "./Task.js";
 export const TASK_DONE_STATUS = "DONE";
 
 export type TaskField =
-  "title" | "description" | "status" | "priority" | "deadline" | "boardId";
+  | "title"
+  | "description"
+  | "status"
+  | "priority"
+  | "deadline"
+  | "boardId"
+  | "assigneeId";
 
 // Published after a task is persisted.
 export type TaskCreatedEvent = DomainEvent<
@@ -57,6 +63,7 @@ export function changedTaskFields(before: Task, after: Task): TaskField[] {
   if (before.priority !== after.priority) changes.push("priority");
   if (time(before.deadline) !== time(after.deadline)) changes.push("deadline");
   if (before.boardId !== after.boardId) changes.push("boardId");
+  if (before.assigneeId !== after.assigneeId) changes.push("assigneeId");
   return changes;
 }
 

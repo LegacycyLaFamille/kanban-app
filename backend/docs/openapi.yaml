@@ -815,7 +815,7 @@ paths:
 
   /api/v1/tasks/{taskId}:
     patch:
-      summary: Met à jour une tâche (statut, titre, boardId...)
+      summary: Met à jour une tâche (statut, titre, boardId, assignation...)
       tags:
         - Tasks
       security:
@@ -841,11 +841,24 @@ paths:
               schema:
                 $ref: '#/components/schemas/Task'
         '400':
-          description: Données invalides (Zod)
+          description: Données invalides (Zod) ou assigné non membre du projet
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ValidationError'
+              examples:
+                validation:
+                  value:
+                    error:
+                      code: VALIDATION_ERROR
+                      message: Invalid request
+                      details:
+                        assigneeId: ["Invalid UUID"]
+                notAMember:
+                  value:
+                    error:
+                      code: ASSIGNEE_NOT_PROJECT_MEMBER
+                      message: The selected user is not a member of this task's project.
         '403':
           $ref: '#/components/responses/ForbiddenError'
         '404':
@@ -1405,7 +1418,9 @@ components:
           type: string
           format: uuid
           nullable: true
-          description: Set via PATCH /admin/tasks/{taskId}/assignee (admin-only).
+          description: >-
+            Set via PATCH /tasks/{taskId} (project owner) or
+            PATCH /admin/tasks/{taskId}/assignee (admin).
 
     # --- ADMIN DASHBOARD ---
     AdminAssignableUser:
@@ -1598,6 +1613,13 @@ components:
           type: string
           format: uuid
           nullable: true
+        assigneeId:
+          type: string
+          format: uuid
+          nullable: true
+          description: >-
+            null désassigne la tâche. L'utilisateur doit être owner ou membre
+            du projet, sinon 400 ASSIGNEE_NOT_PROJECT_MEMBER.
 
     # --- ERRORS ---
     # Every error response uses one of the two shapes below (never a bare

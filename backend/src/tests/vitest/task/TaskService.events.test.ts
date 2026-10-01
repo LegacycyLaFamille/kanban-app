@@ -199,6 +199,16 @@ describe("TaskService - événements", () => {
       ).toMatchObject({ changes: ["deadline"] });
     });
 
+    it("signale un changement d'assignation", async () => {
+      repository.findById.mockResolvedValue(task());
+
+      await service.update("task-1", ownerId, { assigneeId: ownerId });
+
+      expect(
+        eventBus.publishedOfType("task.updated")[0]?.payload,
+      ).toMatchObject({ changes: ["assigneeId"] });
+    });
+
     it("n'est pas publié si la tâche n'existe pas", async () => {
       repository.findById.mockResolvedValue(null);
 
