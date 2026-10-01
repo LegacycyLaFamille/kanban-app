@@ -14,6 +14,7 @@ Ce dossier contient les standards d’ingénierie utilisés par le projet de ref
 - [Conventions de tests](TESTING_CONVENTIONS.fr.md)
 - [Conventions API et backend](API_CONVENTIONS.fr.md)
 - [Norme d'accessibilité (RGAA)](ACCESSIBILITY_RGAA.fr.md)
+- [Déclaration d'accessibilité (brouillon)](ACCESSIBILITY_STATEMENT.fr.md)
 
 ## Architecture et migration
 

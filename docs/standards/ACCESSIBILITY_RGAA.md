@@ -76,6 +76,16 @@ If you add another drag-and-drop interaction anywhere in the app, it needs the s
 - **Profile > Accessibility** offers a *Colour-blind friendly* palette (Okabe-Ito hues: blue / yellow / pink, which differ in lightness too) that also adds patterns to the priority stripe of task cards. It sets `data-color-vision="colorblind"` on `<html>`; the choice is stored per device (`localStorage`) and applied before the first render (`frontend/src/shared/preferences/colorVision.ts`).
 - Interactive task cards are named "Open task …" and point `aria-describedby` at their badges, so screen readers still hear the priority, deadline and assignee.
 
+### 3.9 Motion (theme 13)
+
+The landing page (`/`, `frontend/src/features/landing/`) is animated.
+
+- Looping animations (the Kanban mock-up, the tech marquee, the background) can be stopped with the **"Pause animations"** button (`aria-pressed`), as required for moving content lasting more than 5 seconds (RGAA 13.8 / WCAG 2.2.2).
+- Under `prefers-reduced-motion: reduce`, nothing moves: animations and scroll reveals are disabled and every section is visible straight away. The pause button is then hidden, since there is nothing to pause.
+- Content revealed on scroll is hidden only once JavaScript has taken over (`data-motion="on"`), so it never stays invisible if the observer is unavailable.
+- The mock-up is decorative and `aria-hidden`: the surrounding text says the same thing.
+- Nothing flashes more than 3 times per second (RGAA 13.7).
+
 ---
 
 ## 4. Checklist for new UI
@@ -120,7 +130,7 @@ Before opening a PR that adds or changes frontend UI, check:
 
 ## 5. Automated audit, and why it isn't enough
 
-`frontend/e2e/accessibility.e2e.test.ts` runs axe-core (WCAG 2.1 A + AA rules) on every page of the running app, in the real theme, with test data it creates itself: login, register, 404, 403, projects, project details, kanban board, task dialog, my tasks, notifications, profile. It also checks that focus stays trapped in the task dialog and returns to the card when it closes.
+`frontend/e2e/accessibility.e2e.test.ts` runs axe-core (WCAG 2.1 A + AA rules) on every page of the running app, in the real theme, with test data it creates itself: landing page, login, register, 404, 403, projects, project details, kanban board, task dialog, my tasks, notifications, profile. The test data covers every priority and deadline state, and the kanban board and profile are audited a second time with the **colour-blind palette** (§3.8). The landing page is audited with reduced motion, so axe sees the settled page rather than a frame of an animation. It also checks that focus stays trapped in the task dialog and returns to the card when it closes.
 
 ```bash
 # backend (API + Postgres) running, then from frontend/
@@ -141,6 +151,8 @@ Automated tools catch a meaningful slice of RGAA/WCAG criteria — missing label
 Being explicit about this so nobody mistakes "a pass was done" for "this is RGAA-certified":
 
 - **Color contrast** of every page's default state is checked by the automated audit ([§5](#5-automated-audit-and-why-it-isnt-enough)), including text over gradients. Not covered: hover, focus and disabled states, error states not triggered by the test, and the admin dashboard (the audit has no admin user).
+- **Reflow and zoom**: layouts were checked at 390 px wide, not at 320 px nor at 200% / 400% zoom (RGAA 10.11 / WCAG 1.4.10), and text-spacing overrides (RGAA 10.12 / WCAG 1.4.12) were not tested.
+- **No accessibility statement is published** in the app. A draft, filled with this project's real state, is in [ACCESSIBILITY_STATEMENT.md](ACCESSIBILITY_STATEMENT.md); publishing it requires a full audit to compute a compliance rate.
 - **No screen-reader testing campaign** (NVDA, JAWS, VoiceOver) was performed. The accessibility tree each page exposes has been reviewed, but nobody has listened to how it actually sounds.
 - **The automated audit doesn't run in CI**: e2e tests need the backend and a database, which the CI workflows don't start yet.
 - **Known reshaped defects** (library code, not fixable from ours; worth reporting upstream):

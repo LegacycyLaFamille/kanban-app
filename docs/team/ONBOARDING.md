@@ -101,6 +101,9 @@ Long-term technical information belongs under `docs/`.
 Main areas:
 - `docs/audit/`
 - `docs/architecture/`
+- `docs/adr/`
+- `docs/backend/`
+- `docs/frontend/`
 - `docs/standards/`
 - `docs/team/`
 
@@ -284,7 +287,11 @@ Before removing legacy code:
 
 - `docs/audit/`: legacy analysis and technical debt
 - `docs/architecture/`: target architecture and migration strategies
-- `docs/standards/`: development, naming, Git, testing, API, and quality conventions
+- `docs/standards/`: development, naming, Git, testing, API, quality and accessibility (RGAA) conventions
+- `docs/backend/`: backend modules (projects and access, events, notifications, RabbitMQ, observability, admin, data export, integration tests)
+- `docs/frontend/`: frontend routes and features, frontend testing
+- `docs/adr/`: architecture decision records
+- `docs/quality-gate.md`: CI checks, coverage and SonarQube rules
 - `docs/team/`: team organization and onboarding
 
 ## 13. Definition of Done
@@ -316,7 +323,8 @@ Depending on the issue, completion includes:
 - [ ] Install project dependencies
 - [ ] Start the frontend locally
 - [ ] Start the backend locally
-- [ ] Verify the legacy application works
+- [ ] Open the app (`http://localhost:5173/`), create an account from the landing page
+- [ ] Verify the legacy application works (`http://localhost:5173/legacy`)
 - [ ] Identify your assigned issue
 - [ ] Check its dependencies
 - [ ] Read its acceptance criteria

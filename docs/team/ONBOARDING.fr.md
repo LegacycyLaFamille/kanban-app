@@ -101,6 +101,9 @@ Les informations techniques devant être conservées à long terme sont placées
 Principales zones :
 - `docs/audit/`
 - `docs/architecture/`
+- `docs/adr/`
+- `docs/backend/`
+- `docs/frontend/`
 - `docs/standards/`
 - `docs/team/`
 
@@ -284,7 +287,11 @@ Avant de supprimer du code legacy :
 
 - `docs/audit/` : analyse de l'application legacy et dette technique
 - `docs/architecture/` : architecture cible et stratégies de migration
-- `docs/standards/` : conventions de développement, nommage, Git, tests, API et qualité
+- `docs/standards/` : conventions de développement, nommage, Git, tests, API, qualité et accessibilité (RGAA)
+- `docs/backend/` : modules backend (projets et droits, événements, notifications, RabbitMQ, observabilité, admin, export de données, tests d'intégration)
+- `docs/frontend/` : routes et fonctionnalités du frontend, tests frontend
+- `docs/adr/` : décisions d'architecture (ADR)
+- `docs/quality-gate.md` : contrôles de CI, couverture et règles SonarQube
 - `docs/team/` : organisation de l'équipe et intégration des nouveaux membres
 
 ## 13. Definition of Done
@@ -316,7 +323,8 @@ Selon l'issue, sa finalisation comprend :
 - [ ] Installer les dépendances
 - [ ] Lancer le frontend localement
 - [ ] Lancer le backend localement
-- [ ] Vérifier que l'application legacy fonctionne
+- [ ] Ouvrir l'application (`http://localhost:5173/`) et créer un compte depuis la page d'accueil
+- [ ] Vérifier que l'application legacy fonctionne (`http://localhost:5173/legacy`)
 - [ ] Identifier l'issue attribuée
 - [ ] Vérifier ses dépendances
 - [ ] Lire ses critères d'acceptation

@@ -455,20 +455,25 @@ User A must not be able to read or modify private resources belonging to User B.
 
 Every project has exactly one owner (`Project.ownerId`), who has full
 read/write/delete rights and controls membership. A `ProjectMember` join
-table grants additional users read-only access to a project without making
-them owners:
+table gives other users access to a project without making them owners, with
+a role: **EDITOR** members can also manage boards and tasks, **VIEWER**
+members have read-only access. People normally join through an invitation
+they accept (`ProjectInvitation`):
 
 ```text
 Project
- ├── owner        (User, required — full access, manages membership)
- └── ProjectMember (User, read-only access)
+ ├── owner             (User, required — full access, manages membership)
+ ├── ProjectMember     (User + role EDITOR | VIEWER)
+ ├── ProjectInvitation (pending, becomes a ProjectMember once accepted)
+ └── Board ── Task     (a task belongs to one board of the same project)
 ```
 
-Task access is never checked independently: it is always derived from the
-requesting user's access to the task's parent project (owner or member can
-read; only the owner can create/update/delete). This is enforced through a
-single shared `ProjectAccessGuard` (`backend/src/shared/security/`) used by
-both the projects and tasks modules, so the rule lives in one place.
+Task and board access is never checked independently: it is always derived
+from the requesting user's access to the parent project (owner or any member
+can read; owner or EDITOR can create/update/delete). This is enforced through
+a single shared `ProjectAccessGuard` (`backend/src/shared/security/`) used by
+the projects, boards, tasks and invitations modules, so the rule lives in one
+place. Details: [`docs/backend/PROJECTS_AND_ACCESS.md`](../backend/PROJECTS_AND_ACCESS.md).
 
 Per [ADR-007](../adr/ADR-007-no-legacy-data-migration.md), legacy Todo
 records are never migrated into this domain, so `ProjectMember` and

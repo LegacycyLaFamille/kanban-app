@@ -76,6 +76,16 @@ Si une autre interaction de glisser-déposer est ajoutée ailleurs dans l'applic
 - **Profil > Accessibility** propose une palette *Colour-blind friendly* (teintes Okabe-Ito : bleu / jaune / rose, qui diffèrent aussi en luminosité) qui ajoute des motifs sur la bande de priorité des cartes. Elle pose `data-color-vision="colorblind"` sur `<html>` ; le choix est mémorisé par appareil (`localStorage`) et appliqué avant le premier rendu (`frontend/src/shared/preferences/colorVision.ts`).
 - Les cartes interactives sont nommées « Open task … » et pointent `aria-describedby` vers leurs badges : les lecteurs d'écran annoncent toujours la priorité, l'échéance et l'assigné.
 
+### 3.9 Animations (thématique 13)
+
+La landing page (`/`, `frontend/src/features/landing/`) est animée.
+
+- Les animations en boucle (la maquette de Kanban, le bandeau des technologies, le fond) peuvent être arrêtées avec le bouton **« Pause animations »** (`aria-pressed`), comme l'exige tout contenu en mouvement de plus de 5 secondes (RGAA 13.8 / WCAG 2.2.2).
+- Avec `prefers-reduced-motion: reduce`, rien ne bouge : animations et apparitions au défilement sont désactivées et toutes les sections sont visibles d'emblée. Le bouton pause est alors masqué, puisqu'il n'y a rien à mettre en pause.
+- Le contenu qui apparaît au défilement n'est masqué qu'une fois que JavaScript a pris le relais (`data-motion="on"`) : il ne reste jamais invisible si l'observer est indisponible.
+- La maquette est décorative et `aria-hidden` : le texte autour dit la même chose.
+- Rien ne clignote plus de 3 fois par seconde (RGAA 13.7).
+
 ---
 
 ## 4. Checklist pour toute nouvelle interface
@@ -120,7 +130,7 @@ Avant d'ouvrir une PR qui ajoute ou modifie une interface frontend, vérifier :
 
 ## 5. Audit automatisé, et pourquoi il ne suffit pas
 
-`frontend/e2e/accessibility.e2e.test.ts` lance axe-core (règles WCAG 2.1 A + AA) sur chaque page de l'application en fonctionnement, dans le vrai thème, avec des données de test qu'il crée lui-même : connexion, inscription, 404, 403, projets, détail d'un projet, tableau kanban, modale de tâche, mes tâches, notifications, profil. Il vérifie aussi que le focus reste piégé dans la modale de tâche et revient sur la carte à sa fermeture.
+`frontend/e2e/accessibility.e2e.test.ts` lance axe-core (règles WCAG 2.1 A + AA) sur chaque page de l'application en fonctionnement, dans le vrai thème, avec des données de test qu'il crée lui-même : landing page, connexion, inscription, 404, 403, projets, détail d'un projet, tableau kanban, modale de tâche, mes tâches, notifications, profil. Les données de test couvrent toutes les priorités et tous les états d'échéance, et le tableau kanban et le profil sont audités une seconde fois avec la **palette daltonienne** (§3.8). La landing page est auditée avec les animations réduites, pour qu'axe voie la page stabilisée et non une image d'animation. Il vérifie aussi que le focus reste piégé dans la modale de tâche et revient sur la carte à sa fermeture.
 
 ```bash
 # backend (API + Postgres) démarré, puis depuis frontend/
@@ -141,6 +151,8 @@ Les outils automatisés détectent une part significative des critères RGAA/WCA
 Pour être explicite, afin que personne ne confonde « une passe a été faite » avec « ceci est certifié RGAA » :
 
 - **Le contraste des couleurs** de l'état par défaut de chaque page est vérifié par l'audit automatisé ([§5](#5-audit-automatisé-et-pourquoi-il-ne-suffit-pas)), y compris le texte sur dégradé. Non couverts : les états survol, focus et désactivé, les états d'erreur que le test ne déclenche pas, et le tableau de bord admin (l'audit n'a pas d'utilisateur admin).
+- **Redimensionnement et zoom** : les mises en page ont été vérifiées à 390 px de large, pas à 320 px ni à 200 % / 400 % de zoom (RGAA 10.11 / WCAG 1.4.10), et la modification de l'espacement du texte (RGAA 10.12 / WCAG 1.4.12) n'a pas été testée.
+- **Aucune déclaration d'accessibilité n'est publiée** dans l'application. Un brouillon rempli avec l'état réel du projet est dans [ACCESSIBILITY_STATEMENT.fr.md](ACCESSIBILITY_STATEMENT.fr.md) ; le publier demande un audit complet pour calculer un taux de conformité.
 - **Aucune campagne de test avec lecteur d'écran** (NVDA, JAWS, VoiceOver) n'a été menée. L'arbre d'accessibilité exposé par chaque page a été relu, mais personne n'a écouté le rendu réel.
 - **L'audit automatisé ne tourne pas en CI** : les tests e2e ont besoin du backend et d'une base de données, que les workflows de CI ne démarrent pas encore.
 - **Défauts connus de reshaped** (code de la bibliothèque, non corrigeable depuis le nôtre ; à signaler en amont) :

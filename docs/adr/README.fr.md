@@ -24,6 +24,7 @@ Les ADR documentent les décisions d'architecture importantes, les raisons de ce
 | ADR-007 | Ne pas migrer automatiquement les anciennes Todo | Accepted |
 | ADR-008 | RabbitMQ pour les workflows event-driven | Accepted |
 | ADR-009 | Reshaped comme fondation UI frontend | Accepted |
+| ADR-010 | Landing page sur `/`, application legacy déplacée sur `/legacy` | Proposed |
 
 ## Convention de nommage
 

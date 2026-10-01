@@ -15,16 +15,23 @@ PATCH /tasks/:id ──► TaskService ──► task.completed ──► Rabbit
 
 ## Which events notify whom
 
-| Event            | Notified | Why                                              |
-| ---------------- | -------- | ------------------------------------------------ |
-| `task.created`   | yes      | A new task appears in a shared project           |
-| `task.completed` | yes      | A task reached `DONE`                            |
-| `task.updated`   | no       | Every drag-and-drop would create a notification  |
+| Event            | Who is notified                                                    |
+| ---------------- | ------------------------------------------------------------------ |
+| `task.created`   | Everyone on the project, except a new assignee (gets `task.assigned`) |
+| `task.completed` | Everyone on the project (the task reached `DONE`)                  |
+| `task.assigned`  | The new assignee                                                   |
+| `task.updated`   | The task's assignee only, and only when the update is neither an assignment nor a completion |
 
-Recipients: everyone with access to the project, i.e. the owner and the
-members (`ProjectMember`), **except the user who triggered the event**
-(`actorId`). The owner is only notified once even if also listed as a member.
-If the project was deleted before the event is processed, nothing is created.
+"Everyone on the project" means the owner and the members (`ProjectMember`),
+whatever their role. In every case **the user who triggered the event
+(`actorId`) is never notified**, recipients are limited to users who still
+have access to the project, and one action never produces two notifications
+for the same person (e.g. assigning a task to someone sends them only
+`task.assigned`). If the project was deleted before the event is processed,
+nothing is created. Rules: `NotificationService.notifyTaskEvent`.
+
+Plain status moves (drag and drop between To Do and In Progress) only reach
+the assignee, so a busy board does not flood the whole team.
 
 ## Data
 
@@ -134,3 +141,18 @@ New consumers must follow the same rule: derive a unique key from
   in `src/main.ts` through `notification.bootstrap.ts`
 - `src/modules/notifications/NotificationController.ts`,
   `notification.routes.ts`, `notification.schema.ts`: API
+
+## Frontend
+
+- **Badge**: the "Notifications" entry of the sidebar shows the unread count
+  (`UnreadNotificationsProvider`, `GET /notifications/unread-count`). It polls
+  every 30 s, backs off up to 5 min on errors, skips hidden tabs and refreshes
+  when the tab regains focus. Screen readers get the count as text
+  ("3 unread notifications").
+- **Page** `/notifications`: All / Unread filter, "Mark all as read",
+  paginated with "Load more" (cursor). Clicking a notification marks it read
+  and opens its project's Kanban (task notifications) or the project page.
+  Notifications carry no board, so that Kanban shows all the project's tasks.
+- Messages are built in `frontend/src/features/notifications/utils/notificationMessage.ts`
+  ("Ada assigned you to "Fix login"", "Ada changed the priority and deadline
+  of …").

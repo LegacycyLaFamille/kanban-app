@@ -22,6 +22,7 @@ All checks run on every Pull Request targeting `main` or `Dev`
 | Backend format        | `format-backend`      | Prettier `--check`                                             |
 | Backend type-check    | `typecheck-backend`   | `tsc --noEmit`, no type errors                                 |
 | Backend tests         | `test-backend`        | Vitest, all tests pass, plus the coverage threshold (see §3)   |
+| Backend integration tests | `integration-backend` | Vitest against real PostgreSQL + RabbitMQ services (see `docs/backend/INTEGRATION_TESTS.md`) |
 | SonarQube Quality Gate | `sonarqube`          | No new Blocker/Critical issues on New Code (see §4)            |
 
 Type-checking and the full `build` script are kept separate on purpose:
@@ -89,9 +90,23 @@ cd backend
 npm run test:coverage
 ```
 
-The frontend has no tests yet, so no frontend coverage threshold is
-enforced. Add one (Vitest + React Testing Library, per
-`docs/standards/TESTING_CONVENTIONS.md`) once frontend tests exist.
+The frontend has a unit test suite (Vitest + React Testing Library, about
+290 tests, see `docs/frontend/TESTING.md`) and Playwright E2E tests
+(Kanban workflow and the axe accessibility audit). **Neither runs in CI yet**:
+the CI only lints, format-checks and type-checks the frontend, and no
+frontend coverage threshold is enforced. Run them locally before a PR:
+
+```bash
+cd frontend
+npm test                 # unit tests
+npm run test:coverage    # with coverage
+npx playwright test      # E2E, needs the backend and PostgreSQL running
+```
+
+Next steps: add a `frontend-tests` job running `npm run test:coverage`, then
+a threshold set at the measured baseline, as was done for the backend. The
+E2E tests need the backend stack in CI first (the backend integration-tests
+job, `integration-backend`, already starts PostgreSQL and RabbitMQ services).
 
 ## 4. SonarQube Cloud Quality Gate
 

@@ -7,7 +7,10 @@ Related documents:
 [`docs/standards/TESTING_CONVENTIONS.md`](../standards/TESTING_CONVENTIONS.md)
 (project-wide rules),
 [`docs/backend/Get_started.md`](../backend/Get_started.md) (running the
-backend, needed for E2E tests).
+backend, needed for E2E tests),
+[`docs/frontend/FEATURES.md`](FEATURES.md) (what each page does),
+[`docs/standards/ACCESSIBILITY_RGAA.md`](../standards/ACCESSIBILITY_RGAA.md#5-automated-audit-and-why-it-isnt-enough)
+(the accessibility E2E audit).
 
 ## 1. Overview
 
@@ -72,6 +75,15 @@ set `E2E_BASE_URL`. The dev server is then not started:
 ```bash
 E2E_BASE_URL=http://localhost:8080 npm run test:e2e
 ```
+
+The E2E folder holds two suites:
+
+| File                                | What it checks                                              |
+| ----------------------------------- | ----------------------------------------------------------- |
+| `e2e/kanban-workflow.e2e.test.ts`   | The main user journey, step by step (§4.1)                  |
+| `e2e/accessibility.e2e.test.ts`     | axe-core WCAG 2.1 AA audit of every page, including the landing page and the colour-blind palette, plus keyboard focus in the task dialog |
+
+Run only one of them with `npx playwright test e2e/accessibility.e2e.test.ts`.
 
 ## 3. How the unit tests work
 
@@ -307,7 +319,7 @@ the helpers in several files, move them to `frontend/e2e/helpers.ts`.
 | Symptom                                                                     | Likely cause / fix                                                                             |
 | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | `register a new user` fails, `POST /auth/register` returns 500 or times out | The backend or PostgreSQL is not running. Start them (see §2).                                 |
-| `Executable doesn't exist … chromium`                                       | Run `npx playwright install chromium`.                                                         |
+| `Executable doesn't exist … chromium`                                       | Run `npx playwright install chromium`. Or use an installed Edge/Chrome without downloading: add `channel: "msedge"` (or `"chrome"`) to the project's `use` in a local copy of the config. |
 | `Timed out waiting … http://localhost:5173`                                 | The dev server could not start. Run `npm run dev` manually to see the error.                   |
 | Only the first step fails, and all others are `-`                           | Normal: later steps are skipped after a failure. Fix the first `x`.                            |
 | A drag-and-drop step fails intermittently                                   | Open the trace. Make sure the step waits for the `PATCH` response and for `aria-busy="false"`. |
