@@ -16,6 +16,7 @@ type ColumnProps = {
   tasks: Task[];
   onDropTask: (taskId: string, targetColumnId: ColumnId) => void;
   onAddTask: () => void;
+  onOpenTask: (task: Task) => void;
   isTaskPending?: (taskId: string) => boolean;
 };
 
@@ -25,6 +26,7 @@ export function Column({
   tasks,
   onDropTask,
   onAddTask,
+  onOpenTask,
   isTaskPending,
 }: ColumnProps) {
   const ref = useRef<HTMLDivElement>(null);
@@ -54,6 +56,8 @@ export function Column({
     <div
       ref={ref}
       data-testid={`column-${columnId}`}
+      role="region"
+      aria-label={`${title} column`}
       style={{ height: "100%" }}
     >
       <Card padding={4}>
@@ -80,7 +84,12 @@ export function Column({
                   ({tasks.length})
                 </Text>
               </View>
-              <Button variant="ghost" size="small" onClick={onAddTask}>
+              <Button
+                variant="ghost"
+                size="small"
+                onClick={onAddTask}
+                attributes={{ "aria-label": `Add task to ${title}` }}
+              >
                 +
               </Button>
             </View>
@@ -98,6 +107,7 @@ export function Column({
                   <DraggableTaskCard
                     key={task.id}
                     task={task}
+                    onOpen={() => onOpenTask(task)}
                     isPending={isTaskPending?.(task.id) ?? false}
                   />
                 ))}
