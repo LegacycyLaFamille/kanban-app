@@ -75,4 +75,4 @@ None
 
 ## Superseded By
 
-None
+[ADR-011](ADR-011-remove-legacy-todolist.md), for the `/legacy` route: the legacy app has been removed.

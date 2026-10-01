@@ -8,7 +8,7 @@ This guide contains the essential information a new team member needs to underst
 
 The project progressively modernizes a legacy TodoList application into a maintainable Kanban application.
 
-The migration is incremental: the legacy application must remain operational while old components are isolated, replaced, validated, and eventually removed.
+The migration was incremental: the legacy application stayed operational while old components were isolated, replaced and validated. It has now been removed ([ADR-011](../adr/ADR-011-remove-legacy-todolist.md)).
 
 ### Main technologies
 
@@ -273,9 +273,10 @@ Project conventions take precedence over personal coding preferences.
 
 Legacy code must not be rewritten simply because it is old.
 
-Current legacy boundaries:
-- `frontend/src/app/legacy/`
-- `backend/src/legacy/`
+The legacy TodoList (`frontend/src/app/legacy/`, `backend/src/legacy/`) has
+been removed ([ADR-011](../adr/ADR-011-remove-legacy-todolist.md)). Its data is archived by
+`scripts/migrate-legacy-data.sh` ([LEGACY_DATA_MIGRATION.md](../backend/LEGACY_DATA_MIGRATION.md)).
+The rules below still apply to any code being replaced.
 
 Before removing legacy code:
 1. Its replacement must exist.
@@ -326,7 +327,6 @@ Depending on the issue, completion includes:
 - [ ] Start the frontend locally
 - [ ] Start the backend locally
 - [ ] Open the app (`http://localhost:5173/`), create an account from the landing page
-- [ ] Verify the legacy application works (`http://localhost:5173/legacy`)
 - [ ] Identify your assigned issue
 - [ ] Check its dependencies
 - [ ] Read its acceptance criteria

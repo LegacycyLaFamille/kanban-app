@@ -8,7 +8,7 @@ Ce guide regroupe les informations essentielles dont un nouvel arrivant a besoin
 
 Le projet consiste à moderniser progressivement une application TodoList legacy afin d'en faire une application Kanban maintenable.
 
-La migration est incrémentale : l'application legacy doit rester fonctionnelle pendant que les anciennes parties sont isolées, remplacées, validées puis supprimées.
+La migration a été incrémentale : l'application legacy est restée fonctionnelle pendant que les anciennes parties étaient isolées, remplacées et validées. Elle est désormais retirée ([ADR-011](../adr/ADR-011-remove-legacy-todolist.fr.md)).
 
 ### Technologies principales
 
@@ -273,9 +273,10 @@ Les conventions du projet doivent être privilégiées par rapport aux préfére
 
 Le code legacy ne doit pas être réécrit uniquement parce qu'il est ancien.
 
-Principales zones legacy actuelles :
-- `frontend/src/app/legacy/`
-- `backend/src/legacy/`
+La TodoList legacy (`frontend/src/app/legacy/`, `backend/src/legacy/`) a été
+retirée ([ADR-011](../adr/ADR-011-remove-legacy-todolist.fr.md)). Ses données sont archivées par
+`scripts/migrate-legacy-data.sh` ([LEGACY_DATA_MIGRATION.md](../backend/LEGACY_DATA_MIGRATION.md)).
+Les règles ci-dessous restent valables pour tout code remplacé.
 
 Avant de supprimer du code legacy :
 1. Son remplacement doit exister.
@@ -326,7 +327,6 @@ Selon l'issue, sa finalisation comprend :
 - [ ] Lancer le frontend localement
 - [ ] Lancer le backend localement
 - [ ] Ouvrir l'application (`http://localhost:5173/`) et créer un compte depuis la page d'accueil
-- [ ] Vérifier que l'application legacy fonctionne (`http://localhost:5173/legacy`)
 - [ ] Identifier l'issue attribuée
 - [ ] Vérifier ses dépendances
 - [ ] Lire ses critères d'acceptation

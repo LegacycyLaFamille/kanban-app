@@ -1,37 +1,7 @@
-import type { Request, Response, NextFunction } from "express";
-import jwt from "jsonwebtoken";
+import { prisma } from "../database/prisma.js";
+import { PrismaUserRepository } from "../../modules/users/PrismaUserRepository.js";
+import { createRequireAuth } from "./createRequireAuth.js";
 
-export const requireAuth = (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): void => {
-  try {
-    const token = req.cookies.accessToken;
-
-    if (!token) {
-      res.status(401).json({
-        error: {
-          code: "UNAUTHENTICATED",
-          message: "Authentication required.",
-        },
-      });
-      return;
-    }
-
-    const secret = process.env.JWT_SECRET;
-    if (!secret) throw new Error("FATAL: JWT_SECRET manquant.");
-
-    const decoded = jwt.verify(token, secret) as { userId: string };
-    req.userId = decoded.userId;
-
-    next();
-  } catch {
-    res.status(401).json({
-      error: {
-        code: "UNAUTHENTICATED",
-        message: "Invalid or expired session.",
-      },
-    });
-  }
-};
+// The middleware every protected route uses. Its rules are in
+// createRequireAuth.ts, testable without a database.
+export const requireAuth = createRequireAuth(new PrismaUserRepository(prisma));

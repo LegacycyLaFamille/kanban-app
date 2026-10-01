@@ -32,6 +32,8 @@ services:
       - OTEL_LOGS_EXPORTER=otlp
       - OTEL_METRIC_EXPORT_INTERVAL=15000
       - OTEL_SEMCONV_STABILITY_OPT_IN=http
+      - GRAFANA_URL=${GRAFANA_ROOT_URL:-http://localhost:8080/grafana/}
+      # Former legacy TodoList database, read by scripts/migrate-legacy-data.sh.
       - SQLITE_DB_LOCATION=/data/todo.db
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_USER=${RABBITMQ_USER:-kanban}

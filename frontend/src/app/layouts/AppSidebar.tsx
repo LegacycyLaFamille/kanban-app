@@ -94,14 +94,11 @@ const adminNavigationItems: NavigationItem[] = [
     ),
   },
   {
-    label: "Legacy",
-    path: "/legacy",
+    label: "System",
+    path: "/admin/system",
     icon: (
       <SidebarIcon>
-        <rect x="3" y="3" width="7" height="7" rx="1" />
-        <rect x="14" y="3" width="7" height="7" rx="1" />
-        <rect x="3" y="14" width="7" height="7" rx="1" />
-        <rect x="14" y="14" width="7" height="7" rx="1" />
+        <path d="M3 12h4l3-8 4 16 3-8h4" />
       </SidebarIcon>
     ),
   },

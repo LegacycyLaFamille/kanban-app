@@ -316,6 +316,22 @@ describe("Board", () => {
     // Types text and drives a dropdown: slow under a full parallel run.
   }, 15_000);
 
+  it("lists each column by priority: high, then medium, then low", async () => {
+    vi.mocked(getTasksByProject).mockResolvedValue([
+      { ...task, id: "low", title: "Low task", priority: "Low" },
+      { ...task, id: "high", title: "High task", priority: "High" },
+      { ...task, id: "medium", title: "Medium task", priority: "Medium" },
+    ]);
+
+    renderBoard();
+    await screen.findByText("High task");
+
+    const titles = Array.from(
+      screen.getByTestId("column-todo").querySelectorAll("[data-task-id]"),
+    ).map((card) => card.querySelector("span")?.textContent);
+    expect(titles).toEqual(["High task", "Medium task", "Low task"]);
+  });
+
   it("shows only the tasks of the opened board, under its name", async () => {
     vi.mocked(getTasksByProject).mockResolvedValue([
       { ...task, boardId: "board-1" },

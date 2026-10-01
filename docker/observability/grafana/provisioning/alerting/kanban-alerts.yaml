@@ -1,0 +1,196 @@
+# Alert rules for the Kanban backend, provisioned at Grafana start-up.
+# They show in Grafana > Alerting and in the "Alerts" panel of the
+# "Kanban - Backend observability" dashboard. No contact point is
+# provisioned: add one in Grafana (email, Discord, Slack…) to be notified.
+# See docs/backend/OBSERVABILITY.md#alerts.
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: kanban-backend
+    folder: Kanban
+    interval: 1m
+    rules:
+      - uid: kanban-api-error-rate
+        title: API 5xx error rate above 5%
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              expr: >-
+                (sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~"5.."}[5m])) or vector(0))
+                / sum(rate(http_server_request_duration_seconds_count[5m]))
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [0.05] }
+        for: 5m
+        # No traffic at all is not an error.
+        noDataState: OK
+        execErrState: Error
+        labels: { severity: critical, component: api }
+        annotations:
+          summary: More than 5% of API requests fail with a 5xx.
+          description: >-
+            Check the "Errors and warnings" logs and the "Failed traces"
+            panel of the dashboard to find the failing route.
+
+      - uid: kanban-api-latency
+        title: API p95 latency above 1 s
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              expr: >-
+                histogram_quantile(0.95, sum by (le) (rate(http_server_request_duration_seconds_bucket[5m])))
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [1] }
+        for: 10m
+        noDataState: OK
+        execErrState: Error
+        labels: { severity: warning, component: api }
+        annotations:
+          summary: 5% of API requests take more than one second.
+          description: >-
+            The "p95 latency by route" panel shows which route is slow; its
+            traces show whether the time goes to PostgreSQL or elsewhere.
+
+      - uid: kanban-events-dead-lettered
+        title: Events dead-lettered
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              expr: >-
+                sum(increase(kanban_events_consumed_total{outcome=~"dead_letter|unreadable"}[15m])) or vector(0)
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+        for: 0m
+        noDataState: OK
+        execErrState: Error
+        labels: { severity: warning, component: events }
+        annotations:
+          summary: An event failed after every retry and was dead-lettered.
+          description: >-
+            Its notification was not created. The message is kept in
+            kanban.events.dead-letter with x-failed-consumer and
+            x-failure-reason headers (see docs/backend/EVENTS.md).
+
+      - uid: kanban-events-publish-failures
+        title: Events could not be published
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              expr: >-
+                sum(increase(kanban_events_published_total{outcome="failure"}[15m])) or vector(0)
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+        for: 0m
+        noDataState: OK
+        execErrState: Error
+        labels: { severity: warning, component: events }
+        annotations:
+          summary: The backend could not hand events to RabbitMQ.
+          description: >-
+            The business action succeeded but its notifications are lost
+            ("Event lost" in the logs). Usually RabbitMQ is down.
+
+      - uid: kanban-dead-letter-queue
+        title: Dead-letter queue not empty
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              expr: >-
+                sum(rabbitmq_queue_messages_ready{queue="kanban.events.dead-letter"}) or vector(0)
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+        for: 5m
+        noDataState: OK
+        execErrState: Error
+        labels: { severity: info, component: events }
+        annotations:
+          summary: Failed events wait in kanban.events.dead-letter.
+          description: >-
+            Inspect them in the RabbitMQ management UI, fix the cause, then
+            move or purge them. They stay until someone does.
+
+      - uid: kanban-notification-consumer-down
+        title: No consumer on the notification queue
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              expr: >-
+                sum(rabbitmq_queue_consumers{queue="notifications.task-events"})
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: lt, params: [1] }
+        for: 5m
+        # The queue missing from RabbitMQ's metrics is the same problem.
+        noDataState: Alerting
+        execErrState: Error
+        labels: { severity: critical, component: events }
+        annotations:
+          summary: Nobody consumes notifications.task-events.
+          description: >-
+            The backend is down or lost its RabbitMQ connection: events pile
+            up and no notification is created. Check the backend health.

@@ -11,9 +11,8 @@ route exposes it. It only exists for traceability and manual recovery.
 ## What the script does
 
 1. Reads `todo_items` from the legacy database: MySQL when `MYSQL_HOST` is
-   set, otherwise the SQLite file at `SQLITE_DB_LOCATION` (same rule as
-   `src/legacy/persistence/index.js`). The source is only read, never
-   modified.
+   set, otherwise the SQLite file at `SQLITE_DB_LOCATION` (the rule the
+   legacy app used). The source is only read, never modified.
 2. Normalizes rows the way the legacy app read them:
    - `completed` is `true` only when the legacy value is `1`;
    - rows without an `id` are skipped and counted;

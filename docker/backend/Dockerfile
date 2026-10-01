@@ -6,8 +6,7 @@ RUN apt-get update \
 COPY backend/package.json backend/package-lock.json ./
 RUN npm ci --build-from-source
 COPY backend/ ./
-RUN DATABASE_URL="postgresql://build:build@localhost:5432/build" npm run build \
- && cp src/legacy/package.json dist/legacy/package.json
+RUN DATABASE_URL="postgresql://build:build@localhost:5432/build" npm run build
     
 FROM node:24-slim AS runtime
 ENV NODE_ENV=production
@@ -21,6 +20,8 @@ COPY --from=build /app /app
 RUN chown -R node:node /app
 
 ENV PORT=3000
+# Database of the former legacy TodoList, kept in the backend-data volume
+# until scripts/migrate-legacy-data.sh has archived it (LEGACY_DATA_MIGRATION.md).
 ENV SQLITE_DB_LOCATION=/data/todo.db
 EXPOSE 3000
 USER node

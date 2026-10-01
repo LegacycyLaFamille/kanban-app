@@ -11,6 +11,7 @@ import { ProjectsPage } from "../features/projects/pages/ProjectsPage";
 import { ProfilePage } from "../features/profile/pages/ProfilePage";
 
 import { AdminDashboardPage } from "../features/admin/pages/AdminDashboardPage";
+import { AdminSystemPage } from "../features/admin/pages/AdminSystemPage";
 
 import { MyTasksPage } from "../features/tasks/pages/MyTasksPage";
 
@@ -88,6 +89,10 @@ export const router = createBrowserRouter([
               {
                 path: "/admin/dashboard",
                 element: <AdminDashboardPage />,
+              },
+              {
+                path: "/admin/system",
+                element: <AdminSystemPage />,
               },
             ],
           },

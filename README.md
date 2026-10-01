@@ -67,9 +67,9 @@ The application remains a **modular monolith** and is migrated progressively.
 - **My Tasks**, **notifications** (event-driven, RabbitMQ), **data export**, **admin dashboard**.
 - **Accessibility**: RGAA checklist, automated axe audit of every page, colour-blind palette.
 - **Observability**: OpenTelemetry, Prometheus, Loki, Tempo, Grafana.
-- The legacy TodoList is still available on `/legacy`.
+- The legacy TodoList has been removed ([ADR-011](./docs/adr/ADR-011-remove-legacy-todolist.md)); its data is archived by a one-shot script.
 
-Not done yet: change password and account deletion (the profile buttons exist, the backend routes do not), the accessibility statement, frontend tests in CI.
+Not done yet: publishing the accessibility statement, frontend tests in CI.
 
 Route by route: [docs/frontend/FEATURES.md](./docs/frontend/FEATURES.md).
 
@@ -85,12 +85,14 @@ Route by route: [docs/frontend/FEATURES.md](./docs/frontend/FEATURES.md).
 ### Audit
 
 - [`audit/LEGACY_AUDIT.md`](./docs/audit/LEGACY_AUDIT.md) — technical audit of the legacy repository (also in [French](./docs/audit/LEGACY_AUDIT.fr.md)).
+- [`audit/AUTH_AUDIT.md`](./docs/audit/AUTH_AUDIT.md) — authentication audit (S3-07): findings, fixes, evidence
+- [`audit/AUTHORIZATION_AUDIT.md`](./docs/audit/AUTHORIZATION_AUDIT.md) — authorization audit (S3-08): owner / member / outsider matrix
 
 ### Architecture and decisions
 
 - [`architecture/FRONTEND_MIGRATION.md`](./docs/architecture/FRONTEND_MIGRATION.md) — frontend migration strategy and current state
 - [`architecture/BACKEND_MIGRATION.md`](./docs/architecture/BACKEND_MIGRATION.md) — backend migration strategy, data model, authorization
-- [`adr/`](./docs/adr/README.md) — Architecture Decision Records (ADR-001 to ADR-010)
+- [`adr/`](./docs/adr/README.md) — Architecture Decision Records (ADR-001 to ADR-011)
 
 ### Backend
 
@@ -144,5 +146,5 @@ Every document under `adr/`, `architecture/`, `standards/` and `team/` has a Fre
 - Users are informed before the upgrade so they can preserve relevant information and recreate still-needed tasks after account creation and authentication.
 - RabbitMQ provides the event-driven workflow.
 - Project access is decided in one place (`ProjectAccessGuard`): owner, EDITOR and VIEWER roles.
-- The landing page is served on `/`, the legacy app on `/legacy` (ADR-010, proposed).
+- The landing page is served on `/` (ADR-010); the legacy TodoList is removed, its data kept in the `LegacyTodoItem` archive (ADR-011, proposed).
 - Docker, GitHub Actions, ESLint, tests, coverage, and static quality analysis are part of the modernization.

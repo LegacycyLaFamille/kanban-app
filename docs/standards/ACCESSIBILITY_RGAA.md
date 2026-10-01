@@ -150,7 +150,7 @@ Automated tools catch a meaningful slice of RGAA/WCAG criteria — missing label
 
 Being explicit about this so nobody mistakes "a pass was done" for "this is RGAA-certified":
 
-- **Color contrast** of every page's default state is checked by the automated audit ([§5](#5-automated-audit-and-why-it-isnt-enough)), including text over gradients. Not covered: hover, focus and disabled states, error states not triggered by the test, and the admin dashboard (the audit has no admin user).
+- **Color contrast** of every page's default state is checked by the automated audit ([§5](#5-automated-audit-and-why-it-isnt-enough)), including text over gradients. Not covered: hover, focus and disabled states, and error states not triggered by the test. The admin pages (`/admin/dashboard`, `/admin/system`) are not in the automated audit (it has no admin user); they were checked once with axe by hand, in both palettes, with no violation.
 - **Reflow and zoom**: layouts were checked at 390 px wide, not at 320 px nor at 200% / 400% zoom (RGAA 10.11 / WCAG 1.4.10), and text-spacing overrides (RGAA 10.12 / WCAG 1.4.12) were not tested.
 - **No accessibility statement is published** in the app. A draft, filled with this project's real state, is in [ACCESSIBILITY_STATEMENT.md](ACCESSIBILITY_STATEMENT.md); publishing it requires a full audit to compute a compliance rate.
 - **No screen-reader testing campaign** (NVDA, JAWS, VoiceOver) was performed. The accessibility tree each page exposes has been reviewed, but nobody has listened to how it actually sounds.
@@ -159,6 +159,5 @@ Being explicit about this so nobody mistakes "a pass was done" for "this is RGAA
   - The modal backdrop (`Overlay`) hardcodes `role="button"` around the whole dialog: a screen reader may announce a button wrapping the dialog (axe `nested-interactive`; the audit ignores only that exact node).
   - `FormControl.Helper` always renders `role="alert"`, so static help text (e.g. the email hint on the profile page) can be announced as an alert when it reappears.
   - `Modal.Title` renders an `<h6>`, which skips heading levels inside dialogs.
-- **`frontend/src/app/legacy/**`** and **`backend/src/legacy/**`** are explicitly out of scope (same exclusion as the quality gate and SonarQube — see `docs/quality-gate.md`): pre-migration legacy code is not touched for this.
 - The admin dashboard's and "My Tasks" page's tables are simple (no merged cells, one header row, `<th>` headings). Each one is named after its project via `aria-labelledby` (RGAA 5.4), set by `shared/utils/labelTable.ts`: reshaped's `Table` doesn't forward attributes to its `<table>`, and a `<caption>` child breaks its `<thead>`/`<tbody>` detection. Reuse that helper for any new table.
 - This document itself has not been through a legal/compliance review — treat it as engineering guidance, not a certification deliverable.

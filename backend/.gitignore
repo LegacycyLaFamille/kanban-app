@@ -3,8 +3,9 @@ dist
 # Keep environment variables out of version control
 .env
 .env.test
-# Ignorer les données SQLite du legacy
-**/legacy/persistence/data/
+# Local SQLite database of the former legacy TodoList (a file named `data`),
+# still read by scripts/migrate-legacy-data.sh. Never committed.
+**/legacy/persistence/data
 *.sqlite
 *.db
 /src/generated/prisma

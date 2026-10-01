@@ -2,7 +2,15 @@ openapi: 3.0.3
 info:
   title: Kanban API
   version: 1.0.0
-  description: Documentation of the kanban backend API.
+  description: >
+    Documentation of the kanban backend API.
+
+
+    Errors use the shape `{ "error": { "code", "message" } }`. On every
+    endpoint that takes a JSON body, a malformed body answers 400
+    `INVALID_JSON` and a body over the size limit 413 `PAYLOAD_TOO_LARGE`;
+    an unexpected failure answers 500 `INTERNAL_SERVER_ERROR`, without any
+    stack trace.
 
 paths:
   # ==========================================
@@ -286,7 +294,7 @@ paths:
         - CookieAuth: []
       responses:
         '200':
-          description: Pièce jointe JSON, envoyée avec `Cache-Control: no-store`.
+          description: "Pièce jointe JSON, envoyée avec `Cache-Control: no-store`."
           content:
             application/json:
               schema:
@@ -1242,6 +1250,41 @@ paths:
   # role check, independent of ProjectAccessGuard's per-project
   # owner/member authorization. See
   # docs/standards/API_CONVENTIONS.md#admin-dashboard-endpoints.
+  /api/v1/admin/system:
+    get:
+      summary: État du système pour les administrateurs
+      description: >
+        Base de données (latence), broker RabbitMQ, files d'événements
+        (consommateur, retry, dead-letter), totaux d'événements depuis le
+        démarrage du processus, activité de l'application, derniers
+        avertissements/erreurs du backend et lien vers le dashboard Grafana
+        (si GRAFANA_URL est défini). Répond 200 même si le système est
+        dégradé ou en panne : le champ status le dit. Jamais mis en cache.
+        Ne contient ni l'URL du broker ni les messages d'erreur bruts.
+      tags:
+        - Admin
+      security:
+        - CookieAuth: []
+      responses:
+        '200':
+          description: État calculé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminSystemStatus'
+        '401':
+          description: Non authentifié.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+        '403':
+          description: Authentifié mais non administrateur.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+
   /api/v1/admin/tasks:
     get:
       summary: Liste toutes les tâches de tous les projets, groupées par projet
@@ -1522,8 +1565,120 @@ components:
       type: apiKey
       in: cookie
       name: accessToken
+      description: >
+        HttpOnly, SameSite=Strict cookie set by /auth/login, valid 15 minutes.
+        It is bound to the user's active session: logout, password change,
+        account deletion or a sign-in on another device revoke it at once
+        (401 on the next request). A refresh token is never accepted here.
 
   schemas:
+    AdminSystemStatus:
+      type: object
+      required: [checkedAt, status, warnings, application, database, broker, queues, events, activity, recentProblems, links]
+      properties:
+        checkedAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [ok, degraded, down]
+          description: down si la base est injoignable, degraded si un avertissement existe.
+        warnings:
+          type: array
+          items:
+            type: string
+          example: ["3 event(s) failed for good and wait in kanban.events.dead-letter."]
+        application:
+          type: object
+          properties:
+            version: { type: string, example: "1.0.0" }
+            nodeVersion: { type: string, example: "v24.9.0" }
+            environment: { type: string, example: production }
+            startedAt: { type: string, format: date-time }
+            uptimeSeconds: { type: integer }
+            memory:
+              type: object
+              properties:
+                rssBytes: { type: integer }
+                heapUsedBytes: { type: integer }
+        database:
+          type: object
+          properties:
+            status: { type: string, enum: [up, down] }
+            latencyMs: { type: number, nullable: true }
+        broker:
+          type: object
+          properties:
+            state:
+              type: string
+              enum: [disabled, connecting, connected, disconnected, closed]
+            connectedAt: { type: string, format: date-time }
+            reconnectAttempt: { type: integer }
+        queues:
+          type: array
+          items:
+            type: object
+            properties:
+              name: { type: string, example: notifications.task-events }
+              role: { type: string, enum: [consumer, retry, dead_letter] }
+              messages:
+                type: integer
+                nullable: true
+                description: Messages en attente ; null si le broker est injoignable.
+              consumers: { type: integer, nullable: true }
+        events:
+          type: object
+          description: Totaux depuis le démarrage du processus backend.
+          properties:
+            since: { type: string, format: date-time }
+            published:
+              type: object
+              properties:
+                success: { type: integer }
+                failure: { type: integer }
+            consumed:
+              type: object
+              properties:
+                success: { type: integer }
+                retry: { type: integer }
+                dead_letter: { type: integer }
+                unreadable: { type: integer }
+        activity:
+          nullable: true
+          description: null si la base est injoignable.
+          type: object
+          properties:
+            users: { type: integer }
+            newUsersLast7Days: { type: integer }
+            projects: { type: integer }
+            tasks:
+              type: object
+              properties:
+                total: { type: integer }
+                todo: { type: integer }
+                inProgress: { type: integer }
+                done: { type: integer }
+                overdue: { type: integer }
+                createdLast24Hours: { type: integer }
+            unreadNotifications: { type: integer }
+        recentProblems:
+          type: array
+          description: 20 derniers avertissements/erreurs du backend (message et composant uniquement).
+          items:
+            type: object
+            properties:
+              time: { type: string, format: date-time }
+              level: { type: string, enum: [warn, error, fatal] }
+              component: { type: string, example: rabbitmq }
+              message: { type: string }
+        links:
+          type: object
+          properties:
+            grafanaDashboard:
+              type: string
+              nullable: true
+              example: http://localhost:3001/d/kanban-backend
+
     Notification:
       type: object
       properties:
@@ -1625,6 +1780,7 @@ components:
         email:
           type: string
           format: email
+          description: Trimmed and lowercased; unique whatever its case.
           example: john.doe@example.com
         name:
           type: string
@@ -1633,6 +1789,7 @@ components:
         password:
           type: string
           minLength: 8
+          description: At most 72 bytes (bcrypt's limit).
           example: SuperSecurePassword123
 
     RegisterSuccessResponse:
@@ -1990,16 +2147,26 @@ components:
 
     CreateBoardDto:
       type: object
+      additionalProperties: false
       required: [name]
       properties:
         name:
           type: string
+          minLength: 1
+          maxLength: 100
+          description: Trimmed. The only accepted field.
+          example: Sprint 12
 
     UpdateBoardDto:
       type: object
+      additionalProperties: false
+      required: [name]
       properties:
         name:
           type: string
+          minLength: 1
+          maxLength: 100
+          description: Trimmed. The only accepted field.
 
     CreateTaskDto:
       type: object

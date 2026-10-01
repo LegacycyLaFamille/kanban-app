@@ -80,4 +80,4 @@ Aucun
 
 ## Remplacé par
 
-Aucun
+[ADR-011](ADR-011-remove-legacy-todolist.fr.md), pour la route `/legacy` : l'application legacy a été retirée.

@@ -506,6 +506,10 @@ A legacy section should only be removed when:
 - the new persistence layer works;
 - no active feature still depends on that code.
 
+Done: `backend/src/legacy/` and the `/api/legacy` API were removed with
+[ADR-011](../adr/ADR-011-remove-legacy-todolist.md). Only the one-shot data migration script
+remains, until every deployed stack's TodoList data is archived.
+
 ---
 
 ## 10. Target Data Strategy

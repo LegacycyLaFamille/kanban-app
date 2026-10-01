@@ -57,8 +57,7 @@ What has been done (details in [ACCESSIBILITY_RGAA.md](ACCESSIBILITY_RGAA.md)):
 
 ### Content exempt from the accessibility requirement
 
-- The former TodoList application, reachable at `/legacy`, kept while it is
-  phased out and excluded from this work.
+None: the former TodoList application has been removed.
 
 ## Preparation of this statement
 

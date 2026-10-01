@@ -13,7 +13,6 @@ Defined in `frontend/src/app/router.tsx`.
 | ------------------------------------- | ------------- | ----------------------------------------- |
 | `/`                                   | public        | Landing page, with sign-in / sign-up      |
 | `/login`, `/register`                 | public        | Standalone auth pages                     |
-| `/legacy`                             | public        | The original TodoList (`app/legacy/`), kept while it is phased out |
 | `/403`, any unknown path              | public        | Forbidden / Not found                     |
 | `/projects`                           | signed in     | Projects list, received invitations       |
 | `/projects/:projectId`                | signed in     | Project details: boards, members          |
@@ -22,11 +21,13 @@ Defined in `frontend/src/app/router.tsx`.
 | `/notifications`                      | signed in     | Notifications                             |
 | `/profile`                            | signed in     | Profile, accessibility, data export       |
 | `/admin/dashboard`                    | `ADMIN` role  | All tasks, assignment                     |
+| `/admin/system`                       | `ADMIN` role  | System status: services, event queues, activity, recent errors, Grafana link |
 
 `ProtectedRoute` sends signed-out users to `/login` (and back afterwards);
 `RequireAdmin` sends non-admins back to `/projects`. Signed-in pages share
-`MainLayout` (sidebar, skip link, unread-notifications badge). The admin
-sidebar has a "Legacy" entry pointing to `/legacy`.
+`MainLayout` (sidebar, skip link, unread-notifications badge). Admins also
+get the "Dashboard" and "System" entries. The legacy TodoList was removed
+([ADR-011](../adr/ADR-011-remove-legacy-todolist.md)).
 
 ## Features (`frontend/src/features/`)
 
@@ -39,7 +40,7 @@ sidebar has a "Legacy" entry pointing to `/legacy`.
 | `tasks/`        | My Tasks                                                           |
 | `notifications/`| Notifications page and unread badge                                |
 | `profile/`      | Profile details, stats, accessibility settings, data export        |
-| `admin/`        | Admin dashboard                                                    |
+| `admin/`        | Admin dashboard (tasks) and system status page                     |
 | `errors/`       | 403 and 404 pages                                                  |
 
 Shared code is in `frontend/src/shared/`: `api/` (the only HTTP client,
@@ -73,6 +74,8 @@ entry point for new users.
   Without `boardId` (e.g. opened from a notification), all the project's
   tasks are shown. See [PROJECTS_AND_ACCESS.md](../backend/PROJECTS_AND_ACCESS.md#boards).
 - Three columns (To Do, In Progress, Done), each with a status dot.
+- Each column lists its tasks by priority: High first, then Medium, then
+  Low, then tasks without a priority (`kanban/utils/sortByPriority.ts`).
 - Drag and drop with optimistic update and rollback; keyboard alternative:
   every card opens the task dialog with Enter/Space, where the status can be
   changed (RGAA 7.3 / WCAG 2.5.7).
@@ -114,9 +117,6 @@ Sidebar badge and `/notifications` page: see
 
 ## Known gaps
 
-- **Change password** and **Delete account** (Profile → Danger zone) open
-  their dialogs but are not connected: there is no backend route yet
-  (issue #104 for deletion).
 - The colour-vision setting is per device, not per account.
 - Tasks without a board appear on no board (see
   [PROJECTS_AND_ACCESS.md](../backend/PROJECTS_AND_ACCESS.md#boards)).

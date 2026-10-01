@@ -67,9 +67,9 @@ L’application reste un **monolithe modulaire**. La migration est progressive e
 - **My Tasks**, **notifications** (événementielles, RabbitMQ), **export de données**, **tableau de bord admin**.
 - **Accessibilité** : checklist RGAA, audit axe automatisé de toutes les pages, palette daltonienne.
 - **Observabilité** : OpenTelemetry, Prometheus, Loki, Tempo, Grafana.
-- La TodoList legacy reste disponible sur `/legacy`.
+- La TodoList legacy a été retirée ([ADR-011](./docs/adr/ADR-011-remove-legacy-todolist.fr.md)) ; ses données sont archivées par un script ponctuel.
 
-Pas encore fait : changement de mot de passe et suppression de compte (les boutons du profil existent, pas les routes backend), déclaration d'accessibilité, tests frontend en CI.
+Pas encore fait : publication de la déclaration d'accessibilité, tests frontend en CI.
 
 Route par route : [docs/frontend/FEATURES.md](./docs/frontend/FEATURES.md).
 
@@ -85,12 +85,14 @@ Route par route : [docs/frontend/FEATURES.md](./docs/frontend/FEATURES.md).
 ### Audit
 
 - [`audit/LEGACY_AUDIT.fr.md`](./docs/audit/LEGACY_AUDIT.fr.md) — état des lieux technique complet du repository legacy : stack, versions, architecture, dette technique, sécurité, tests, CI/CD, Docker, persistence et recommandations.
+- [`audit/AUTH_AUDIT.fr.md`](./docs/audit/AUTH_AUDIT.fr.md) — audit de l'authentification (S3-07) : constats, corrections, preuves
+- [`audit/AUTHORIZATION_AUDIT.fr.md`](./docs/audit/AUTHORIZATION_AUDIT.fr.md) — audit des autorisations (S3-08) : matrice propriétaire / membre / extérieur
 
 ### Architecture et décisions
 
 - [`architecture/FRONTEND_MIGRATION.fr.md`](./docs/architecture/FRONTEND_MIGRATION.fr.md) — stratégie de migration du frontend et état actuel
 - [`architecture/BACKEND_MIGRATION.fr.md`](./docs/architecture/BACKEND_MIGRATION.fr.md) — stratégie de migration du backend, modèle de données, autorisations
-- [`adr/`](./docs/adr/README.fr.md) — décisions d'architecture (ADR-001 à ADR-010)
+- [`adr/`](./docs/adr/README.fr.md) — décisions d'architecture (ADR-001 à ADR-011)
 
 ### Backend (en anglais)
 
@@ -144,5 +146,5 @@ Les documents de `adr/`, `architecture/`, `standards/` et `team/` existent en fr
 - Les utilisateurs doivent être prévenus avant la mise à niveau afin de pouvoir conserver les informations nécessaires et recréer les tâches encore pertinentes après authentification.
 - RabbitMQ est utilisé pour le workflow event-driven.
 - Les droits sur un projet sont décidés à un seul endroit (`ProjectAccessGuard`) : propriétaire, rôles EDITOR et VIEWER.
-- La landing page est servie sur `/`, l'application legacy sur `/legacy` (ADR-010, proposé).
+- La landing page est servie sur `/` (ADR-010) ; la TodoList legacy est retirée, ses données conservées dans l'archive `LegacyTodoItem` (ADR-011, proposé).
 - Docker, GitHub Actions, ESLint, tests, couverture et analyse de qualité font partie de la modernisation.

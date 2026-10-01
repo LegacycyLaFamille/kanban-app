@@ -199,14 +199,14 @@ frontend est organisé par fonctionnalité et entièrement en TypeScript hors
 | `kanban`                         | Fait : un board par page, glisser-déposer, cartes colorées    |
 | `tasks`                          | Fait : My Tasks                                               |
 | `notifications`                  | Fait : page et badge des non-lues                             |
-| `profile`                        | Fait, sauf changement de mot de passe et suppression de compte (pas de route backend) |
+| `profile`                        | Fait : informations, changement de mot de passe, suppression du compte, accessibilité, export |
 | `admin`                          | Fait : tableau de bord, assignation                           |
 | `landing`                        | Fait : landing page sur `/`                                   |
 | `users`                          | Vide : les besoins sont couverts par `auth`, `profile` et `admin` |
 
-La TodoList legacy est toujours servie, sur `/legacy`
-([ADR-010](../adr/ADR-010-landing-page-and-legacy-route.fr.md)) ; sa
-suppression (étape 6) n'a pas commencé.
+L'étape 6 est faite : la TodoList legacy et `app/legacy/` ont été retirées
+([ADR-011](../adr/ADR-011-remove-legacy-todolist.fr.md)). Le frontend est entièrement en
+TypeScript.
 
 Routes et comportement de chaque fonctionnalité :
 [docs/frontend/FEATURES.md](../frontend/FEATURES.md).

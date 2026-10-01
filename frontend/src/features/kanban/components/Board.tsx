@@ -31,6 +31,7 @@ import { useCreateTask } from "../hooks/useCreateTask";
 import { useUpdateTask } from "../hooks/useUpdateTask";
 import { useDeleteTask } from "../hooks/useDeleteTask";
 import { useTaskDragAndDrop } from "../hooks/useTaskDragAndDrop";
+import { sortByPriority } from "../utils/sortByPriority";
 import type {
   Task as BackendTask,
   TaskStatus,
@@ -424,7 +425,9 @@ export function Board({
                 key={column.id}
                 columnId={column.id}
                 title={column.title}
-                tasks={tasks.filter((task) => task.columnId === column.id)}
+                tasks={sortByPriority(
+                  tasks.filter((task) => task.columnId === column.id),
+                )}
                 onDropTask={handleDropTask}
                 onAddTask={
                   readOnly ? undefined : () => handleOpenCreate(column.id)

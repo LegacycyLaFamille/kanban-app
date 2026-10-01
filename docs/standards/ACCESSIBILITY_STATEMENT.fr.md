@@ -58,8 +58,7 @@ Ce qui a été fait (détail dans [ACCESSIBILITY_RGAA.fr.md](ACCESSIBILITY_RGAA.
 
 ### Contenus non soumis à l'obligation d'accessibilité
 
-- L'ancienne application TodoList, accessible sur `/legacy`, conservée le
-  temps de sa dépréciation et exclue de la démarche.
+Aucun : l'ancienne application TodoList a été retirée.
 
 ## Établissement de cette déclaration
 

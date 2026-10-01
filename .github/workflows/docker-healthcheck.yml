@@ -44,11 +44,19 @@ jobs:
         run: |
           set -euo pipefail
           curl -fsS http://localhost:8080/ -o /dev/null
-          curl -fsS http://localhost:8080/api/legacy/items -o /dev/null
-          curl -fsS -X POST http://localhost:8080/api/legacy/items \
+          # Write and read through nginx → backend → PostgreSQL: create an
+          # account, sign in with it, and check the session cookies.
+          email="ci-smoke-$(date +%s)@example.com"
+          curl -fsS -X POST http://localhost:8080/api/v1/auth/register \
             -H 'Content-Type: application/json' \
-            -d '{"name":"ci smoke test"}' -o /dev/null
-          curl -fsS http://localhost:8080/api/legacy/items | grep -q 'ci smoke test'
+            -d "{\"name\":\"CI smoke\",\"email\":\"$email\",\"password\":\"ci-smoke-password\"}" \
+            -o /dev/null
+          curl -fsS -X POST http://localhost:8080/api/v1/auth/login \
+            -H 'Content-Type: application/json' \
+            -d "{\"email\":\"$email\",\"password\":\"ci-smoke-password\"}" \
+            -D - -o /dev/null | grep -i '^set-cookie: accessToken=' > /dev/null
+          # Protected routes refuse a request without session.
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/api/v1/projects)" = 401
           curl -fsS http://localhost:8080/grafana/api/health -o /dev/null
 
       - name: Backend connected to PostgreSQL and RabbitMQ

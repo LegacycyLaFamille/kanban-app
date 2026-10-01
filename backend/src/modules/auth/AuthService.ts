@@ -4,7 +4,11 @@ import type {
   UserActivityStats,
   UserRepository,
 } from "../users/UserRepository.js";
-import jwt from "jsonwebtoken";
+import {
+  issueSessionTokens,
+  sessionIdOf,
+  verifyToken,
+} from "../../shared/security/tokens.js";
 
 export class AuthService {
   constructor(private readonly userRepository: UserRepository) {}
@@ -43,11 +47,13 @@ export class AuthService {
     incomingRefreshToken: string,
   ): Promise<{ accessToken: string; refreshToken: string; user: User }> {
     try {
-      const secret = process.env.JWT_SECRET!;
-      jwt.verify(incomingRefreshToken, secret);
+      // Only a refresh token, and only the user's current one: an old token
+      // (already rotated, logged out) or an access token is refused.
+      verifyToken(incomingRefreshToken, "refresh");
 
-      const user =
-        await this.userRepository.findByRefreshToken(incomingRefreshToken);
+      const user = await this.userRepository.findByRefreshToken(
+        sessionIdOf(incomingRefreshToken),
+      );
       if (!user) throw new Error("Token invalide ou révoqué");
 
       const tokens = await this.generateAuthTokens(user);
@@ -113,20 +119,17 @@ export class AuthService {
     return this.userRepository.getActivityStats(userId);
   }
 
+  // Starts a new session: it replaces the user's previous one (one session
+  // per user), whose tokens stop working immediately. Only the session id
+  // (a hash of the refresh token) is stored, never the token itself.
   private async generateAuthTokens(
     user: User,
   ): Promise<{ accessToken: string; refreshToken: string }> {
-    const secret = process.env.JWT_SECRET;
-    if (!secret) throw new Error("FATAL: JWT_SECRET manquant.");
+    const { accessToken, refreshToken, sessionId } = issueSessionTokens(
+      user.id,
+    );
 
-    const accessToken = jwt.sign({ userId: user.id }, secret, {
-      expiresIn: "15m",
-    });
-    const refreshToken = jwt.sign({ userId: user.id }, secret, {
-      expiresIn: "7d",
-    });
-
-    await this.userRepository.updateRefreshToken(user.id, refreshToken);
+    await this.userRepository.updateRefreshToken(user.id, sessionId);
 
     return { accessToken, refreshToken };
   }

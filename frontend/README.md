@@ -15,7 +15,7 @@ npm install
 npm run dev        # http://localhost:5173
 ```
 
-The dev server proxies `/api` (and the legacy app's `/items`) to
+The dev server proxies `/api` to
 `http://localhost:3000`. To call another API, set `VITE_API_URL`
 (default `/api/v1`).
 
@@ -39,7 +39,7 @@ tests yourself before opening one: they are not in CI yet
 
 ```text
 src/
-├── app/            router, providers, layouts (sidebar), legacy app (/legacy)
+├── app/            router, providers, layouts (sidebar)
 ├── features/       one folder per feature: api/, hooks/, components/, pages/, types/
 │   ├── landing/    landing page on /
 │   ├── auth/       session, login/register, route guards
