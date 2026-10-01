@@ -75,9 +75,12 @@ describe("AppSidebar", () => {
   it("shows the unread notification count on the Notifications entry", () => {
     renderSidebar(false, 3);
 
-    expect(screen.getByLabelText("3 unread notifications").textContent).toBe(
-      "3",
-    );
+    expect(screen.getByText("3").getAttribute("aria-hidden")).toBe("true");
+    expect(
+      screen.getByRole("button", {
+        name: /Notifications, 3 unread notifications/,
+      }),
+    ).toBeTruthy();
   });
 
   it("caps the unread notification badge at 99+", () => {
@@ -89,7 +92,7 @@ describe("AppSidebar", () => {
   it("shows no notification badge when everything is read", () => {
     renderSidebar(false, 0);
 
-    expect(screen.queryByLabelText(/unread notifications/)).toBeNull();
+    expect(screen.queryByText(/unread notifications/)).toBeNull();
   });
 
   it("navigates the admin's Legacy entry to /", async () => {

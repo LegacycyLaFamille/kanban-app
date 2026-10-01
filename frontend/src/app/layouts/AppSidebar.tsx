@@ -168,17 +168,25 @@ export function AppSidebar({
               <div key={item.path} className={styles.navigationItem}>
                 <MenuItem
                   selected={isActive(item.path)}
+                  attributes={{
+                    "aria-current": isActive(item.path) ? "page" : undefined,
+                  }}
                   startSlot={item.icon}
                   onClick={() => navigate(item.path)}
                 >
                   <span className={styles.navigationLabel}>{item.label}</span>
                   {item.path === "/notifications" && notificationCount > 0 && (
-                    <span
-                      className={styles.notificationBadge}
-                      aria-label={`${notificationCount} unread notifications`}
-                    >
-                      {notificationCount > 99 ? "99+" : notificationCount}
-                    </span>
+                    <>
+                      <span
+                        className={styles.notificationBadge}
+                        aria-hidden="true"
+                      >
+                        {notificationCount > 99 ? "99+" : notificationCount}
+                      </span>
+                      <span className="sr-only">
+                        {`, ${notificationCount} unread notifications`}
+                      </span>
+                    </>
                   )}
                 </MenuItem>
               </div>
@@ -195,7 +203,7 @@ export function AppSidebar({
         </View>
 
         <div className={styles.user}>
-          <div className={styles.avatar}>
+          <div className={styles.avatar} aria-hidden="true">
             {userName.charAt(0).toUpperCase()}
           </div>
 

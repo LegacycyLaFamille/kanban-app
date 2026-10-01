@@ -1,5 +1,7 @@
 import { Accordion, Badge, Card, Table, Text, View } from "reshaped";
 
+import { labelTable } from "../../../shared/utils/labelTable";
+
 import { useMyTasks } from "../hooks/useMyTasks";
 import type { MyTask } from "../types/myTasks.types";
 
@@ -36,7 +38,7 @@ export function MyTasksPage() {
     <section className={styles.page}>
       <View gap={6}>
         <header>
-          <Text variant="featured-2" weight="bold">
+          <Text as="h1" variant="featured-2" weight="bold">
             My Tasks
           </Text>
           <Text color="neutral-faded">
@@ -68,7 +70,12 @@ export function MyTasksPage() {
               <Accordion defaultActive>
                 <Accordion.Trigger>
                   <div className={styles.groupTrigger}>
-                    <Text weight="bold">{group.projectName}</Text>
+                    <Text
+                      weight="bold"
+                      attributes={{ id: `my-tasks-${group.projectId}` }}
+                    >
+                      {group.projectName}
+                    </Text>
                     <Text color="neutral-faded" variant="caption-1">
                       {group.tasks.length}{" "}
                       {group.tasks.length === 1 ? "task" : "tasks"}
@@ -78,32 +85,34 @@ export function MyTasksPage() {
 
                 <Accordion.Content>
                   <View paddingTop={4}>
-                    <Table>
-                      <Table.Head>
-                        <Table.Row>
-                          <Table.Heading>Title</Table.Heading>
-                          <Table.Heading>Status</Table.Heading>
-                          <Table.Heading>Priority</Table.Heading>
-                          <Table.Heading>Deadline</Table.Heading>
-                        </Table.Row>
-                      </Table.Head>
-                      <Table.Body>
-                        {group.tasks.map((task: MyTask) => (
-                          <Table.Row key={task.id}>
-                            <Table.Cell>{task.title}</Table.Cell>
-                            <Table.Cell>
-                              <Badge color={statusColor(task.status)}>
-                                {task.status}
-                              </Badge>
-                            </Table.Cell>
-                            <Table.Cell>{task.priority}</Table.Cell>
-                            <Table.Cell>
-                              {formatDeadline(task.deadline)}
-                            </Table.Cell>
+                    <div ref={labelTable(`my-tasks-${group.projectId}`)}>
+                      <Table>
+                        <Table.Head>
+                          <Table.Row>
+                            <Table.Heading>Title</Table.Heading>
+                            <Table.Heading>Status</Table.Heading>
+                            <Table.Heading>Priority</Table.Heading>
+                            <Table.Heading>Deadline</Table.Heading>
                           </Table.Row>
-                        ))}
-                      </Table.Body>
-                    </Table>
+                        </Table.Head>
+                        <Table.Body>
+                          {group.tasks.map((task: MyTask) => (
+                            <Table.Row key={task.id}>
+                              <Table.Cell>{task.title}</Table.Cell>
+                              <Table.Cell>
+                                <Badge color={statusColor(task.status)}>
+                                  {task.status}
+                                </Badge>
+                              </Table.Cell>
+                              <Table.Cell>{task.priority}</Table.Cell>
+                              <Table.Cell>
+                                {formatDeadline(task.deadline)}
+                              </Table.Cell>
+                            </Table.Row>
+                          ))}
+                        </Table.Body>
+                      </Table>
+                    </div>
                   </View>
                 </Accordion.Content>
               </Accordion>

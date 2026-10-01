@@ -91,6 +91,17 @@ describe("MyTasksPage", () => {
     expect(screen.getByText("1 task")).toBeTruthy();
   });
 
+  it("names each task table after its project (RGAA 5.4)", async () => {
+    vi.mocked(getMyTasks).mockResolvedValue(tasks);
+
+    renderPage();
+
+    await screen.findByText("Marketing Site");
+
+    expect(screen.getByRole("table", { name: "Marketing Site" })).toBeTruthy();
+    expect(screen.getByRole("table", { name: "Mobile App" })).toBeTruthy();
+  });
+
   it("shows a clear empty state when there are no assigned tasks", async () => {
     vi.mocked(getMyTasks).mockResolvedValue([]);
 

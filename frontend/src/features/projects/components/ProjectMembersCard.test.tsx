@@ -222,14 +222,10 @@ describe("ProjectMembersCard", () => {
     renderCard(true);
 
     await screen.findByText("Bob");
-    // Reshaped renders a custom dropdown: open it, then pick the option.
-    const list = screen.getByRole("list", { name: "Project members" });
-    const trigger = within(list)
-      .getAllByRole("button")
-      .find((element) => element.getAttribute("aria-haspopup") === "menu");
-    await user.click(trigger!);
-    const options = await screen.findAllByText("Can edit");
-    await user.click(options[options.length - 1]!);
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Role of Bob" }),
+      "Can edit",
+    );
 
     expect(updateMemberRole).toHaveBeenCalledWith(
       "project-1",

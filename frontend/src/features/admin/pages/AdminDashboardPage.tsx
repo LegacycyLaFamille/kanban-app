@@ -1,5 +1,7 @@
 import { Accordion, Badge, Card, Select, Table, Text, View } from "reshaped";
 
+import { labelTable } from "../../../shared/utils/labelTable";
+
 import { useAdminTasks } from "../hooks/useAdminTasks";
 import { useTaskAssignment } from "../hooks/useTaskAssignment";
 import type { AdminTask } from "../types/admin.types";
@@ -51,7 +53,7 @@ export function AdminDashboardPage() {
     <section className={styles.page}>
       <View gap={6}>
         <header>
-          <Text variant="featured-2" weight="bold">
+          <Text as="h1" variant="featured-2" weight="bold">
             All Tasks
           </Text>
           <Text color="neutral-faded">
@@ -89,7 +91,12 @@ export function AdminDashboardPage() {
               <Accordion defaultActive>
                 <Accordion.Trigger>
                   <div className={styles.groupTrigger}>
-                    <Text weight="bold">{group.projectName}</Text>
+                    <Text
+                      weight="bold"
+                      attributes={{ id: `admin-tasks-${group.projectId}` }}
+                    >
+                      {group.projectName}
+                    </Text>
                     <Text color="neutral-faded" variant="caption-1">
                       {group.tasks.length}{" "}
                       {group.tasks.length === 1 ? "task" : "tasks"}
@@ -99,74 +106,70 @@ export function AdminDashboardPage() {
 
                 <Accordion.Content>
                   <View paddingTop={4}>
-                    <Table>
-                      <Table.Head>
-                        <Table.Row>
-                          <Table.Heading>Title</Table.Heading>
-                          <Table.Heading>Status</Table.Heading>
-                          <Table.Heading>Priority</Table.Heading>
-                          <Table.Heading>Deadline</Table.Heading>
-                          <Table.Heading>Assignee</Table.Heading>
-                        </Table.Row>
-                      </Table.Head>
-                      <Table.Body>
-                        {group.tasks.map((task: AdminTask) => {
-                          const effectiveAssigneeId = getEffectiveAssigneeId(
-                            task.id,
-                            task.assigneeId,
-                          );
-                          const pending = isPending(task.id);
+                    <div ref={labelTable(`admin-tasks-${group.projectId}`)}>
+                      <Table>
+                        <Table.Head>
+                          <Table.Row>
+                            <Table.Heading>Title</Table.Heading>
+                            <Table.Heading>Status</Table.Heading>
+                            <Table.Heading>Priority</Table.Heading>
+                            <Table.Heading>Deadline</Table.Heading>
+                            <Table.Heading>Assignee</Table.Heading>
+                          </Table.Row>
+                        </Table.Head>
+                        <Table.Body>
+                          {group.tasks.map((task: AdminTask) => {
+                            const effectiveAssigneeId = getEffectiveAssigneeId(
+                              task.id,
+                              task.assigneeId,
+                            );
+                            const pending = isPending(task.id);
 
-                          return (
-                            <Table.Row key={task.id}>
-                              <Table.Cell>{task.title}</Table.Cell>
-                              <Table.Cell>
-                                <Badge color={statusColor(task.status)}>
-                                  {task.status}
-                                </Badge>
-                              </Table.Cell>
-                              <Table.Cell>{task.priority}</Table.Cell>
-                              <Table.Cell>
-                                {formatDeadline(task.deadline)}
-                              </Table.Cell>
-                              <Table.Cell>
-                                <div className={styles.assigneeSelect}>
-                                  <Select
-                                    name={`assignee-${task.id}`}
-                                    size="small"
-                                    placeholder="Unassigned"
-                                    disabled={pending}
-                                    value={effectiveAssigneeId ?? ""}
-                                    inputAttributes={{
-                                      "aria-label": `Assignee for ${task.title}`,
-                                    }}
-                                    onChange={({ value }) =>
-                                      void assignTask(
-                                        task.id,
-                                        task.assigneeId,
-                                        value === "" ? null : value,
-                                      )
-                                    }
-                                  >
-                                    <Select.Option value="">
-                                      Unassigned
-                                    </Select.Option>
-                                    {group.assignableUsers.map((user) => (
-                                      <Select.Option
-                                        key={user.id}
-                                        value={user.id}
-                                      >
-                                        {user.name}
-                                      </Select.Option>
-                                    ))}
-                                  </Select>
-                                </div>
-                              </Table.Cell>
-                            </Table.Row>
-                          );
-                        })}
-                      </Table.Body>
-                    </Table>
+                            return (
+                              <Table.Row key={task.id}>
+                                <Table.Cell>{task.title}</Table.Cell>
+                                <Table.Cell>
+                                  <Badge color={statusColor(task.status)}>
+                                    {task.status}
+                                  </Badge>
+                                </Table.Cell>
+                                <Table.Cell>{task.priority}</Table.Cell>
+                                <Table.Cell>
+                                  {formatDeadline(task.deadline)}
+                                </Table.Cell>
+                                <Table.Cell>
+                                  <div className={styles.assigneeSelect}>
+                                    <Select
+                                      name={`assignee-${task.id}`}
+                                      size="small"
+                                      disabled={pending}
+                                      value={effectiveAssigneeId ?? ""}
+                                      inputAttributes={{
+                                        "aria-label": `Assignee for ${task.title}`,
+                                      }}
+                                      onChange={({ value }) =>
+                                        void assignTask(
+                                          task.id,
+                                          task.assigneeId,
+                                          value === "" ? null : value,
+                                        )
+                                      }
+                                    >
+                                      <option value="">Unassigned</option>
+                                      {group.assignableUsers.map((user) => (
+                                        <option key={user.id} value={user.id}>
+                                          {user.name}
+                                        </option>
+                                      ))}
+                                    </Select>
+                                  </div>
+                                </Table.Cell>
+                              </Table.Row>
+                            );
+                          })}
+                        </Table.Body>
+                      </Table>
+                    </div>
                   </View>
                 </Accordion.Content>
               </Accordion>

@@ -24,13 +24,13 @@ export function TaskCard({ task }: TaskCardProps) {
         <View direction="row" justify="space-between" align="center">
           {task.priority && (
             <Text variant="caption-2" color="neutral-faded">
-              🏷️{" "}
+              <span aria-hidden="true">🏷️</span>{" "}
               {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
             </Text>
           )}
           {task.assignee?.name && (
             <Text variant="caption-2" color="neutral-faded">
-              👤 {task.assignee.name}
+              <span aria-hidden="true">👤</span> {task.assignee.name}
             </Text>
           )}
         </View>

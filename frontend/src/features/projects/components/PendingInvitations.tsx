@@ -25,7 +25,9 @@ export function PendingInvitations({
   return (
     <Card padding={5}>
       <View gap={4}>
-        <Text weight="bold">Project invitations ({invitations.length})</Text>
+        <Text as="h2" weight="bold">
+          Project invitations ({invitations.length})
+        </Text>
 
         {error && (
           <p role="alert" className={`${styles.message} ${styles.error}`}>

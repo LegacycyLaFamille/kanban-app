@@ -110,8 +110,10 @@ describe("AdminDashboardPage", () => {
     const row = screen.getByText("Write copy").closest("tr");
     if (!row) throw new Error("Row not found");
 
-    await user.click(within(row).getByRole("button"));
-    await user.click(await screen.findByText("Alice"));
+    await user.selectOptions(
+      within(row).getByRole("combobox", { name: "Assignee for Write copy" }),
+      "Alice",
+    );
 
     await waitFor(() => {
       expect(assignAdminTask).toHaveBeenCalledWith("task-1", "user-1");
@@ -129,8 +131,10 @@ describe("AdminDashboardPage", () => {
     const row = screen.getByText("Write copy").closest("tr");
     if (!row) throw new Error("Row not found");
 
-    await user.click(within(row).getByRole("button"));
-    await user.click(await screen.findByText("Alice"));
+    await user.selectOptions(
+      within(row).getByRole("combobox", { name: "Assignee for Write copy" }),
+      "Alice",
+    );
 
     expect(
       await screen.findByText("Unable to assign task. Please try again."),

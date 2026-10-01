@@ -1,14 +1,10 @@
-import {
-  useState,
-  useCallback,
-  type CSSProperties,
-  type MouseEvent,
-} from "react";
+import { useState, useCallback, type CSSProperties } from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import {
   Button,
   Card,
+  FormControl,
   Modal,
   Select,
   Skeleton,
@@ -302,17 +298,6 @@ export function Board({ projectId, currentUserId }: BoardProps) {
     }
   };
 
-  const handleColumnClick = (e: MouseEvent<HTMLDivElement>) => {
-    if (readOnly) return;
-    const target = e.target as HTMLElement;
-    const cardEl = target.closest<HTMLElement>("[data-task-id]");
-    if (cardEl) {
-      const taskId = cardEl.getAttribute("data-task-id");
-      const found = tasks.find((t) => t.id === taskId);
-      if (found) handleOpenEdit(found);
-    }
-  };
-
   const currentActionError =
     validationError || createError || updateError || deleteError;
 
@@ -334,12 +319,13 @@ export function Board({ projectId, currentUserId }: BoardProps) {
             <View direction="row" align="center" gap={3}>
               <div
                 className="auth-logo"
+                aria-hidden="true"
                 style={{ width: 36, height: 36, fontSize: 16 }}
               >
                 K
               </div>
               <View>
-                <Text variant="featured-3" weight="bold">
+                <Text as="h1" variant="featured-3" weight="bold">
                   Project Board
                 </Text>
                 <Text variant="caption-1" color="neutral-faded">
@@ -427,18 +413,18 @@ export function Board({ projectId, currentUserId }: BoardProps) {
             }}
           >
             {COLUMNS.map((column) => (
-              <div key={column.id} onClick={handleColumnClick}>
-                <Column
-                  columnId={column.id}
-                  title={column.title}
-                  tasks={tasks.filter((task) => task.columnId === column.id)}
-                  onDropTask={handleDropTask}
-                  onAddTask={
-                    readOnly ? undefined : () => handleOpenCreate(column.id)
-                  }
-                  isTaskPending={isTaskPending}
-                />
-              </div>
+              <Column
+                key={column.id}
+                columnId={column.id}
+                title={column.title}
+                tasks={tasks.filter((task) => task.columnId === column.id)}
+                onDropTask={handleDropTask}
+                onAddTask={
+                  readOnly ? undefined : () => handleOpenCreate(column.id)
+                }
+                onOpenTask={readOnly ? undefined : handleOpenEdit}
+                isTaskPending={isTaskPending}
+              />
             ))}
           </div>
         )}
@@ -452,13 +438,14 @@ export function Board({ projectId, currentUserId }: BoardProps) {
           <Card padding={6}>
             <View gap={5}>
               <View direction="row" justify="space-between" align="center">
-                <Text variant="featured-3" weight="bold">
+                <Modal.Title>
                   {isEditing ? "Edit Task" : "Create Task"}
-                </Text>
+                </Modal.Title>
                 <Button
                   variant="ghost"
                   size="small"
                   onClick={() => setIsModalOpen(false)}
+                  attributes={{ "aria-label": "Close dialog" }}
                 >
                   ✕
                 </Button>
@@ -466,16 +453,14 @@ export function Board({ projectId, currentUserId }: BoardProps) {
 
               {currentActionError && (
                 <Text color="critical" variant="caption-1">
-                  {currentActionError}
+                  <span role="alert">{currentActionError}</span>
                 </Text>
               )}
 
               <View gap={4}>
                 {/* Title */}
-                <View gap={1}>
-                  <Text variant="caption-1" color="neutral-faded">
-                    Title
-                  </Text>
+                <FormControl>
+                  <FormControl.Label>Title</FormControl.Label>
                   <TextField
                     name="title"
                     placeholder="Task title..."
@@ -485,17 +470,14 @@ export function Board({ projectId, currentUserId }: BoardProps) {
                       setValidationError(null);
                     }}
                   />
-                </View>
+                </FormControl>
 
                 {/* Assignee */}
-                <View gap={1}>
-                  <Text variant="caption-1" color="neutral-faded">
-                    Assignee
-                  </Text>
+                <FormControl>
+                  <FormControl.Label>Assignee</FormControl.Label>
                   <Select
                     name="assignee"
                     value={activeTask.assignee?.id ?? ""}
-                    inputAttributes={{ "aria-label": "Assignee" }}
                     onChange={({ value }) =>
                       setActiveTask((prev) => {
                         const user = teamUsers.find((u) => u.userId === value);
@@ -508,23 +490,27 @@ export function Board({ projectId, currentUserId }: BoardProps) {
                       })
                     }
                   >
-                    <Select.Option value="">Unassigned</Select.Option>
+                    <option value="">Unassigned</option>
                     {teamUsers.map((user) => (
-                      <Select.Option key={user.userId} value={user.userId}>
+                      <option key={user.userId} value={user.userId}>
                         {user.role === "owner"
                           ? `${user.name} (owner)`
                           : user.name}
-                      </Select.Option>
+                      </option>
                     ))}
                   </Select>
-                </View>
+                </FormControl>
 
                 {/* Priority */}
                 <View gap={1}>
                   <Text variant="caption-1" color="neutral-faded">
                     Priority
                   </Text>
-                  <View direction="row" gap={2}>
+                  <View
+                    direction="row"
+                    gap={2}
+                    attributes={{ role: "group", "aria-label": "Priority" }}
+                  >
                     {PRIORITIES.map((p) => {
                       const isSelected = activeTask.priority === p;
                       return (
@@ -534,6 +520,7 @@ export function Board({ projectId, currentUserId }: BoardProps) {
                             fullWidth
                             variant={isSelected ? "solid" : "outline"}
                             color={isSelected ? "primary" : "neutral"}
+                            attributes={{ "aria-pressed": isSelected }}
                             onClick={() =>
                               setActiveTask((prev) => ({
                                 ...prev,
@@ -554,7 +541,11 @@ export function Board({ projectId, currentUserId }: BoardProps) {
                   <Text variant="caption-1" color="neutral-faded">
                     Status
                   </Text>
-                  <View direction="row" gap={2}>
+                  <View
+                    direction="row"
+                    gap={2}
+                    attributes={{ role: "group", "aria-label": "Status" }}
+                  >
                     {COLUMNS.map((col) => {
                       const isSelected = activeTask.columnId === col.id;
                       return (
@@ -564,6 +555,7 @@ export function Board({ projectId, currentUserId }: BoardProps) {
                             fullWidth
                             variant={isSelected ? "solid" : "outline"}
                             color={isSelected ? "primary" : "neutral"}
+                            attributes={{ "aria-pressed": isSelected }}
                             onClick={() =>
                               setActiveTask((prev) => ({
                                 ...prev,
@@ -580,16 +572,13 @@ export function Board({ projectId, currentUserId }: BoardProps) {
                 </View>
 
                 {/* Deadline */}
-                <View gap={1}>
-                  <Text variant="caption-1" color="neutral-faded">
-                    Deadline
-                  </Text>
+                <FormControl>
+                  <FormControl.Label>Deadline</FormControl.Label>
                   <TextField
                     name="deadline"
                     value={toDateTimeLocalValue(activeTask.deadline)}
                     inputAttributes={{
                       type: "datetime-local",
-                      "aria-label": "Deadline",
                     }}
                     onChange={({ value }) =>
                       setActiveTask((prev) => ({
@@ -598,13 +587,11 @@ export function Board({ projectId, currentUserId }: BoardProps) {
                       }))
                     }
                   />
-                </View>
+                </FormControl>
 
                 {/* Description */}
-                <View gap={1}>
-                  <Text variant="caption-1" color="neutral-faded">
-                    Description
-                  </Text>
+                <FormControl>
+                  <FormControl.Label>Description</FormControl.Label>
                   <TextArea
                     name="description"
                     placeholder="Add details about this task..."
@@ -616,7 +603,7 @@ export function Board({ projectId, currentUserId }: BoardProps) {
                       }))
                     }
                   />
-                </View>
+                </FormControl>
               </View>
 
               {/* Bottom Actions */}
@@ -668,9 +655,7 @@ export function Board({ projectId, currentUserId }: BoardProps) {
           <Card padding={6}>
             <View gap={4}>
               <View gap={2}>
-                <Text variant="featured-3" weight="bold">
-                  Delete Task
-                </Text>
+                <Modal.Title>Delete Task</Modal.Title>
                 <Text color="neutral-faded">
                   Are you sure you want to delete{" "}
                   <strong>"{activeTask.title}"</strong>? This action cannot be
