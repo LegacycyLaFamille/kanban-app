@@ -10,8 +10,10 @@ import {
   LoadingState,
 } from "../../../shared/components/Feedback";
 
+import { PendingInvitations } from "../components/PendingInvitations";
 import { ProjectCard } from "../components/ProjectCard";
 import { ProjectForm } from "../components/ProjectForm";
+import { useMyInvitations } from "../hooks/useMyInvitations";
 import { useProjects } from "../hooks/useProjects";
 
 import type {
@@ -38,6 +40,9 @@ export function ProjectsPage() {
     createProject,
     resetMutationError,
   } = useProjects();
+
+  // Accepting an invitation adds a project: refresh the list.
+  const invitations = useMyInvitations(reload);
 
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<ProjectSort>("NEWEST");
@@ -141,6 +146,14 @@ export function ProjectsPage() {
             </Button>
           </div>
         </header>
+
+        <PendingInvitations
+          invitations={invitations.invitations}
+          pendingId={invitations.pendingId}
+          error={invitations.error}
+          onAccept={(id) => void invitations.accept(id)}
+          onDecline={(id) => void invitations.decline(id)}
+        />
 
         {isCreateOpen && (
           <Card padding={5}>

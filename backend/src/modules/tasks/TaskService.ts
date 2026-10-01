@@ -11,6 +11,7 @@ import { createEvent } from "../../shared/events/DomainEvent.js";
 import { publishSafely } from "../../shared/events/publishSafely.js";
 import {
   changedTaskFields,
+  createTaskAssignedEvent,
   isCompletion,
   type TaskCompletedEvent,
   type TaskCreatedEvent,
@@ -24,6 +25,7 @@ export interface CreateTaskDto {
   status: string;
   deadline?: string | null;
   boardId?: string | null;
+  assigneeId?: string | null;
 }
 
 export interface updateTaskDto {
@@ -33,6 +35,7 @@ export interface updateTaskDto {
   status?: string;
   deadline?: string | null;
   boardId?: string | null;
+  assigneeId?: string | null;
 }
 
 export class TaskService {
@@ -75,13 +78,27 @@ export class TaskService {
     return task;
   }
 
-  /** Owner of the parent project only. */
+  /**
+   * Owner or EDITOR member of the parent project. A non-null assigneeId must
+   * be the project's owner or a member, same rule as update.
+   */
   async create(
     projectId: string,
     userid: string,
     data: CreateTaskDto,
   ): Promise<Task> {
-    await this.projectAccessGuard.assertIsOwner(projectId, userid);
+    const project = await this.projectAccessGuard.assertCanEdit(
+      projectId,
+      userid,
+    );
+
+    if (data.assigneeId) {
+      const role = await this.projectAccessGuard.getAccessRole(
+        project,
+        data.assigneeId,
+      );
+      if (!role) throw new Error("Assignee is not a member of this project");
+    }
 
     const newTask = new Task(
       randomUUID(),
@@ -93,6 +110,7 @@ export class TaskService {
       data.deadline ? new Date(data.deadline) : null,
       new Date(),
       data.boardId ? data.boardId : null,
+      data.assigneeId ?? null,
     );
     const res = await this.taskRepository.save(newTask);
     if (!res) {
@@ -108,14 +126,21 @@ export class TaskService {
         title: res.title,
         status: res.status,
         priority: res.priority,
+        assigneeId: res.assigneeId,
       },
       { actorId: userid },
     );
     await publishSafely(this.eventBus, event);
+
+    const assigned = createTaskAssignedEvent(res, null, userid);
+    if (assigned) await publishSafely(this.eventBus, assigned);
     return res;
   }
 
-  /** Owner of the parent project only. */
+  /**
+   * Owner or EDITOR member of the parent project. A non-null assigneeId must
+   * be the project's owner or a member, same rule as AdminTaskService.assign.
+   */
   async update(
     taskId: string,
     userid: string,
@@ -123,7 +148,18 @@ export class TaskService {
   ): Promise<Task> {
     const task = await this.taskRepository.findById(taskId);
     if (!task) throw new Error("Not found");
-    await this.projectAccessGuard.assertIsOwner(task.projectId, userid);
+    const project = await this.projectAccessGuard.assertCanEdit(
+      task.projectId,
+      userid,
+    );
+
+    if (data.assigneeId) {
+      const role = await this.projectAccessGuard.getAccessRole(
+        project,
+        data.assigneeId,
+      );
+      if (!role) throw new Error("Assignee is not a member of this project");
+    }
 
     const updatedTask = new Task(
       task.id,
@@ -139,6 +175,7 @@ export class TaskService {
         : task.deadline,
       task.createdAt,
       data.boardId !== undefined ? data.boardId : task.boardId,
+      data.assigneeId !== undefined ? data.assigneeId : task.assigneeId,
     );
 
     await this.taskRepository.save(updatedTask);
@@ -146,13 +183,13 @@ export class TaskService {
     return updatedTask;
   }
 
-  /** Owner of the parent project only. */
+  /** Owner or EDITOR member of the parent project. */
   async delete(taskId: string, userid: string): Promise<void> {
     const task = await this.taskRepository.findById(taskId);
     if (!task) {
       throw new Error("Not found");
     }
-    await this.projectAccessGuard.assertIsOwner(task.projectId, userid);
+    await this.projectAccessGuard.assertCanEdit(task.projectId, userid);
     await this.taskRepository.delete(task);
   }
 
@@ -175,10 +212,21 @@ export class TaskService {
         changes,
         previousStatus: before.status,
         status: after.status,
+        assigneeId: after.assigneeId,
+        previousAssigneeId: before.assigneeId,
       },
       { actorId },
     );
     await publishSafely(this.eventBus, updated);
+
+    if (changes.includes("assigneeId")) {
+      const assigned = createTaskAssignedEvent(
+        after,
+        before.assigneeId,
+        actorId,
+      );
+      if (assigned) await publishSafely(this.eventBus, assigned);
+    }
 
     if (isCompletion(before, after)) {
       const completed: TaskCompletedEvent = createEvent(

@@ -109,6 +109,7 @@ describe("Notifications API", () => {
         project: { id: "proj-1", name: "Kanban" },
         task: { id: "task-1", title: "Écrire la doc" },
         actor: { id: ALICE, name: "Alice" },
+        changes: [],
       });
     });
 

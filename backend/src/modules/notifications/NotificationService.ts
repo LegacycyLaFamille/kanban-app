@@ -1,9 +1,12 @@
 import { randomUUID } from "node:crypto";
 import type { ProjectRepository } from "../projects/ProjectRepository.js";
 import type { ProjectMemberRepository } from "../projects/ProjectMemberRepository.js";
-import type {
-  TaskCompletedEvent,
-  TaskCreatedEvent,
+import {
+  TASK_DONE_STATUS,
+  type TaskAssignedEvent,
+  type TaskCompletedEvent,
+  type TaskCreatedEvent,
+  type TaskUpdatedEvent,
 } from "../tasks/task.events.js";
 import { Notification } from "./Notification.js";
 import type {
@@ -11,7 +14,8 @@ import type {
   NotificationView,
 } from "./NotificationRepository.js";
 
-export type NotifiableTaskEvent = TaskCreatedEvent | TaskCompletedEvent;
+export type NotifiableTaskEvent =
+  TaskCreatedEvent | TaskCompletedEvent | TaskUpdatedEvent | TaskAssignedEvent;
 
 export class NotificationNotFoundError extends Error {
   constructor() {
@@ -37,9 +41,18 @@ export class NotificationService {
     private readonly projectMemberRepository: ProjectMemberRepository,
   ) {}
 
-  // Everyone with access to the project (owner and members) is notified,
-  // except the user who triggered the event. Safe to call several times
-  // with the same event: existing notifications are not duplicated.
+  /**
+   * Recipients, always limited to users who still have access to the
+   * project and never including the user who triggered the event:
+   * - task.created / task.completed: the whole project (owner and members),
+   *   except a task's assignee at creation, who gets task.assigned instead;
+   * - task.assigned: the new assignee;
+   * - task.updated: the task's assignee, unless the update is an
+   *   assignment (task.assigned) or a completion (task.completed), so one
+   *   action never produces two notifications for the same person.
+   * Safe to call several times with the same event: existing notifications
+   * are not duplicated.
+   */
   async notifyTaskEvent(
     event: NotifiableTaskEvent,
   ): Promise<NotificationResult> {
@@ -52,9 +65,15 @@ export class NotificationService {
     const members = await this.projectMemberRepository.findByProject(
       project.id,
     );
-    const recipients = [
-      ...new Set([project.ownerId, ...members.map((m) => m.userId)]),
-    ].filter((userId) => userId !== event.actorId);
+    const withAccess = new Set([
+      project.ownerId,
+      ...members.map((m) => m.userId),
+    ]);
+
+    const recipients = [...new Set(this.targetsOf(event, withAccess))].filter(
+      (userId) => withAccess.has(userId) && userId !== event.actorId,
+    );
+    const changes = event.type === "task.updated" ? event.payload.changes : [];
 
     const createdAt = new Date(event.occurredAt);
     const created = await this.notificationRepository.createMany(
@@ -71,11 +90,39 @@ export class NotificationService {
             event.payload.title,
             null,
             createdAt,
+            changes,
           ),
       ),
     );
 
     return { recipients: recipients.length, created };
+  }
+
+  private targetsOf(
+    event: NotifiableTaskEvent,
+    projectUsers: Set<string>,
+  ): string[] {
+    switch (event.type) {
+      case "task.assigned":
+        return [event.payload.assigneeId];
+
+      case "task.updated": {
+        const { assigneeId, changes, status, previousStatus } = event.payload;
+        if (!assigneeId) return [];
+        if (changes.includes("assigneeId")) return [];
+        const completed =
+          status === TASK_DONE_STATUS && previousStatus !== TASK_DONE_STATUS;
+        return completed ? [] : [assigneeId];
+      }
+
+      case "task.created": {
+        const assigneeId = event.payload.assigneeId ?? null;
+        return [...projectUsers].filter((userId) => userId !== assigneeId);
+      }
+
+      case "task.completed":
+        return [...projectUsers];
+    }
   }
 
   async list(

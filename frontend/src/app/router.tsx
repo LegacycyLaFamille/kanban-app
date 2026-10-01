@@ -14,7 +14,7 @@ import { AdminDashboardPage } from "../features/admin/pages/AdminDashboardPage";
 
 import { MyTasksPage } from "../features/tasks/pages/MyTasksPage";
 
-import { WaitTemplate } from "../shared/components/WaitTemplate";
+import { NotificationsPage } from "../features/notifications/pages/NotificationsPage";
 
 import { LegacyApp } from "./legacy/LegacyApp";
 import { MainLayout } from "./layouts/MainLayout";
@@ -68,7 +68,7 @@ export const router = createBrowserRouter([
           },
           {
             path: "/notifications",
-            element: <WaitTemplate template="NOTIFICATIONS" />,
+            element: <NotificationsPage />,
           },
           {
             element: <RequireAdmin />,

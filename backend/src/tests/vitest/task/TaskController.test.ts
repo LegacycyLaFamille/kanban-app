@@ -172,6 +172,68 @@ describe("TaskController validation", () => {
       expect(mockTaskService.update).not.toHaveBeenCalled();
     });
 
+    it("accepts an assigneeId, or null to unassign", async () => {
+      mockTaskService.update.mockResolvedValue(
+        new Task(
+          "task-1",
+          "Design the login page",
+          "",
+          "proj-1",
+          "TODO",
+          "Medium",
+          null,
+          new Date(),
+          null,
+        ),
+      );
+      const assigneeId = "6f1c2b7e-3a4d-4e5f-8a9b-0c1d2e3f4a5b";
+
+      const assigned = await request(app)
+        .patch("/tasks/task-1")
+        .send({ assigneeId });
+      const unassigned = await request(app)
+        .patch("/tasks/task-1")
+        .send({ assigneeId: null });
+
+      expect(assigned.status).toBe(200);
+      expect(unassigned.status).toBe(200);
+      expect(mockTaskService.update).toHaveBeenNthCalledWith(
+        1,
+        "task-1",
+        "user-1",
+        { assigneeId },
+      );
+      expect(mockTaskService.update).toHaveBeenNthCalledWith(
+        2,
+        "task-1",
+        "user-1",
+        { assigneeId: null },
+      );
+    });
+
+    it("rejects an assigneeId that is not a UUID", async () => {
+      const res = await request(app)
+        .patch("/tasks/task-1")
+        .send({ assigneeId: "not-a-uuid" });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe("VALIDATION_ERROR");
+      expect(mockTaskService.update).not.toHaveBeenCalled();
+    });
+
+    it("returns 400 ASSIGNEE_NOT_PROJECT_MEMBER when the assignee has no project access", async () => {
+      mockTaskService.update.mockRejectedValue(
+        new Error("Assignee is not a member of this project"),
+      );
+
+      const res = await request(app)
+        .patch("/tasks/task-1")
+        .send({ assigneeId: "6f1c2b7e-3a4d-4e5f-8a9b-0c1d2e3f4a5b" });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe("ASSIGNEE_NOT_PROJECT_MEMBER");
+    });
+
     it("rejects unknown fields", async () => {
       const res = await request(app)
         .patch("/tasks/task-1")

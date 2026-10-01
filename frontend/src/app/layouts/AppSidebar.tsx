@@ -9,6 +9,8 @@ type AppSidebarProps = {
   userName?: string;
   userEmail?: string;
   isAdmin?: boolean;
+  // Unread notifications, shown as a badge on the Notifications entry.
+  notificationCount?: number;
   onLogout?: () => void;
 };
 
@@ -119,6 +121,7 @@ export function AppSidebar({
   userName = "Current user",
   userEmail = "user@example.com",
   isAdmin = false,
+  notificationCount = 0,
   onLogout,
 }: AppSidebarProps) {
   const location = useLocation();
@@ -162,14 +165,23 @@ export function AppSidebar({
         <nav className={styles.navigation} aria-label="Main navigation">
           <View gap={1}>
             {items.map((item) => (
-              <MenuItem
-                key={item.path}
-                selected={isActive(item.path)}
-                startSlot={item.icon}
-                onClick={() => navigate(item.path)}
-              >
-                <span className={styles.navigationLabel}>{item.label}</span>
-              </MenuItem>
+              <div key={item.path} className={styles.navigationItem}>
+                <MenuItem
+                  selected={isActive(item.path)}
+                  startSlot={item.icon}
+                  onClick={() => navigate(item.path)}
+                >
+                  <span className={styles.navigationLabel}>{item.label}</span>
+                  {item.path === "/notifications" && notificationCount > 0 && (
+                    <span
+                      className={styles.notificationBadge}
+                      aria-label={`${notificationCount} unread notifications`}
+                    >
+                      {notificationCount > 99 ? "99+" : notificationCount}
+                    </span>
+                  )}
+                </MenuItem>
+              </div>
             ))}
           </View>
         </nav>

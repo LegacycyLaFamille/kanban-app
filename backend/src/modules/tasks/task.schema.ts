@@ -21,6 +21,7 @@ const isoDateString = z
     message: "Invalid date",
   });
 const boardIdSchema = z.uuid();
+const assigneeIdSchema = z.uuid();
 
 export const createTaskSchema = z.strictObject({
   title: titleSchema,
@@ -32,6 +33,7 @@ export const createTaskSchema = z.strictObject({
   priority: prioritySchema.default("Medium"),
   deadline: isoDateString.nullable().optional(),
   boardId: boardIdSchema.nullable().optional(),
+  assigneeId: assigneeIdSchema.nullable().optional(),
 });
 
 export const updateTaskSchema = z
@@ -42,6 +44,8 @@ export const updateTaskSchema = z
     priority: prioritySchema.optional(),
     deadline: isoDateString.nullable().optional(),
     boardId: boardIdSchema.nullable().optional(),
+    // null clears the assignment.
+    assigneeId: assigneeIdSchema.nullable().optional(),
   })
   .refine(
     (data) =>
@@ -50,7 +54,8 @@ export const updateTaskSchema = z
       data.status !== undefined ||
       data.priority !== undefined ||
       data.deadline !== undefined ||
-      data.boardId !== undefined,
+      data.boardId !== undefined ||
+      data.assigneeId !== undefined,
     { message: "At least one field must be provided" },
   );
 

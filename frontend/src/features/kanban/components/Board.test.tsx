@@ -4,6 +4,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Reshaped } from "reshaped";
 
+import { getProjectTeam } from "../../projects/api/team.api";
 import { createTask, getTasksByProject, updateTask } from "../api/tasks.api";
 import type { Task as BackendTask } from "../types/task.types";
 import type { ColumnId, Task as FrontendTask } from "../types";
@@ -14,6 +15,11 @@ vi.mock("../api/tasks.api", () => ({
   createTask: vi.fn(),
   updateTask: vi.fn(),
   deleteTask: vi.fn(),
+}));
+
+vi.mock("../../projects/api/team.api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../projects/api/team.api")>()),
+  getProjectTeam: vi.fn().mockResolvedValue({ owner: null, members: [] }),
 }));
 
 // Column owns real react-dnd drag targets, which jsdom cannot drive without
@@ -51,10 +57,10 @@ vi.mock("./Column", () => ({
   ),
 }));
 
-function renderBoard() {
+function renderBoard(currentUserId?: string) {
   return render(
     <Reshaped theme="slate" defaultColorMode="dark">
-      <Board projectId="project-1" />
+      <Board projectId="project-1" currentUserId={currentUserId} />
     </Reshaped>,
   );
 }
@@ -259,5 +265,97 @@ describe("Board", () => {
 
     expect(await screen.findByText("Task title is required.")).toBeTruthy();
     expect(createTask).not.toHaveBeenCalled();
+  });
+
+  it("creates a task assigned to the member picked in the dropdown", async () => {
+    const user = userEvent.setup();
+    vi.mocked(getTasksByProject).mockResolvedValue([]);
+    vi.mocked(getProjectTeam).mockResolvedValue({
+      owner: { userId: "owner-1", name: "Alice", email: "alice@example.com" },
+      members: [
+        {
+          id: "m-1",
+          userId: "member-1",
+          name: "Bob",
+          email: "bob@example.com",
+          joinedAt: "2026-09-01T00:00:00.000Z",
+          role: "VIEWER",
+        },
+      ],
+    });
+    vi.mocked(createTask).mockResolvedValue(task);
+
+    renderBoard();
+    await user.click(await screen.findByRole("button", { name: "+ Add Task" }));
+
+    await user.type(screen.getByPlaceholderText("Task title..."), "Write docs");
+    // Wait for the team to load, then open the dropdown and pick Bob.
+    await waitFor(() => expect(getProjectTeam).toHaveBeenCalled());
+    // The modal itself is also a "button": target the dropdown trigger.
+    const trigger = screen
+      .getAllByRole("button", { name: /Unassigned/ })
+      .find((element) => element.getAttribute("aria-haspopup") === "menu");
+    await user.click(trigger!);
+    expect(await screen.findByText("Alice (owner)")).toBeTruthy();
+    await user.click(await screen.findByText("Bob"));
+    await user.click(screen.getByRole("button", { name: "Create Task" }));
+
+    await waitFor(() => {
+      expect(createTask).toHaveBeenCalledWith(
+        "project-1",
+        expect.objectContaining({
+          title: "Write docs",
+          assigneeId: "member-1",
+        }),
+      );
+    });
+    // Types text and drives a dropdown: slow under a full parallel run.
+  }, 15_000);
+
+  it("hides editing controls from a VIEWER member", async () => {
+    vi.mocked(getTasksByProject).mockResolvedValue([task]);
+    vi.mocked(getProjectTeam).mockResolvedValue({
+      owner: { userId: "owner-1", name: "Alice", email: "alice@example.com" },
+      members: [
+        {
+          id: "m-1",
+          userId: "viewer-1",
+          name: "Bob",
+          email: "bob@example.com",
+          joinedAt: "2026-09-01T00:00:00.000Z",
+          role: "VIEWER",
+        },
+      ],
+    });
+
+    renderBoard("viewer-1");
+
+    expect(await screen.findByText("Read-only access")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "+ Add Task" })).toBeNull();
+  });
+
+  it("keeps editing controls for an EDITOR member", async () => {
+    vi.mocked(getTasksByProject).mockResolvedValue([task]);
+    vi.mocked(getProjectTeam).mockResolvedValue({
+      owner: { userId: "owner-1", name: "Alice", email: "alice@example.com" },
+      members: [
+        {
+          id: "m-1",
+          userId: "editor-1",
+          name: "Bob",
+          email: "bob@example.com",
+          joinedAt: "2026-09-01T00:00:00.000Z",
+          role: "EDITOR",
+        },
+      ],
+    });
+
+    renderBoard("editor-1");
+
+    await waitFor(() => expect(getProjectTeam).toHaveBeenCalled());
+    expect(
+      await screen.findByRole("button", { name: "+ Add Task" }),
+    ).toBeTruthy();
+    expect(screen.queryByText("Read-only access")).toBeNull();
   });
 });

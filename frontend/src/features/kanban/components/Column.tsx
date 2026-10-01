@@ -15,7 +15,8 @@ type ColumnProps = {
   title: string;
   tasks: Task[];
   onDropTask: (taskId: string, targetColumnId: ColumnId) => void;
-  onAddTask: () => void;
+  // Omitted for read-only users: no "Add card" button.
+  onAddTask?: () => void;
   isTaskPending?: (taskId: string) => boolean;
 };
 
@@ -105,15 +106,17 @@ export function Column({
             </View.Item>
 
             {/* In-Card Add Button */}
-            <Button
-              variant="outline"
-              color="neutral"
-              size="small"
-              fullWidth
-              onClick={onAddTask}
-            >
-              Add card
-            </Button>
+            {onAddTask && (
+              <Button
+                variant="outline"
+                color="neutral"
+                size="small"
+                fullWidth
+                onClick={onAddTask}
+              >
+                Add card
+              </Button>
+            )}
           </View>
         </div>
       </Card>

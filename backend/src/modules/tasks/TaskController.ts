@@ -125,6 +125,15 @@ export class TaskController {
       });
     }
 
+    if (message === "Assignee is not a member of this project") {
+      return res.status(400).json({
+        error: {
+          code: "ASSIGNEE_NOT_PROJECT_MEMBER",
+          message: "The selected user is not a member of this task's project.",
+        },
+      });
+    }
+
     if (message === "Not found" || message === "Project not found") {
       return res.status(404).json({
         error: {

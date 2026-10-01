@@ -167,6 +167,8 @@ describe("TaskService - événements", () => {
         changes: ["title", "status"],
         previousStatus: "TODO",
         status: "IN_PROGRESS",
+        assigneeId: null,
+        previousAssigneeId: null,
       });
     });
 
@@ -197,6 +199,16 @@ describe("TaskService - événements", () => {
       expect(
         eventBus.publishedOfType("task.updated")[0]?.payload,
       ).toMatchObject({ changes: ["deadline"] });
+    });
+
+    it("signale un changement d'assignation", async () => {
+      repository.findById.mockResolvedValue(task());
+
+      await service.update("task-1", ownerId, { assigneeId: ownerId });
+
+      expect(
+        eventBus.publishedOfType("task.updated")[0]?.payload,
+      ).toMatchObject({ changes: ["assigneeId"] });
     });
 
     it("n'est pas publié si la tâche n'existe pas", async () => {

@@ -13,5 +13,7 @@ export class Notification {
     public readonly taskTitle: string | null,
     public readonly readAt: Date | null,
     public readonly createdAt: Date,
+    // task.updated only: fields that changed.
+    public readonly changes: string[] = [],
   ) {}
 }

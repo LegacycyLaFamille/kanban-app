@@ -8,7 +8,12 @@ dotenv.config({ quiet: true });
 const UNTRACED_ROUTES = ["/api/v1/health", "/api-docs"];
 
 if (process.env.OTEL_SDK_DISABLED !== "true") {
-  register("@opentelemetry/instrumentation/hook.mjs", import.meta.url);
+  // Instrumentations only patch third-party packages: leave application
+  // files alone, the hook cannot parse some of them (e.g. the generated
+  // Prisma client in .ts under tsx).
+  register("@opentelemetry/instrumentation/hook.mjs", import.meta.url, {
+    data: { exclude: [/^file:(?!.*[\\/]node_modules[\\/])/] },
+  });
 
   const sdk = new NodeSDK({
     instrumentations: [
