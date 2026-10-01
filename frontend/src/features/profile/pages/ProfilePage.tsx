@@ -1,5 +1,7 @@
 import { useAuth } from "../../auth/hooks/useAuth";
 
+import { changePassword } from "../api/profile.api";
+
 import { AccountStats } from "../components/AccountStats";
 import { DangerZone } from "../components/DangerZone";
 import { DataExportSection } from "../components/DataExportSection";
@@ -19,7 +21,7 @@ function getInitials(name: string): string {
 }
 
 export function ProfilePage() {
-  const { user } = useAuth();
+  const { user, deleteAccount } = useAuth();
 
   if (!user) {
     return null;
@@ -47,7 +49,13 @@ export function ProfilePage() {
             </div>
 
             <div className={styles.danger}>
-              <DangerZone email={user.email} />
+              <DangerZone
+                email={user.email}
+                onChangePassword={({ currentPassword, newPassword }) =>
+                  changePassword({ currentPassword, newPassword })
+                }
+                onDeleteAccount={deleteAccount}
+              />
             </div>
           </div>
 

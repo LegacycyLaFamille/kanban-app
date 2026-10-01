@@ -97,6 +97,7 @@ describe("ProjectDetailsPage", () => {
       signIn: vi.fn(),
       signOut: vi.fn(),
       refreshUser: vi.fn(),
+      deleteAccount: vi.fn(),
     });
 
     vi.mocked(useProjectDetails).mockReturnValue({
@@ -351,6 +352,7 @@ describe("ProjectDetailsPage", () => {
       signIn: vi.fn(),
       signOut: vi.fn(),
       refreshUser: vi.fn(),
+      deleteAccount: vi.fn(),
     });
 
     renderPage();

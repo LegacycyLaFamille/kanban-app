@@ -214,6 +214,14 @@ export function RegisterPage() {
               </Button>
             </form>
 
+            <Text color="neutral-faded" variant="caption-1">
+              We use your name and email only to run your account. See our{" "}
+              <Link to="/privacy" className={styles.link}>
+                Privacy policy
+              </Link>
+              .
+            </Text>
+
             <div className={styles.footer}>
               <Text color="neutral-faded">
                 Already have an account?{" "}

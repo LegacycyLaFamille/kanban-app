@@ -111,6 +111,7 @@ describe("Project board navigation", () => {
       signIn: vi.fn(),
       signOut: vi.fn(),
       refreshUser: vi.fn(),
+      deleteAccount: vi.fn(),
     });
 
     vi.mocked(useProjectDetails).mockReturnValue({

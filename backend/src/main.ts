@@ -25,6 +25,10 @@ dotenv.config();
 export const app: Express = express();
 const port = process.env.PORT || 3000;
 
+// The backend is only reachable through nginx (docker/frontend/nginx.conf),
+// so the client IP used by the rate limiters is the one nginx forwards.
+app.set("trust proxy", 1);
+
 const swaggerDocument = YAML.load(
   path.join(process.cwd(), "docs", "openapi.yaml"),
 );

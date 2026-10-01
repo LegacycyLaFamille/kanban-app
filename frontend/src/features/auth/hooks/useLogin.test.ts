@@ -26,6 +26,7 @@ describe("useLogin", () => {
       signIn,
       signOut: vi.fn(),
       refreshUser: vi.fn(),
+      deleteAccount: vi.fn(),
     });
   });
 
