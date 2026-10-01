@@ -33,6 +33,7 @@ export interface updateTaskDto {
   status?: string;
   deadline?: string | null;
   boardId?: string | null;
+  assigneeId?: string | null;
 }
 
 export class TaskService {
@@ -115,7 +116,10 @@ export class TaskService {
     return res;
   }
 
-  /** Owner of the parent project only. */
+  /**
+   * Owner of the parent project only. A non-null assigneeId must be the
+   * project's owner or a member, same rule as AdminTaskService.assign.
+   */
   async update(
     taskId: string,
     userid: string,
@@ -123,7 +127,18 @@ export class TaskService {
   ): Promise<Task> {
     const task = await this.taskRepository.findById(taskId);
     if (!task) throw new Error("Not found");
-    await this.projectAccessGuard.assertIsOwner(task.projectId, userid);
+    const project = await this.projectAccessGuard.assertIsOwner(
+      task.projectId,
+      userid,
+    );
+
+    if (data.assigneeId) {
+      const role = await this.projectAccessGuard.getAccessRole(
+        project,
+        data.assigneeId,
+      );
+      if (!role) throw new Error("Assignee is not a member of this project");
+    }
 
     const updatedTask = new Task(
       task.id,
@@ -139,6 +154,7 @@ export class TaskService {
         : task.deadline,
       task.createdAt,
       data.boardId !== undefined ? data.boardId : task.boardId,
+      data.assigneeId !== undefined ? data.assigneeId : task.assigneeId,
     );
 
     await this.taskRepository.save(updatedTask);
