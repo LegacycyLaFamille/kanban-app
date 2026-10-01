@@ -1,0 +1,105 @@
+.page {
+  min-height: 100vh;
+  padding: 48px 20px;
+
+  background:
+    radial-gradient(circle at 50% 0%, rgb(79 70 229 / 14%), transparent 38%),
+    #0b0b0f;
+  color: #d4d4d8;
+}
+
+.content {
+  max-width: 760px;
+  margin: 0 auto;
+
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.content h1 {
+  margin: 24px 0 4px;
+
+  color: #fafafa;
+  font-size: 32px;
+  line-height: 1.2;
+}
+
+.content h2 {
+  margin: 40px 0 12px;
+
+  color: #fafafa;
+  font-size: 20px;
+}
+
+.content p,
+.content ul,
+.content table {
+  margin: 0 0 16px;
+}
+
+.content ul {
+  padding-left: 20px;
+}
+
+.content li + li {
+  margin-top: 6px;
+}
+
+.content strong {
+  color: #fafafa;
+}
+
+.content a {
+  color: #818cf8;
+  font-weight: 600;
+}
+
+.content a:hover {
+  color: #a5b4fc;
+}
+
+.content a:focus-visible {
+  outline: 2px solid #818cf8;
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+.updated {
+  color: #a1a1aa;
+  font-size: 14px;
+}
+
+.table {
+  width: 100%;
+
+  border-collapse: collapse;
+
+  font-size: 14px;
+}
+
+.table th,
+.table td {
+  padding: 10px 12px;
+
+  border: 1px solid rgb(255 255 255 / 10%);
+
+  text-align: left;
+  vertical-align: top;
+}
+
+.table th {
+  color: #fafafa;
+  background: rgb(255 255 255 / 4%);
+}
+
+.tableWrapper {
+  overflow-x: auto;
+}
+
+.nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+
+  font-size: 14px;
+}

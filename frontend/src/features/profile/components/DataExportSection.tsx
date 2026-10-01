@@ -2,6 +2,10 @@ import { useEffect, useState } from "react";
 
 import { Button } from "reshaped";
 
+import { saveFile } from "../../../shared/utils/saveFile";
+
+import { downloadPersonalData } from "../api/dataExport.api";
+
 import { DataExportModal } from "./DataExportModal";
 import { ProfileSection } from "./ProfileSection";
 
@@ -12,6 +16,28 @@ const SUCCESS_MESSAGE_DURATION = 5000;
 export function DataExportSection() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isExported, setIsExported] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+
+  async function handlePersonalDataDownload() {
+    try {
+      setIsDownloading(true);
+      setIsExported(false);
+      setDownloadError(null);
+
+      const blob = await downloadPersonalData();
+      const date = new Date().toISOString().slice(0, 10);
+
+      saveFile(blob, `kanban-personal-data-${date}.json`);
+      setIsExported(true);
+    } catch {
+      setDownloadError(
+        "Unable to download your personal data. Please try again.",
+      );
+    } finally {
+      setIsDownloading(false);
+    }
+  }
 
   useEffect(() => {
     if (!isExported) {
@@ -30,7 +56,7 @@ export function DataExportSection() {
   return (
     <ProfileSection
       title="Your data"
-      description="Download a copy of the projects, boards and tasks you own, as CSV or JSON."
+      description="Download a copy of the projects, boards and tasks you own, or of all the personal data we hold about you."
     >
       <div aria-live="polite">
         {isExported && (
@@ -39,6 +65,12 @@ export function DataExportSection() {
           </div>
         )}
       </div>
+
+      {downloadError && (
+        <div className={styles.errorMessage} role="alert">
+          {downloadError}
+        </div>
+      )}
 
       <div className={styles.sectionAction}>
         <Button
@@ -49,6 +81,15 @@ export function DataExportSection() {
           }}
         >
           Export my data
+        </Button>
+
+        <Button
+          variant="ghost"
+          loading={isDownloading}
+          loadingAriaLabel="Downloading your personal data"
+          onClick={handlePersonalDataDownload}
+        >
+          Download my personal data
         </Button>
       </div>
 

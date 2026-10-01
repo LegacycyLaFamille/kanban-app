@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Badge, MenuItem, Text, View } from "reshaped";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AppLogo } from "../../shared/components/AppLogo/AppLogo.tsx";
 
 import styles from "./AppSidebar.module.css";
@@ -219,6 +219,11 @@ export function AppSidebar({
             <span>{userEmail}</span>
           </div>
         </div>
+
+        <nav className={styles.legalLinks} aria-label="Legal">
+          <Link to="/privacy">Privacy</Link>
+          <Link to="/legal-notice">Legal notice</Link>
+        </nav>
       </View>
     </aside>
   );

@@ -53,6 +53,7 @@ describe("ProfilePage", () => {
       signIn: vi.fn(),
       signOut: vi.fn(),
       refreshUser,
+      deleteAccount: vi.fn(),
     } satisfies AuthContextValue);
 
     vi.mocked(getProfileStats).mockResolvedValue(stats);

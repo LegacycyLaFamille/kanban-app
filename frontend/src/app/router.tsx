@@ -16,6 +16,9 @@ import { MyTasksPage } from "../features/tasks/pages/MyTasksPage";
 
 import { NotificationsPage } from "../features/notifications/pages/NotificationsPage";
 
+import { LegalNoticePage } from "../features/legal/pages/LegalNoticePage";
+import { PrivacyPolicyPage } from "../features/legal/pages/PrivacyPolicyPage";
+
 import { LegacyApp } from "./legacy/LegacyApp";
 import { MainLayout } from "./layouts/MainLayout";
 import { KanbanPage } from "../features/kanban/pages/KanbanPage.tsx";
@@ -35,6 +38,14 @@ export const router = createBrowserRouter([
   {
     path: "/register",
     element: <RegisterPage />,
+  },
+  {
+    path: "/privacy",
+    element: <PrivacyPolicyPage />,
+  },
+  {
+    path: "/legal-notice",
+    element: <LegalNoticePage />,
   },
   {
     path: "/403",

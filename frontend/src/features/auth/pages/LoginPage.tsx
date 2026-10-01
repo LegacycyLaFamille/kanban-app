@@ -176,6 +176,15 @@ export function LoginPage() {
                 </Link>
               </Text>
             </div>
+
+            <nav className={styles.legalLinks} aria-label="Legal">
+              <Link to="/privacy" className={styles.link}>
+                Privacy policy
+              </Link>
+              <Link to="/legal-notice" className={styles.link}>
+                Legal notice
+              </Link>
+            </nav>
           </View>
         </Card>
       </div>

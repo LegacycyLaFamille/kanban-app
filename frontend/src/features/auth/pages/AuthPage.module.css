@@ -70,3 +70,10 @@
   outline-offset: 3px;
   border-radius: 2px;
 }
+
+.legalLinks {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  font-size: 13px;
+}

@@ -9,13 +9,18 @@ import { Reshaped } from "reshaped";
 import { ApiError } from "../../../shared/api";
 import { saveFile } from "../../../shared/utils/saveFile";
 
-import { downloadDataExport, getOwnedProjects } from "../api/dataExport.api";
+import {
+  downloadDataExport,
+  downloadPersonalData,
+  getOwnedProjects,
+} from "../api/dataExport.api";
 
 import { DataExportSection } from "./DataExportSection";
 
 vi.mock("../api/dataExport.api", () => ({
   getOwnedProjects: vi.fn(),
   downloadDataExport: vi.fn(),
+  downloadPersonalData: vi.fn(),
 }));
 
 vi.mock("../../../shared/utils/saveFile", () => ({
@@ -273,5 +278,45 @@ describe("DataExportSection", () => {
         expect.stringMatching(/^kanban-export-.+\.zip$/),
       );
     });
+  });
+
+  it("downloads the user's personal data as JSON", async () => {
+    const user = userEvent.setup();
+    const personalData = new Blob(["{}"]);
+
+    vi.mocked(downloadPersonalData).mockResolvedValue(personalData);
+
+    renderSection();
+
+    await user.click(
+      screen.getByRole("button", { name: "Download my personal data" }),
+    );
+
+    await waitFor(() =>
+      expect(saveFile).toHaveBeenCalledWith(
+        personalData,
+        expect.stringMatching(/^kanban-personal-data-\d{4}-\d{2}-\d{2}\.json$/),
+      ),
+    );
+    expect(screen.getByRole("status").textContent).toBe(
+      "Your export has been downloaded.",
+    );
+  });
+
+  it("reports a failed personal data download", async () => {
+    const user = userEvent.setup();
+
+    vi.mocked(downloadPersonalData).mockRejectedValue(new Error("down"));
+
+    renderSection();
+
+    await user.click(
+      screen.getByRole("button", { name: "Download my personal data" }),
+    );
+
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "Unable to download your personal data. Please try again.",
+    );
+    expect(saveFile).not.toHaveBeenCalled();
   });
 });

@@ -45,6 +45,7 @@ describe("RequireAdmin", () => {
       signIn: vi.fn(),
       signOut: vi.fn(),
       refreshUser: vi.fn(),
+      deleteAccount: vi.fn(),
     } satisfies AuthContextValue);
 
     renderWithGuard();
@@ -66,6 +67,7 @@ describe("RequireAdmin", () => {
       signIn: vi.fn(),
       signOut: vi.fn(),
       refreshUser: vi.fn(),
+      deleteAccount: vi.fn(),
     } satisfies AuthContextValue);
 
     const router = renderWithGuard();
@@ -88,6 +90,7 @@ describe("RequireAdmin", () => {
       signIn: vi.fn(),
       signOut: vi.fn(),
       refreshUser: vi.fn(),
+      deleteAccount: vi.fn(),
     } satisfies AuthContextValue);
 
     renderWithGuard();
