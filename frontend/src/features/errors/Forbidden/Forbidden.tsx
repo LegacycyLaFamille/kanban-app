@@ -33,7 +33,7 @@ export default function Forbidden() {
         <div className="not-found__actions">
           <Link to="/projects" className="not-found__button">
             Back to homepage
-            <span>→</span>
+            <span aria-hidden="true">→</span>
           </Link>
 
           <button
@@ -41,7 +41,7 @@ export default function Forbidden() {
             className="not-found__back"
             onClick={() => window.history.back()}
           >
-            ← Go back
+            <span aria-hidden="true">←</span> Go back
           </button>
         </div>
       </div>

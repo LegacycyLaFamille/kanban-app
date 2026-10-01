@@ -41,7 +41,7 @@ describe("KanbanPage", () => {
     const user = userEvent.setup();
     renderPage();
 
-    await user.click(screen.getByRole("button", { name: "← Back to project" }));
+    await user.click(screen.getByRole("link", { name: "Back to project" }));
 
     expect(screen.getByText("project details")).toBeTruthy();
   });

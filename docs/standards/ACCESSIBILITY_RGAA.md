@@ -120,9 +120,9 @@ Automated tools (axe-core, Lighthouse, eslint-plugin-jsx-a11y) catch a meaningfu
 
 Being explicit about this so nobody mistakes "a pass was done" for "this is RGAA-certified":
 
-- **No color contrast audit** was run against the actual rendered theme (reshaped `slate`, dark mode). Pairings should be spot-checked with a contrast tool before this is trusted at AA level.
+- **No color contrast audit** was run against the actual rendered theme (reshaped `slate`, dark mode). Pairings should be spot-checked with a contrast tool before this is trusted at AA level. Only the unread-notification badge and the project search placeholder have been checked and fixed so far.
 - **No screen-reader testing campaign** (NVDA, JAWS, VoiceOver) was performed — the fixes here are based on correct ARIA/semantic HTML usage, not on listening to how each one actually sounds.
 - **No automated accessibility linting in CI** (axe-core, `eslint-plugin-jsx-a11y`, Lighthouse CI) — would be the natural next step to prevent regressions on new PRs.
 - **`frontend/src/app/legacy/**`** and **`backend/src/legacy/**`** are explicitly out of scope (same exclusion as the quality gate and SonarQube — see `docs/quality-gate.md`): pre-migration legacy code is not touched for this.
-- The admin dashboard's and "My Tasks" page's tables (`Table`/`Table.Row`) were not individually re-audited for complex-table semantics (`scope`, `<caption>`) — they are simple enough (no merged cells, one header row) that basic semantics likely suffice, but this wasn't explicitly verified against the relevant RGAA table criteria.
+- The admin dashboard's and "My Tasks" page's tables are simple (no merged cells, one header row, `<th>` headings). Each one is named after its project via `aria-labelledby` (RGAA 5.4), set by `shared/utils/labelTable.ts`: reshaped's `Table` doesn't forward attributes to its `<table>`, and a `<caption>` child breaks its `<thead>`/`<tbody>` detection. Reuse that helper for any new table.
 - This document itself has not been through a legal/compliance review — treat it as engineering guidance, not a certification deliverable.

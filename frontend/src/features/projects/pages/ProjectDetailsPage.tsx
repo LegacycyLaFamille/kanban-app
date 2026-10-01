@@ -250,13 +250,9 @@ export function ProjectDetailsPage() {
   return (
     <section className={styles.page}>
       <View gap={7}>
-        <button
-          type="button"
-          className={styles.back}
-          onClick={() => navigate("/projects")}
-        >
-          ← Back to projects
-        </button>
+        <Link to="/projects" className={styles.back}>
+          <span aria-hidden="true">←</span> Back to projects
+        </Link>
 
         <header className={styles.header}>
           <div className={styles.projectHeading}>
