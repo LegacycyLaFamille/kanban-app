@@ -5,6 +5,7 @@ import { TaskService } from "./TaskService.js";
 import { PrismaTaskRepository } from "./PrismaTaskRepository.js";
 import { prisma } from "../../shared/database/prisma.js";
 import { PrismaProjectRepository } from "../projects/PrismaProjectRepository.js";
+import { PrismaBoardRepository } from "../boards/PrismaBoardRepository.js";
 import { PrismaProjectMemberRepository } from "../projects/PrismaProjectMemberRepository.js";
 import { ProjectAccessGuard } from "../../shared/security/ProjectAccessGuard.js";
 import { validateSchema } from "../../shared/http/validateSchema.js";
@@ -24,6 +25,7 @@ const taskService = new TaskService(
   taskRepository,
   projectAccessGuard,
   eventBus,
+  new PrismaBoardRepository(prisma),
 );
 const taskController = new TaskController(taskService);
 

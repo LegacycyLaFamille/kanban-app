@@ -37,6 +37,9 @@ Les principales zones legacy actuelles sont :
 - `frontend/src/app/legacy/`
 - `backend/src/legacy/`
 
+Mise à jour : la dernière étape est faite, ces deux dossiers ont été retirés
+avec l'[ADR-011](ADR-011-remove-legacy-todolist.fr.md).
+
 ## Alternatives étudiées
 
 ### Réécriture complète

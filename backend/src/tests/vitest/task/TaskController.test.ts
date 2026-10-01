@@ -234,6 +234,19 @@ describe("TaskController validation", () => {
       expect(res.body.error.code).toBe("ASSIGNEE_NOT_PROJECT_MEMBER");
     });
 
+    it("returns 400 BOARD_NOT_IN_PROJECT when the board belongs to another project", async () => {
+      mockTaskService.update.mockRejectedValue(
+        new Error("Board is not part of this project"),
+      );
+
+      const res = await request(app)
+        .patch("/tasks/task-1")
+        .send({ boardId: "6f1c2b7e-3a4d-4e5f-8a9b-0c1d2e3f4a5b" });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe("BOARD_NOT_IN_PROJECT");
+    });
+
     it("rejects unknown fields", async () => {
       const res = await request(app)
         .patch("/tasks/task-1")

@@ -1,5 +1,6 @@
 import { useAuth } from "../../auth/hooks/useAuth";
 
+import { AccessibilitySection } from "../components/AccessibilitySection";
 import { changePassword } from "../api/profile.api";
 
 import { AccountStats } from "../components/AccountStats";
@@ -46,6 +47,10 @@ export function ProfilePage() {
           <div className={styles.column}>
             <div className={styles.details}>
               <ProfileDetailsForm user={user} />
+            </div>
+
+            <div className={styles.accessibility}>
+              <AccessibilitySection />
             </div>
 
             <div className={styles.danger}>

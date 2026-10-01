@@ -136,7 +136,9 @@
   white-space: nowrap;
 }
 
-.userInformation span {
+/* The email only: a descendant selector would also grey out the text of
+   the Admin badge (1.96:1 on its blue background). */
+.userInformation > span {
   overflow: hidden;
 
   margin-top: 2px;

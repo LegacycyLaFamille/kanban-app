@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { emailSchema } from "../../shared/http/schemas.js";
 import { PROJECT_ROLES } from "./ProjectMember.js";
 
 export const projectRoleSchema = z.enum(PROJECT_ROLES);
@@ -21,7 +22,7 @@ export const updateProjectSchema = z
   });
 
 export const addProjectMemberSchema = z.strictObject({
-  email: z.email(),
+  email: emailSchema,
   role: projectRoleSchema.default("VIEWER"),
 });
 

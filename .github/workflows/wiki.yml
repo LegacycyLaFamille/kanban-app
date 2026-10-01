@@ -1,0 +1,55 @@
+name: Publish Wiki
+
+# Publishes docs/ to the GitHub wiki whenever the documentation changes on
+# main. docs/ stays the source of truth; see docs/team/WIKI.md.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "README.md"
+      - "README.fr.md"
+      - "frontend/README.md"
+      - "scripts/sync-wiki.mjs"
+      - ".github/workflows/wiki.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: wiki
+  cancel-in-progress: false
+
+jobs:
+  publish-wiki:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Check out the wiki
+        uses: actions/checkout@v5
+        with:
+          repository: ${{ github.repository }}.wiki
+          path: wiki
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+
+      - name: Generate the wiki pages
+        run: node scripts/sync-wiki.mjs wiki "${{ github.ref_name }}"
+
+      - name: Push if anything changed
+        working-directory: wiki
+        run: |
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Wiki already up to date."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "docs: sync wiki from ${GITHUB_SHA::7}"
+          git push

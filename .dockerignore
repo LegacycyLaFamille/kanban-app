@@ -1,13 +1,22 @@
 .git
 .github
-.env
 .idea
 .vscode
-.env.*
-*.db
-
-node_modules
-
-npm-debug.log*
-coverage
 docs
+
+# Patterns without **/ only match at the root of the build context (.):
+# these are needed so backend/ and frontend/ local files never reach an
+# image (`COPY backend/ ./` copies the whole folder).
+**/.env
+**/.env.*
+!**/.env.example
+**/node_modules
+**/dist
+**/coverage
+**/test-results
+**/playwright-report
+**/*.db
+**/*.sqlite
+# Local SQLite database of the former legacy TodoList (a file named `data`).
+**/legacy/persistence/data
+npm-debug.log*

@@ -23,6 +23,7 @@ import {
  */
 
 const API = "/api/v1";
+const DAY = 24 * 60 * 60 * 1000;
 const WCAG_AA_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"];
 
 const runId = `${Date.now()}-${Math.floor(Math.random() * 10_000)}`;
@@ -306,8 +307,23 @@ test.describe("Accessibility (axe, WCAG 2.1 AA)", () => {
       title: taskTitle,
       description: "Audit task",
       priority: "High",
+      // Overdue: the card shows every badge colour the palette defines.
+      deadline: new Date(Date.now() - DAY).toISOString(),
       boardId,
       assigneeId: ownerId,
+    });
+    await post(context.request, `/projects/${projectId}/tasks`, {
+      title: `A11y Soon ${runId}`,
+      priority: "Medium",
+      deadline: new Date(Date.now() + DAY).toISOString(),
+      boardId,
+    });
+    await post(context.request, `/projects/${projectId}/tasks`, {
+      title: `A11y Later ${runId}`,
+      priority: "Low",
+      status: "DONE",
+      deadline: new Date(Date.now() + 14 * DAY).toISOString(),
+      boardId,
     });
 
     // A second user invites the owner, so the pending-invitations card shows.
@@ -325,6 +341,18 @@ test.describe("Accessibility (axe, WCAG 2.1 AA)", () => {
 
   test.afterAll(async () => {
     await context?.close();
+  });
+
+  test("landing page", async ({ browser }) => {
+    const guestContext = await browser.newContext({
+      // Audit the settled page, not a frame of the intro animations.
+      reducedMotion: "reduce",
+    });
+    const guest = await guestContext.newPage();
+    await guest.goto("/");
+    await expect(guest.getByRole("heading", { level: 1 })).toBeVisible();
+    await audit(guest);
+    await guestContext.close();
   });
 
   test("login page", async ({ browser }) => {
@@ -446,5 +474,34 @@ test.describe("Accessibility (axe, WCAG 2.1 AA)", () => {
     await page.goto("/profile");
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await audit(page);
+  });
+
+  // Same contrast checks with the colour-blind palette (Profile >
+  // Accessibility), which swaps every task colour.
+  test.describe("colour-blind palette", () => {
+    test.beforeAll(async () => {
+      await page.goto("/profile");
+      await page.getByRole("radio", { name: /Colour-blind friendly/ }).check();
+    });
+
+    test.afterAll(async () => {
+      await page.evaluate(() => localStorage.removeItem("kanban.colorVision"));
+    });
+
+    test("kanban board", async () => {
+      await page.goto(`/projects/${projectId}/kanban?boardId=${boardId}`);
+      await expect(page.locator("html")).toHaveAttribute(
+        "data-color-vision",
+        "colorblind",
+      );
+      await expect(page.getByText(taskTitle)).toBeVisible();
+      await audit(page);
+    });
+
+    test("profile page", async () => {
+      await page.goto("/profile");
+      await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+      await audit(page);
+    });
   });
 });

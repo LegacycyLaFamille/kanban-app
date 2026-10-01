@@ -32,10 +32,9 @@ The migration sequence is:
 6. Replace functionality progressively.
 7. Remove legacy code only after its replacement is operational and validated.
 
-The current legacy boundaries include:
-
-- `frontend/src/app/legacy/`
-- `backend/src/legacy/`
+The legacy boundaries were `frontend/src/app/legacy/` and
+`backend/src/legacy/`. Step 7 is done: both were removed with
+[ADR-011](ADR-011-remove-legacy-todolist.md).
 
 ## Alternatives Considered
 

@@ -19,6 +19,7 @@ import {
   ErrorState,
   LoadingState,
 } from "../../../shared/components/Feedback";
+import { AppLogo } from "../../../shared/components/AppLogo/AppLogo";
 import { getPermission } from "../../projects/api/team.api";
 import { useProjectTeam } from "../../projects/hooks/useProjectTeam";
 import type { TeamUser } from "../../projects/types/team.types";
@@ -30,6 +31,7 @@ import { useCreateTask } from "../hooks/useCreateTask";
 import { useUpdateTask } from "../hooks/useUpdateTask";
 import { useDeleteTask } from "../hooks/useDeleteTask";
 import { useTaskDragAndDrop } from "../hooks/useTaskDragAndDrop";
+import { sortByPriority } from "../utils/sortByPriority";
 import type {
   Task as BackendTask,
   TaskStatus,
@@ -38,6 +40,10 @@ import type {
 
 interface BoardProps {
   projectId: string;
+  // When set, only this board's tasks are shown and new tasks are created on
+  // it. Without it, the whole project's tasks are shown.
+  boardId?: string;
+  boardName?: string;
   // Used to hide editing controls from VIEWER members. When omitted, the
   // board is editable (the API still enforces permissions).
   currentUserId?: string;
@@ -171,7 +177,12 @@ const EMPTY_TASK: FrontendTask = {
   assignee: undefined,
 };
 
-export function Board({ projectId, currentUserId }: BoardProps) {
+export function Board({
+  projectId,
+  boardId,
+  boardName,
+  currentUserId,
+}: BoardProps) {
   // API Hooks
   const {
     tasks: backendTasks,
@@ -179,7 +190,7 @@ export function Board({ projectId, currentUserId }: BoardProps) {
     hasLoaded,
     error: fetchError,
     refetch,
-  } = useGetTasks(projectId);
+  } = useGetTasks(projectId, boardId);
   // Owner and members: the people a task can be assigned to.
   const { team, users: teamUsers } = useProjectTeam(projectId);
   const permission =
@@ -281,7 +292,10 @@ export function Board({ projectId, currentUserId }: BoardProps) {
         await refetch();
       }
     } else {
-      const created = await createTask(projectId, payload);
+      const created = await createTask(projectId, {
+        ...payload,
+        boardId: boardId ?? null,
+      });
       if (created) {
         setIsModalOpen(false);
         await refetch();
@@ -317,16 +331,10 @@ export function Board({ projectId, currentUserId }: BoardProps) {
         <Card padding={4}>
           <View direction="row" align="center" justify="space-between">
             <View direction="row" align="center" gap={3}>
-              <div
-                className="auth-logo"
-                aria-hidden="true"
-                style={{ width: 36, height: 36, fontSize: 16 }}
-              >
-                K
-              </div>
+              <AppLogo />
               <View>
                 <Text as="h1" variant="featured-3" weight="bold">
-                  Project Board
+                  {boardName ?? "Project Board"}
                 </Text>
                 <Text variant="caption-1" color="neutral-faded">
                   Organize. Prioritize. Deliver.
@@ -417,7 +425,9 @@ export function Board({ projectId, currentUserId }: BoardProps) {
                 key={column.id}
                 columnId={column.id}
                 title={column.title}
-                tasks={tasks.filter((task) => task.columnId === column.id)}
+                tasks={sortByPriority(
+                  tasks.filter((task) => task.columnId === column.id),
+                )}
                 onDropTask={handleDropTask}
                 onAddTask={
                   readOnly ? undefined : () => handleOpenCreate(column.id)

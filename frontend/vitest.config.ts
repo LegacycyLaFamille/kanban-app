@@ -24,7 +24,6 @@ export default defineConfig({
       exclude: [
         "src/**/*.test.{ts,tsx}",
         "src/**/*.spec.{ts,tsx}",
-        "src/app/legacy/**",
         "src/main.tsx",
       ],
     },

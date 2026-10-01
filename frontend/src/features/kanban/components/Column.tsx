@@ -80,6 +80,15 @@ export function Column({
             {/* Header with Title, Count, and + button */}
             <View direction="row" align="center" justify="space-between">
               <View direction="row" align="center" gap={2}>
+                <span
+                  aria-hidden="true"
+                  style={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: "50%",
+                    background: `var(--status-${columnId})`,
+                  }}
+                />
                 <Text as="h2" weight="bold">
                   {title}
                 </Text>

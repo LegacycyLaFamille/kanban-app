@@ -4,19 +4,17 @@ export default defineConfig({
   test: {
     env: { LOG_LEVEL: "silent" },
     // Real PostgreSQL/RabbitMQ suite, run with `npm run test:integration`.
-    exclude: [...configDefaults.exclude, "src/tests/integration/**"],
+    // dist/ holds compiled copies of the tests after `npm run build`.
+    exclude: [...configDefaults.exclude, "dist/**", "src/tests/integration/**"],
     coverage: {
       provider: "v8",
       // Measure coverage across the whole TypeScript codebase, not only the
       // files touched by existing tests, so the threshold reflects reality.
       all: true,
       include: ["src/**/*.ts"],
-      // src/legacy is CommonJS pre-migration code kept as-is; it is excluded
-      // from the TypeScript test suite entirely (see docs/quality-gate.md).
       // src/generated is Prisma's generated client, not source we write
       // or test; it isn't committed either (see .gitignore).
       exclude: [
-        "src/legacy/**",
         "src/tests/**",
         "src/generated/**",
         "**/*.d.ts",

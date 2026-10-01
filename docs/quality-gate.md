@@ -22,6 +22,7 @@ All checks run on every Pull Request targeting `main` or `Dev`
 | Backend format        | `format-backend`      | Prettier `--check`                                             |
 | Backend type-check    | `typecheck-backend`   | `tsc --noEmit`, no type errors                                 |
 | Backend tests         | `test-backend`        | Vitest, all tests pass, plus the coverage threshold (see §3)   |
+| Backend integration tests | `integration-backend` | Vitest against real PostgreSQL + RabbitMQ services (see `docs/backend/INTEGRATION_TESTS.md`) |
 | SonarQube Quality Gate | `sonarqube`          | No new Blocker/Critical issues on New Code (see §4)            |
 
 Type-checking and the full `build` script are kept separate on purpose:
@@ -33,34 +34,14 @@ The backend type-check job runs `prisma generate` first (with a placeholder
 `DATABASE_URL`, since `generate` only reads the schema and never connects to
 a database) because the Prisma client types are generated, not committed.
 
-## 2. Legacy exceptions (explicit and scoped)
+## 2. No legacy exceptions
 
-Two directories hold pre-migration code that is being kept as-is while the
-rest of the codebase migrates to TypeScript, per
-[`docs/architecture/FRONTEND_MIGRATION.md`](architecture/FRONTEND_MIGRATION.md) and
-[`docs/architecture/BACKEND_MIGRATION.md`](architecture/BACKEND_MIGRATION.md):
-
-- `frontend/src/app/legacy/**` — CommonJS-era JSX kept working during the
-  frontend migration.
-- `backend/src/legacy/**` — CommonJS code (with its own local
-  `package.json` `{"type": "commonjs"}` override) kept working during the
-  backend migration.
-
-These are relaxed, not silently skipped, and only in these two places:
-
-- **ESLint** (`frontend/eslint.config.js`, `backend/eslint.config.js`)
-  applies a separate, looser rule set to these paths instead of the strict
-  TypeScript/React rules used for new code.
-- **SonarQube** (`sonar-project.properties`) excludes both paths from
-  analysis entirely via `sonar.exclusions`, with an inline comment
-  explaining why.
-- **Coverage** (`backend/vitest.config.ts`) excludes `src/legacy/**` so
-  untested legacy code doesn't inflate or deflate the coverage number in
-  either direction.
-
-The exception is temporary and scoped to these two directories: as a legacy
-module is migrated, it moves out of `legacy/` and back under the strict
-rules — the exclusion list should shrink over time, not grow.
+The two pre-migration directories (`frontend/src/app/legacy/`,
+`backend/src/legacy/`) that had looser ESLint rules and were excluded from
+SonarQube and coverage were removed with
+[ADR-011](adr/ADR-011-remove-legacy-todolist.md). Every source file is now under the same
+rules; the only exclusions left are build output, generated code
+(`backend/src/generated/`), dependencies and test files from coverage.
 
 ## 3. Coverage threshold
 
@@ -89,9 +70,23 @@ cd backend
 npm run test:coverage
 ```
 
-The frontend has no tests yet, so no frontend coverage threshold is
-enforced. Add one (Vitest + React Testing Library, per
-`docs/standards/TESTING_CONVENTIONS.md`) once frontend tests exist.
+The frontend has a unit test suite (Vitest + React Testing Library, about
+290 tests, see `docs/frontend/TESTING.md`) and Playwright E2E tests
+(Kanban workflow and the axe accessibility audit). **Neither runs in CI yet**:
+the CI only lints, format-checks and type-checks the frontend, and no
+frontend coverage threshold is enforced. Run them locally before a PR:
+
+```bash
+cd frontend
+npm test                 # unit tests
+npm run test:coverage    # with coverage
+npx playwright test      # E2E, needs the backend and PostgreSQL running
+```
+
+Next steps: add a `frontend-tests` job running `npm run test:coverage`, then
+a threshold set at the measured baseline, as was done for the backend. The
+E2E tests need the backend stack in CI first (the backend integration-tests
+job, `integration-backend`, already starts PostgreSQL and RabbitMQ services).
 
 ## 4. SonarQube Cloud Quality Gate
 

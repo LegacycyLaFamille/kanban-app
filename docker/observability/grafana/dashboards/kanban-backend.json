@@ -35,6 +35,40 @@
   },
   "panels": [
     {
+      "id": 23,
+      "type": "alertlist",
+      "title": "Alerts",
+      "description": "Kanban alert rules (docker/observability/grafana/provisioning/alerting). Firing and pending ones first.",
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "viewMode": "list",
+        "groupMode": "default",
+        "groupBy": [],
+        "maxItems": 20,
+        "sortOrder": 3,
+        "dashboardAlerts": false,
+        "alertName": "",
+        "alertInstanceLabelFilter": "",
+        "folder": {
+          "title": "Kanban"
+        },
+        "stateFilter": {
+          "firing": true,
+          "pending": true,
+          "normal": true,
+          "error": true,
+          "noData": true,
+          "recovering": true
+        },
+        "showInstances": false
+      }
+    },
+    {
       "id": 1,
       "type": "row",
       "title": "API",
@@ -43,7 +77,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 0
+        "y": 6
       },
       "panels": []
     },
@@ -59,7 +93,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 1
+        "y": 7
       },
       "targets": [
         {
@@ -113,7 +147,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 1
+        "y": 7
       },
       "targets": [
         {
@@ -175,7 +209,7 @@
         "h": 4,
         "w": 6,
         "x": 12,
-        "y": 1
+        "y": 7
       },
       "targets": [
         {
@@ -237,7 +271,7 @@
         "h": 4,
         "w": 6,
         "x": 18,
-        "y": 1
+        "y": 7
       },
       "targets": [
         {
@@ -299,7 +333,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 5
+        "y": 11
       },
       "targets": [
         {
@@ -348,7 +382,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 5
+        "y": 11
       },
       "targets": [
         {
@@ -397,7 +431,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 13
+        "y": 19
       },
       "targets": [
         {
@@ -455,7 +489,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 13
+        "y": 19
       },
       "targets": [
         {
@@ -522,7 +556,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 21
+        "y": 27
       },
       "targets": [
         {
@@ -568,7 +602,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 29
+        "y": 35
       },
       "panels": []
     },
@@ -584,7 +618,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 30
+        "y": 36
       },
       "targets": [
         {
@@ -633,7 +667,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 30
+        "y": 36
       },
       "targets": [
         {
@@ -682,7 +716,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 38
+        "y": 44
       },
       "targets": [
         {
@@ -741,7 +775,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 38
+        "y": 44
       },
       "targets": [
         {
@@ -790,7 +824,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 46
+        "y": 52
       },
       "targets": [
         {
@@ -845,7 +879,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 54
+        "y": 60
       },
       "panels": []
     },
@@ -861,7 +895,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 55
+        "y": 61
       },
       "targets": [
         {
@@ -894,7 +928,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 65
+        "y": 71
       },
       "targets": [
         {
@@ -924,7 +958,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 73
+        "y": 79
       },
       "panels": []
     },
@@ -940,7 +974,7 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 74
+        "y": 80
       },
       "targets": [
         {
@@ -968,7 +1002,7 @@
         "h": 9,
         "w": 12,
         "x": 12,
-        "y": 74
+        "y": 80
       },
       "targets": [
         {

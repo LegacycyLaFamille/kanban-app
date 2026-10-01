@@ -8,6 +8,8 @@ import { BoardService } from "./BoardService.js";
 import { BoardController } from "./BoardController.js";
 import { projectRouter } from "../projects/project.routes.js";
 import { requireAuth } from "../../shared/security/requireAuth.js";
+import { validateSchema } from "../../shared/http/validateSchema.js";
+import { boardSchema } from "./board.schema.js";
 
 export const boardRouter = Router();
 
@@ -25,6 +27,7 @@ const boardController = new BoardController(boardService);
 projectRouter.post(
   "/projects/:projectId/boards",
   requireAuth,
+  validateSchema(boardSchema),
   boardController.createBoard,
 );
 
@@ -43,6 +46,7 @@ projectRouter.get(
 projectRouter.patch(
   "/boards/:boardId",
   requireAuth,
+  validateSchema(boardSchema),
   boardController.updateBoard,
 );
 

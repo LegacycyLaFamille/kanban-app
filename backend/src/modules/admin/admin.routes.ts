@@ -13,6 +13,17 @@ import { requireAdmin } from "../../shared/security/requireAdmin.js";
 import { validateSchema } from "../../shared/http/validateSchema.js";
 import { assignTaskSchema } from "./admin.schema.js";
 import { prisma } from "../../shared/database/prisma.js";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { rabbitMq } from "../../shared/events/rabbitmq/index.js";
+import { DEAD_LETTER_QUEUE } from "../../shared/events/rabbitmq/topology.js";
+import { retryQueueName } from "../../shared/events/rabbitmq/RabbitMqEventBus.js";
+import { eventTotals } from "../../shared/observability/eventMetrics.js";
+import { recentWarningsAndErrors } from "../../shared/observability/logger.js";
+import { NOTIFICATION_CONSUMER } from "../notifications/notification.consumer.js";
+import { AdminSystemController } from "./AdminSystemController.js";
+import { AdminSystemService } from "./AdminSystemService.js";
+import { PrismaAdminStatsRepository } from "./PrismaAdminStatsRepository.js";
 
 export const adminRouter = Router();
 
@@ -34,6 +45,41 @@ const adminTaskService = new AdminTaskService(
 );
 const adminTaskController = new AdminTaskController(adminTaskService);
 
+function backendVersion(): string {
+  try {
+    const pkg = JSON.parse(
+      readFileSync(path.join(process.cwd(), "package.json"), "utf8"),
+    ) as { version?: string };
+    return pkg.version ?? "unknown";
+  } catch {
+    return "unknown";
+  }
+}
+
+const adminSystemService = new AdminSystemService({
+  checkDatabase: async () => {
+    await prisma.$queryRaw`SELECT 1`;
+  },
+  brokerStatus: () => rabbitMq.status(),
+  inspectQueue: (name) => rabbitMq.inspectQueue(name),
+  queues: [
+    { name: NOTIFICATION_CONSUMER, role: "consumer" },
+    { name: retryQueueName(NOTIFICATION_CONSUMER), role: "retry" },
+    { name: DEAD_LETTER_QUEUE, role: "dead_letter" },
+  ],
+  statsRepository: new PrismaAdminStatsRepository(prisma),
+  eventTotals,
+  recentProblems: recentWarningsAndErrors,
+  application: {
+    version: backendVersion(),
+    environment: process.env.NODE_ENV ?? "development",
+    startedAt: new Date(Date.now() - process.uptime() * 1000),
+  },
+  // Where admins open Grafana, e.g. http://localhost:3001 in development.
+  grafanaUrl: process.env.GRAFANA_URL || null,
+});
+const adminSystemController = new AdminSystemController(adminSystemService);
+
 // Every /admin route requires both a valid session (requireAuth) and the
 // ADMIN role (requireAdmin) — a system-wide check, deliberately separate
 // from ProjectAccessGuard's per-project owner/member authorization.
@@ -53,4 +99,11 @@ adminRouter.patch(
   validateSchema(assignTaskSchema),
   (req: Request<{ taskId: string }>, res: Response) =>
     adminTaskController.assignTask(req, res),
+);
+
+adminRouter.get(
+  "/admin/system",
+  requireAuth,
+  requireAdminAccess,
+  (req: Request, res: Response) => adminSystemController.getStatus(req, res),
 );

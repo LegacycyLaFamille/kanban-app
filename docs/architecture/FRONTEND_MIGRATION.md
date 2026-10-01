@@ -209,3 +209,27 @@ At the end of the migration, the frontend should be:
 - progressively cleaned of obsolete legacy code.
 
 The migration must demonstrate a **controlled modernization of the existing system**, not the creation of a separate replacement application.
+
+---
+
+## 8. Current State (2026-10-01)
+
+The migration steps above are largely done. The frontend is feature-based and
+fully TypeScript:
+
+| Feature (`src/features/`) | State                                                        |
+| ------------------------- | ------------------------------------------------------------ |
+| `auth`                    | Done: session, login/register, guards                        |
+| `projects`                | Done: CRUD, boards, members, invitations with roles          |
+| `kanban`                  | Done: one board per page, drag and drop, coloured task cards |
+| `tasks`                   | Done: My Tasks                                               |
+| `notifications`           | Done: page and unread badge                                  |
+| `profile`                 | Done: details, password change, account deletion, accessibility, data export |
+| `admin`                   | Done: dashboard, assignment                                  |
+| `landing`                 | Done: landing page on `/`                                    |
+| `users`                   | Empty: user needs are covered by `auth`, `profile` and `admin` |
+
+Step 6 is done: the legacy TodoList and `app/legacy/` were removed
+([ADR-011](../adr/ADR-011-remove-legacy-todolist.md)). The frontend is entirely TypeScript.
+
+Routes and per-feature behaviour: [docs/frontend/FEATURES.md](../frontend/FEATURES.md).

@@ -5,6 +5,7 @@ import type {
 } from "./TaskRepository.js";
 import { Task } from "./Task.js";
 import type { ProjectAccessGuard } from "../../shared/security/ProjectAccessGuard.js";
+import type { BoardRepository } from "../boards/BoardRepository.js";
 import { randomUUID } from "node:crypto";
 import type { EventBus } from "../../shared/events/EventBus.js";
 import { createEvent } from "../../shared/events/DomainEvent.js";
@@ -43,6 +44,7 @@ export class TaskService {
     private readonly taskRepository: TaskRepository,
     private readonly projectAccessGuard: ProjectAccessGuard,
     private readonly eventBus: EventBus,
+    private readonly boardRepository: Pick<BoardRepository, "findbyId">,
   ) {}
 
   /** Owner or member of the parent project. */
@@ -80,7 +82,8 @@ export class TaskService {
 
   /**
    * Owner or EDITOR member of the parent project. A non-null assigneeId must
-   * be the project's owner or a member, same rule as update.
+   * be the project's owner or a member, same rule as update. A non-null
+   * boardId must be a board of the same project.
    */
   async create(
     projectId: string,
@@ -99,6 +102,7 @@ export class TaskService {
       );
       if (!role) throw new Error("Assignee is not a member of this project");
     }
+    if (data.boardId) await this.assertBoardInProject(data.boardId, projectId);
 
     const newTask = new Task(
       randomUUID(),
@@ -140,6 +144,7 @@ export class TaskService {
   /**
    * Owner or EDITOR member of the parent project. A non-null assigneeId must
    * be the project's owner or a member, same rule as AdminTaskService.assign.
+   * A non-null boardId must be a board of the task's project.
    */
   async update(
     taskId: string,
@@ -159,6 +164,9 @@ export class TaskService {
         data.assigneeId,
       );
       if (!role) throw new Error("Assignee is not a member of this project");
+    }
+    if (data.boardId) {
+      await this.assertBoardInProject(data.boardId, task.projectId);
     }
 
     const updatedTask = new Task(
@@ -191,6 +199,17 @@ export class TaskService {
     }
     await this.projectAccessGuard.assertCanEdit(task.projectId, userid);
     await this.taskRepository.delete(task);
+  }
+
+  // A task can only live on a board of its own project.
+  private async assertBoardInProject(
+    boardId: string,
+    projectId: string,
+  ): Promise<void> {
+    const board = await this.boardRepository.findbyId(boardId);
+    if (!board || board.projectId !== projectId) {
+      throw new Error("Board is not part of this project");
+    }
   }
 
   // Published only once the update is persisted, and only for real changes

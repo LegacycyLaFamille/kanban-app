@@ -69,6 +69,23 @@ Si une autre interaction de glisser-déposer est ajoutée ailleurs dans l'applic
 
 - Une règle globale `:focus-visible` (`frontend/src/styles/index.css`) dessine un contour visible sur tout élément recevant le focus clavier. Ne pas la surcharger avec `outline: none` sans fournir un remplacement tout aussi visible.
 
+### 3.8 Couleurs (thématique 3) et palette daltonienne
+
+- Les couleurs des tâches (priorité, urgence de l'échéance, statut de colonne) sont des variables CSS dans `frontend/src/styles/index.css` (`--task-*`, `--status-*`). Les utiliser plutôt que des valeurs hexadécimales en dur, pour que la palette daltonienne s'applique partout.
+- La couleur n'est jamais le seul indice : chaque badge de priorité a un libellé et une forme (▼ faible, ● moyenne, ▲ haute), chaque badge d'échéance dit ce qu'il signifie (« Overdue · 28 Sep », « Due tomorrow »), et un badge en retard a en plus un contour plein. Chaque texte atteint 4.5:1 sur son fond teinté.
+- **Profil > Accessibility** propose une palette *Colour-blind friendly* (teintes Okabe-Ito : bleu / jaune / rose, qui diffèrent aussi en luminosité) qui ajoute des motifs sur la bande de priorité des cartes. Elle pose `data-color-vision="colorblind"` sur `<html>` ; le choix est mémorisé par appareil (`localStorage`) et appliqué avant le premier rendu (`frontend/src/shared/preferences/colorVision.ts`).
+- Les cartes interactives sont nommées « Open task … » et pointent `aria-describedby` vers leurs badges : les lecteurs d'écran annoncent toujours la priorité, l'échéance et l'assigné.
+
+### 3.9 Animations (thématique 13)
+
+La landing page (`/`, `frontend/src/features/landing/`) est animée.
+
+- Les animations en boucle (la maquette de Kanban, le bandeau des technologies, le fond) peuvent être arrêtées avec le bouton **« Pause animations »** (`aria-pressed`), comme l'exige tout contenu en mouvement de plus de 5 secondes (RGAA 13.8 / WCAG 2.2.2).
+- Avec `prefers-reduced-motion: reduce`, rien ne bouge : animations et apparitions au défilement sont désactivées et toutes les sections sont visibles d'emblée. Le bouton pause est alors masqué, puisqu'il n'y a rien à mettre en pause.
+- Le contenu qui apparaît au défilement n'est masqué qu'une fois que JavaScript a pris le relais (`data-motion="on"`) : il ne reste jamais invisible si l'observer est indisponible.
+- La maquette est décorative et `aria-hidden` : le texte autour dit la même chose.
+- Rien ne clignote plus de 3 fois par seconde (RGAA 13.7).
+
 ---
 
 ## 4. Checklist pour toute nouvelle interface
@@ -113,7 +130,7 @@ Avant d'ouvrir une PR qui ajoute ou modifie une interface frontend, vérifier :
 
 ## 5. Audit automatisé, et pourquoi il ne suffit pas
 
-`frontend/e2e/accessibility.e2e.test.ts` lance axe-core (règles WCAG 2.1 A + AA) sur chaque page de l'application en fonctionnement, dans le vrai thème, avec des données de test qu'il crée lui-même : connexion, inscription, 404, 403, projets, détail d'un projet, tableau kanban, modale de tâche, mes tâches, notifications, profil. Il vérifie aussi que le focus reste piégé dans la modale de tâche et revient sur la carte à sa fermeture.
+`frontend/e2e/accessibility.e2e.test.ts` lance axe-core (règles WCAG 2.1 A + AA) sur chaque page de l'application en fonctionnement, dans le vrai thème, avec des données de test qu'il crée lui-même : landing page, connexion, inscription, 404, 403, projets, détail d'un projet, tableau kanban, modale de tâche, mes tâches, notifications, profil. Les données de test couvrent toutes les priorités et tous les états d'échéance, et le tableau kanban et le profil sont audités une seconde fois avec la **palette daltonienne** (§3.8). La landing page est auditée avec les animations réduites, pour qu'axe voie la page stabilisée et non une image d'animation. Il vérifie aussi que le focus reste piégé dans la modale de tâche et revient sur la carte à sa fermeture.
 
 ```bash
 # backend (API + Postgres) démarré, puis depuis frontend/
@@ -133,13 +150,14 @@ Les outils automatisés détectent une part significative des critères RGAA/WCA
 
 Pour être explicite, afin que personne ne confonde « une passe a été faite » avec « ceci est certifié RGAA » :
 
-- **Le contraste des couleurs** de l'état par défaut de chaque page est vérifié par l'audit automatisé ([§5](#5-audit-automatisé-et-pourquoi-il-ne-suffit-pas)), y compris le texte sur dégradé. Non couverts : les états survol, focus et désactivé, les états d'erreur que le test ne déclenche pas, et le tableau de bord admin (l'audit n'a pas d'utilisateur admin).
+- **Le contraste des couleurs** de l'état par défaut de chaque page est vérifié par l'audit automatisé ([§5](#5-audit-automatisé-et-pourquoi-il-ne-suffit-pas)), y compris le texte sur dégradé. Non couverts : les états survol, focus et désactivé, et les états d'erreur que le test ne déclenche pas. Les pages admin (`/admin/dashboard`, `/admin/system`) ne sont pas dans l'audit automatisé (il n'a pas d'utilisateur admin) ; elles ont été vérifiées une fois avec axe à la main, dans les deux palettes, sans violation.
+- **Redimensionnement et zoom** : les mises en page ont été vérifiées à 390 px de large, pas à 320 px ni à 200 % / 400 % de zoom (RGAA 10.11 / WCAG 1.4.10), et la modification de l'espacement du texte (RGAA 10.12 / WCAG 1.4.12) n'a pas été testée.
+- **Aucune déclaration d'accessibilité n'est publiée** dans l'application. Un brouillon rempli avec l'état réel du projet est dans [ACCESSIBILITY_STATEMENT.fr.md](ACCESSIBILITY_STATEMENT.fr.md) ; le publier demande un audit complet pour calculer un taux de conformité.
 - **Aucune campagne de test avec lecteur d'écran** (NVDA, JAWS, VoiceOver) n'a été menée. L'arbre d'accessibilité exposé par chaque page a été relu, mais personne n'a écouté le rendu réel.
 - **L'audit automatisé ne tourne pas en CI** : les tests e2e ont besoin du backend et d'une base de données, que les workflows de CI ne démarrent pas encore.
 - **Défauts connus de reshaped** (code de la bibliothèque, non corrigeable depuis le nôtre ; à signaler en amont) :
   - Le fond des modales (`Overlay`) impose `role="button"` autour de toute la boîte de dialogue : un lecteur d'écran peut annoncer un bouton qui englobe la modale (axe `nested-interactive` ; l'audit ignore uniquement ce nœud précis).
   - `FormControl.Helper` pose toujours `role="alert"` : un texte d'aide statique (ex. l'indication sous l'email de la page profil) peut être annoncé comme une alerte quand il réapparaît.
   - `Modal.Title` rend un `<h6>`, ce qui saute des niveaux de titre dans les modales.
-- **`frontend/src/app/legacy/**`** et **`backend/src/legacy/**`** sont explicitement hors périmètre (même exclusion que la porte de qualité et SonarQube — voir `docs/quality-gate.md`) : le code legacy pré-migration n'est pas touché pour ce chantier.
 - Les tableaux du tableau de bord admin et de la page « My Tasks » sont simples (pas de cellules fusionnées, une seule ligne d'en-tête, des `<th>`). Chacun porte le nom de son projet via `aria-labelledby` (RGAA 5.4), posé par `shared/utils/labelTable.ts` : le `Table` de reshaped ne transmet pas d'attributs à son `<table>`, et un enfant `<caption>` casse sa détection du `<thead>`/`<tbody>`. Réutiliser cet utilitaire pour tout nouveau tableau.
 - Ce document lui-même n'a fait l'objet d'aucune relecture juridique/conformité — à considérer comme un guide d'ingénierie, pas un livrable de certification.

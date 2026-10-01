@@ -8,19 +8,23 @@ import {
 } from "../../shared/events/rabbitmq/RabbitMqEventBus.js";
 import { defaultTopology } from "../../shared/events/rabbitmq/topology.js";
 import type { EventLogger } from "../../shared/events/eventLogger.js";
-import { integrationEnv } from "./env.js";
+import { integrationDatabaseUrl, integrationEnv } from "./env.js";
 
 export function createTestPrisma(): PrismaClient {
-  const { databaseUrl } = integrationEnv();
   return new PrismaClient({
-    adapter: new PrismaPg({ connectionString: databaseUrl }),
+    adapter: new PrismaPg({ connectionString: integrationDatabaseUrl() }),
   });
 }
 
+// Empties every application table (all of them, so a new model can never
+// leak state between tests), keeping Prisma's migration history.
 export async function resetDatabase(prisma: PrismaClient): Promise<void> {
-  await prisma.$executeRawUnsafe(
-    'TRUNCATE "Notification", "Task", "Board", "ProjectMember", "Project", "User" CASCADE',
-  );
+  const tables = await prisma.$queryRaw<{ tablename: string }[]>`
+    SELECT tablename FROM pg_tables
+    WHERE schemaname = 'public' AND tablename <> '_prisma_migrations'`;
+  if (tables.length === 0) return;
+  const list = tables.map(({ tablename }) => `"${tablename}"`).join(", ");
+  await prisma.$executeRawUnsafe(`TRUNCATE ${list} CASCADE`);
 }
 
 export async function seedProject(prisma: PrismaClient) {

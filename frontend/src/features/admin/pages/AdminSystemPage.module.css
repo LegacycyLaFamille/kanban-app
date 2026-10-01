@@ -1,0 +1,217 @@
+.page {
+  width: 100%;
+  padding: 32px;
+  box-sizing: border-box;
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 24px;
+  align-items: start;
+}
+
+.section {
+  min-width: 0;
+}
+
+/* ---------- Status words (colour tokens: styles/index.css) ---------- */
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.symbol {
+  display: inline-grid;
+  place-items: center;
+  width: 1.25em;
+  height: 1.25em;
+  border-radius: 50%;
+  font-size: 0.8em;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.status[data-tone="ok"] {
+  color: var(--status-done);
+}
+
+.status[data-tone="warning"] {
+  color: var(--task-medium);
+}
+
+.status[data-tone="critical"] {
+  color: var(--task-high);
+}
+
+.status[data-tone="ok"] .symbol {
+  background: var(--task-low-bg);
+}
+
+.status[data-tone="warning"] .symbol {
+  background: var(--task-medium-bg);
+}
+
+.status[data-tone="critical"] .symbol {
+  background: var(--task-high-bg);
+}
+
+/* ---------- Overview banner ---------- */
+
+.overview {
+  padding: 20px 24px;
+  border: 1px solid var(--rs-color-border-neutral-faded);
+  border-left-width: 6px;
+  border-radius: 12px;
+  background: var(--rs-color-background-elevation-base);
+}
+
+.overview[data-tone="ok"] {
+  border-left-color: var(--status-done);
+}
+
+.overview[data-tone="warning"] {
+  border-left-color: var(--task-medium);
+}
+
+.overview[data-tone="critical"] {
+  border-left-color: var(--task-high);
+}
+
+.warnings {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 20px;
+}
+
+/* ---------- Figures ---------- */
+
+.figures {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 16px;
+  margin: 0;
+}
+
+.figure {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.figure dt {
+  color: var(--rs-color-foreground-neutral-faded);
+  font-size: 13px;
+}
+
+.figure dd {
+  margin: 0;
+  color: var(--rs-color-foreground-neutral);
+  font-size: 18px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- Queues table ---------- */
+
+.tableWrapper {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table th,
+.table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--rs-color-border-neutral-faded);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.table thead th {
+  color: var(--rs-color-foreground-neutral-faded);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.table tbody th {
+  font-weight: 500;
+}
+
+/* ---------- Recent problems ---------- */
+
+.problems {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.problem {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--rs-color-background-neutral-faded);
+  font-size: 14px;
+}
+
+.problemTime {
+  color: var(--rs-color-foreground-neutral-faded);
+  font-variant-numeric: tabular-nums;
+}
+
+.problemComponent {
+  color: var(--rs-color-foreground-neutral-faded);
+}
+
+.problemMessage {
+  flex: 1 1 240px;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- Grafana link ---------- */
+
+.externalLink {
+  align-self: flex-start;
+  color: #a5b4fc;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.externalLink:hover {
+  color: #c7d2fe;
+}
+
+@media (max-width: 640px) {
+  .page {
+    padding: 20px 16px;
+  }
+}

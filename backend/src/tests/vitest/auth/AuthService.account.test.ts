@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import type { UserRepository } from "../../../modules/users/UserRepository.js";
 import { AuthService } from "../../../modules/auth/AuthService.js";
 import { User } from "../../../modules/users/User.js";
+import { sessionIdOf } from "../../../shared/security/tokens.js";
 
 vi.mock("bcrypt", () => ({
   default: {
@@ -47,8 +48,8 @@ describe("AuthService - account management", () => {
       vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
       vi.mocked(bcrypt.hash).mockResolvedValue("new_hash" as never);
       vi.mocked(jwt.sign)
-        .mockReturnValueOnce("access" as never)
-        .mockReturnValueOnce("refresh" as never);
+        .mockReturnValueOnce("refresh" as never)
+        .mockReturnValueOnce("access" as never);
 
       const tokens = await authService.changePassword(
         "user_1",
@@ -62,10 +63,10 @@ describe("AuthService - account management", () => {
         "user_1",
         "new_hash",
       );
-      // The stored refresh token is replaced: other sessions are revoked.
+      // The stored session is replaced: other sessions are revoked.
       expect(mockUserRepository.updateRefreshToken).toHaveBeenCalledWith(
         "user_1",
-        "refresh",
+        sessionIdOf("refresh"),
       );
       expect(tokens).toEqual({
         accessToken: "access",
