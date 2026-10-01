@@ -62,6 +62,7 @@ If you add another drag-and-drop interaction anywhere in the app, it needs the s
 
 - Purely decorative icons/emoji (the 🏷️ priority tag, the 👤 assignee glyph, SVG nav icons) are wrapped in `<span aria-hidden="true">` or carry `aria-hidden="true"` directly, so a screen reader doesn't announce an ambiguous glyph name next to the real text that already conveys the information.
 - An icon that *is* the only content of an interactive element (a button, a link) must instead get an `aria-label` on that element — hiding the icon without naming the control would leave it silent.
+- To give screen readers text that isn't shown on screen (e.g. the unread-notification badge in `AppSidebar`), use the global `.sr-only` class (`frontend/src/styles/index.css`) and hide the visual-only version with `aria-hidden="true"`. Don't put `aria-label` on a plain `<span>`/`<div>`: ARIA forbids naming generic elements, and screen readers ignore it.
 
 ### 3.7 Focus visibility (theme 10 / 12)
 
@@ -99,6 +100,7 @@ Before opening a PR that adds or changes frontend UI, check:
 
 - [ ] A decorative icon/emoji sitting next to text that already says the same thing: `aria-hidden="true"`.
 - [ ] An icon that's the *only* content of a control: `aria-label` on the control.
+- [ ] Extra text meant only for screen readers: `.sr-only`, never `aria-label` on a `<span>`/`<div>` without a role.
 - [ ] A meaningful image (not decorative, not duplicated by adjacent text): a real `alt` describing it.
 
 ### 4.6 Color and contrast

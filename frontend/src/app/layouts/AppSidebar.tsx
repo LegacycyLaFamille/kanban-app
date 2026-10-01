@@ -173,12 +173,17 @@ export function AppSidebar({
                 >
                   <span className={styles.navigationLabel}>{item.label}</span>
                   {item.path === "/notifications" && notificationCount > 0 && (
-                    <span
-                      className={styles.notificationBadge}
-                      aria-label={`${notificationCount} unread notifications`}
-                    >
-                      {notificationCount > 99 ? "99+" : notificationCount}
-                    </span>
+                    <>
+                      <span
+                        className={styles.notificationBadge}
+                        aria-hidden="true"
+                      >
+                        {notificationCount > 99 ? "99+" : notificationCount}
+                      </span>
+                      <span className="sr-only">
+                        {`, ${notificationCount} unread notifications`}
+                      </span>
+                    </>
                   )}
                 </MenuItem>
               </div>

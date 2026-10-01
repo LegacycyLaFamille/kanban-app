@@ -62,6 +62,7 @@ Si une autre interaction de glisser-déposer est ajoutée ailleurs dans l'applic
 
 - Les icônes/émojis purement décoratifs (le tag 🏷️ de priorité, le glyphe 👤 d'assigné, les icônes SVG de navigation) sont encapsulés dans `<span aria-hidden="true">` ou portent directement `aria-hidden="true"`, pour qu'un lecteur d'écran n'annonce pas un nom de glyphe ambigu en plus du texte réel qui porte déjà l'information.
 - Une icône qui constitue le *seul* contenu d'un élément interactif (un bouton, un lien) doit à la place recevoir un `aria-label` sur cet élément — masquer l'icône sans nommer le contrôle le rendrait muet.
+- Pour donner aux lecteurs d'écran un texte non affiché à l'écran (ex. le badge de notifications non lues dans `AppSidebar`), utiliser la classe globale `.sr-only` (`frontend/src/styles/index.css`) et masquer la version purement visuelle avec `aria-hidden="true"`. Ne pas mettre d'`aria-label` sur un simple `<span>`/`<div>` : ARIA interdit de nommer les éléments génériques, et les lecteurs d'écran l'ignorent.
 
 ### 3.7 Visibilité du focus (thématique 10 / 12)
 
@@ -99,6 +100,7 @@ Avant d'ouvrir une PR qui ajoute ou modifie une interface frontend, vérifier :
 
 - [ ] Une icône/émoji décoratif à côté d'un texte qui dit déjà la même chose : `aria-hidden="true"`.
 - [ ] Une icône qui est le *seul* contenu d'un contrôle : `aria-label` sur le contrôle.
+- [ ] Un texte destiné uniquement aux lecteurs d'écran : `.sr-only`, jamais un `aria-label` sur un `<span>`/`<div>` sans rôle.
 - [ ] Une image porteuse de sens (non décorative, non dupliquée par le texte adjacent) : un vrai `alt` qui la décrit.
 
 ### 4.6 Couleur et contraste
