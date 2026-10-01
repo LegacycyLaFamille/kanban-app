@@ -25,12 +25,15 @@ export function ProjectForm({
 }: ProjectFormProps) {
   const nameId = useId();
   const descriptionId = useId();
+  const errorId = useId();
 
   const [name, setName] = useState(initialValues?.name ?? "");
   const [description, setDescription] = useState(
     initialValues?.description ?? "",
   );
   const [validationError, setValidationError] = useState<string | null>(null);
+
+  const displayedError = validationError || serverError;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -69,6 +72,8 @@ export function ProjectForm({
           required
           disabled={isSubmitting}
           placeholder="My project"
+          aria-invalid={Boolean(validationError)}
+          aria-describedby={displayedError ? errorId : undefined}
           onChange={(event) => {
             setName(event.target.value);
             setValidationError(null);
@@ -89,9 +94,9 @@ export function ProjectForm({
         />
       </div>
 
-      {(validationError || serverError) && (
-        <p className={styles.error} role="alert">
-          {validationError || serverError}
+      {displayedError && (
+        <p id={errorId} className={styles.error} role="alert">
+          {displayedError}
         </p>
       )}
 
