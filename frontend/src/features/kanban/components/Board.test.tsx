@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Reshaped } from "reshaped";
 
@@ -255,7 +255,11 @@ describe("Board", () => {
     await screen.findByRole("button", { name: "+ Add Task" });
 
     await user.click(screen.getByRole("button", { name: "+ Add Task" }));
-    await user.click(screen.getByRole("button", { name: "Create Task" }));
+
+    const dialog = screen.getByRole("dialog");
+    await user.click(
+      within(dialog).getByRole("button", { name: "Create Task" }),
+    );
 
     expect(await screen.findByText("Task title is required.")).toBeTruthy();
     expect(createTask).not.toHaveBeenCalled();
