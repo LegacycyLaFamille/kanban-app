@@ -164,16 +164,18 @@ describe("Workflow notifications (PostgreSQL + RabbitMQ réels)", () => {
 
   it("un échec temporaire du consumer est réessayé puis réussit", async () => {
     let attempts = 0;
+    // A type no production consumer listens to: a fake task.updated would
+    // also reach the notification consumer and end in the dead-letter queue.
     await broker.bus.subscribe({
       name: `integration.flaky-${runId}`,
-      eventTypes: ["task.updated"],
+      eventTypes: ["integration.flaky"],
       handler: async () => {
         attempts++;
         if (attempts === 1) throw new Error("temporary failure");
       },
     });
 
-    await broker.bus.publish(createEvent("task.updated", { taskId: "t" }));
+    await broker.bus.publish(createEvent("integration.flaky", {}));
 
     await waitFor(async () => attempts >= 2, { label: "retry" });
     expect(attempts).toBe(2);
@@ -192,9 +194,12 @@ describe("Workflow notifications (PostgreSQL + RabbitMQ réels)", () => {
 
     await broker.bus.publish(event);
 
+    // Skip any other dead-lettered message: only this event matters here.
     const message = await waitFor(
-      async () =>
-        (await adminChannel.get(DEAD_LETTER_QUEUE, { noAck: true })) || null,
+      async () => {
+        const next = await adminChannel.get(DEAD_LETTER_QUEUE, { noAck: true });
+        return next && next.properties.messageId === event.id ? next : null;
+      },
       { label: "message en dead-letter" },
     );
     expect(message.properties.messageId).toBe(event.id);

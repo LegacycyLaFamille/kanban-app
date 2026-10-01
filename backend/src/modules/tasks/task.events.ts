@@ -1,4 +1,7 @@
-import type { DomainEvent } from "../../shared/events/DomainEvent.js";
+import {
+  createEvent,
+  type DomainEvent,
+} from "../../shared/events/DomainEvent.js";
 import type { Task } from "./Task.js";
 
 export const TASK_DONE_STATUS = "DONE";
@@ -22,6 +25,8 @@ export type TaskCreatedEvent = DomainEvent<
     title: string;
     status: string;
     priority: string;
+    // Absent on events published before assignment existed.
+    assigneeId?: string | null;
   }
 >;
 
@@ -35,6 +40,23 @@ export type TaskUpdatedEvent = DomainEvent<
     changes: TaskField[];
     previousStatus: string;
     status: string;
+    // Assignee after / before the update. Absent on older events.
+    assigneeId?: string | null;
+    previousAssigneeId?: string | null;
+  }
+>;
+
+// Published when a task gets a (new) assignee: at creation, through
+// PATCH /tasks/:taskId or through the admin assignment route. Not published
+// when the assignment is cleared.
+export type TaskAssignedEvent = DomainEvent<
+  "task.assigned",
+  {
+    taskId: string;
+    projectId: string;
+    title: string;
+    assigneeId: string;
+    previousAssigneeId: string | null;
   }
 >;
 
@@ -51,7 +73,7 @@ export type TaskCompletedEvent = DomainEvent<
 >;
 
 export type TaskEvent =
-  TaskCreatedEvent | TaskUpdatedEvent | TaskCompletedEvent;
+  TaskCreatedEvent | TaskUpdatedEvent | TaskCompletedEvent | TaskAssignedEvent;
 
 const time = (date: Date | null) => (date === null ? null : date.getTime());
 
@@ -65,6 +87,26 @@ export function changedTaskFields(before: Task, after: Task): TaskField[] {
   if (before.boardId !== after.boardId) changes.push("boardId");
   if (before.assigneeId !== after.assigneeId) changes.push("assigneeId");
   return changes;
+}
+
+// null when the task has no assignee (nothing to announce).
+export function createTaskAssignedEvent(
+  task: Task,
+  previousAssigneeId: string | null,
+  actorId: string | null,
+): TaskAssignedEvent | null {
+  if (!task.assigneeId) return null;
+  return createEvent(
+    "task.assigned",
+    {
+      taskId: task.id,
+      projectId: task.projectId,
+      title: task.title,
+      assigneeId: task.assigneeId,
+      previousAssigneeId,
+    },
+    { actorId },
+  );
 }
 
 export function isCompletion(before: Task, after: Task): boolean {

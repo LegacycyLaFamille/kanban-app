@@ -23,32 +23,35 @@ enum Role {
 }
 
 model User {
-  id            String          @id @default(uuid())
-  email         String          @unique
-  name          String
-  passwordHash  String
-  refreshToken  String?
-  role          Role            @default(USER)
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-  Project       Project[]
-  ProjectMember ProjectMember[]
-  AssignedTask  Task[]          @relation("TaskAssignee")
-  Notification  Notification[]
+  id                 String              @id @default(uuid())
+  email              String              @unique
+  name               String
+  passwordHash       String
+  refreshToken       String?
+  role               Role                @default(USER)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  Project            Project[]
+  ProjectMember      ProjectMember[]
+  AssignedTask       Task[]              @relation("TaskAssignee")
+  Notification       Notification[]
+  ReceivedInvitation ProjectInvitation[] @relation("InvitationInvitee")
+  SentInvitation     ProjectInvitation[] @relation("InvitationInviter")
 }
 
 model Project {
-  id           String          @id @default(uuid())
+  id           String              @id @default(uuid())
   name         String
   description  String
   ownerId      String
-  owner        User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
+  owner        User                @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
   Task         Task[]
   Board        Board[]
   Member       ProjectMember[]
   Notification Notification[]
+  Invitation   ProjectInvitation[]
 }
 
 // A project always has exactly one owner (Project.ownerId), who has full
@@ -60,15 +63,40 @@ model Project {
 // Per ADR-007, legacy Todo records are never migrated into this domain, so
 // there is no legacy data here that could exist without a valid owner or
 // membership row — both userId and projectId are required, non-nullable.
+// Rights of a project member (the owner always has every right):
+// VIEWER reads the project, EDITOR also manages its boards and tasks.
+enum ProjectRole {
+  VIEWER
+  EDITOR
+}
+
 model ProjectMember {
-  id        String   @id @default(uuid())
+  id        String      @id @default(uuid())
   projectId String
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime    @default(now())
+  role      ProjectRole @default(VIEWER)
 
   @@unique([projectId, userId])
+}
+
+// Pending invitation to join a project as a member. Accepting it creates
+// the ProjectMember and deletes the invitation; declining deletes it.
+model ProjectInvitation {
+  id        String      @id @default(uuid())
+  projectId String
+  project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  inviteeId String
+  invitee   User        @relation("InvitationInvitee", fields: [inviteeId], references: [id], onDelete: Cascade)
+  inviterId String
+  inviter   User        @relation("InvitationInviter", fields: [inviterId], references: [id], onDelete: Cascade)
+  role      ProjectRole @default(VIEWER)
+  createdAt DateTime    @default(now())
+
+  @@unique([projectId, inviteeId])
+  @@index([inviteeId])
 }
 
 model Board {
@@ -133,6 +161,8 @@ model Notification {
   project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   taskId    String?
   taskTitle String?
+  // task.updated only: fields that changed (e.g. ["status", "priority"]).
+  changes   String[]  @default([])
   readAt    DateTime?
   createdAt DateTime  @default(now())
 

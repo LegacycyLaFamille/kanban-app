@@ -11,6 +11,8 @@ export interface NotificationView {
   task: { id: string; title: string | null } | null;
   // null for system events or when the acting user was deleted.
   actor: { id: string; name: string } | null;
+  // task.updated only: fields that changed, e.g. ["status", "priority"].
+  changes: string[];
 }
 
 // The cursor is unknown or belongs to another user.

@@ -4,6 +4,9 @@ import type { TaskRepository } from "../tasks/TaskRepository.js";
 import type { ProjectRepository } from "../projects/ProjectRepository.js";
 import { Task } from "../tasks/Task.js";
 import type { ProjectAccessGuard } from "../../shared/security/ProjectAccessGuard.js";
+import type { EventBus } from "../../shared/events/EventBus.js";
+import { publishSafely } from "../../shared/events/publishSafely.js";
+import { createTaskAssignedEvent } from "../tasks/task.events.js";
 
 export class AdminTaskService {
   constructor(
@@ -11,6 +14,8 @@ export class AdminTaskService {
     private readonly taskRepository: TaskRepository,
     private readonly projectRepository: ProjectRepository,
     private readonly projectAccessGuard: ProjectAccessGuard,
+    // Optional so the service stays usable without a broker (tests).
+    private readonly eventBus?: EventBus,
   ) {}
 
   /** All tasks across all projects, grouped by project. Admin-only (enforced by the requireAdmin route guard). */
@@ -32,7 +37,11 @@ export class AdminTaskService {
    * per-project and unmodified. To assign to someone new, add them as a
    * project member first via POST /projects/:projectId/members.
    */
-  async assign(taskId: string, assigneeId: string | null): Promise<Task> {
+  async assign(
+    taskId: string,
+    assigneeId: string | null,
+    actorId: string | null = null,
+  ): Promise<Task> {
     const task = await this.taskRepository.findById(taskId);
     if (!task) throw new Error("Not found");
 
@@ -62,6 +71,12 @@ export class AdminTaskService {
       assigneeId,
     );
 
-    return this.taskRepository.save(updatedTask);
+    const saved = await this.taskRepository.save(updatedTask);
+
+    if (this.eventBus && assigneeId !== task.assigneeId) {
+      const assigned = createTaskAssignedEvent(saved, task.assigneeId, actorId);
+      if (assigned) await publishSafely(this.eventBus, assigned);
+    }
+    return saved;
   }
 }

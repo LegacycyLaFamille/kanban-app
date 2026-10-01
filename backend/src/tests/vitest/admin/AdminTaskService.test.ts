@@ -6,6 +6,7 @@ import type { AdminProjectTasks } from "../../../modules/admin/AdminTask.js";
 import { Task } from "../../../modules/tasks/Task.js";
 import { Project } from "../../../modules/projects/Project.js";
 import { ProjectAccessGuard } from "../../../shared/security/ProjectAccessGuard.js";
+import { InMemoryEventBus } from "../../../shared/events/InMemoryEventBus.js";
 import type { TaskRepository } from "../../../modules/tasks/TaskRepository.js";
 import type { ProjectRepository } from "../../../modules/projects/ProjectRepository.js";
 import type { ProjectMemberRepository } from "../../../modules/projects/ProjectMemberRepository.js";
@@ -124,6 +125,7 @@ describe("AdminTaskService", () => {
         projectId: "proj-1",
         userId: memberId,
         createdAt: new Date(),
+        role: "VIEWER",
       });
       mockTaskRepository.save.mockImplementation(
         async (t) => t as unknown as Task,
@@ -132,6 +134,41 @@ describe("AdminTaskService", () => {
       const result = await service.assign("task-1", memberId);
 
       expect(result.assigneeId).toBe(memberId);
+    });
+
+    it("announces the assignment so the assignee gets notified", async () => {
+      const eventBus = new InMemoryEventBus();
+      const withEvents = new AdminTaskService(
+        mockAdminTaskRepository,
+        mockTaskRepository as unknown as TaskRepository,
+        mockProjectRepository as unknown as ProjectRepository,
+        new ProjectAccessGuard(
+          mockProjectRepository as unknown as ProjectRepository,
+          mockProjectMemberRepository as unknown as ProjectMemberRepository,
+        ),
+        eventBus,
+      );
+      mockTaskRepository.findById.mockResolvedValue(task);
+      mockProjectRepository.findById.mockResolvedValue(project);
+      mockProjectMemberRepository.findByProjectAndUser.mockResolvedValue({
+        id: "member-record-1",
+        projectId: "proj-1",
+        userId: memberId,
+        createdAt: new Date(),
+        role: "VIEWER",
+      });
+      mockTaskRepository.save.mockImplementation(
+        async (t) => t as unknown as Task,
+      );
+
+      await withEvents.assign("task-1", memberId, "admin-1");
+
+      const [event] = eventBus.publishedOfType("task.assigned");
+      expect(event?.actorId).toBe("admin-1");
+      expect(event?.payload).toMatchObject({
+        taskId: "task-1",
+        assigneeId: memberId,
+      });
     });
 
     it("rejects assigning to a user with no access to the project", async () => {

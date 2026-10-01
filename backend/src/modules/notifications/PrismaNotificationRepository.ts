@@ -15,6 +15,7 @@ type NotificationRow = {
   actorId: string | null;
   taskId: string | null;
   taskTitle: string | null;
+  changes: string[];
   readAt: Date | null;
   createdAt: Date;
   project: { id: string; name: string };
@@ -38,6 +39,7 @@ export class PrismaNotificationRepository implements NotificationRepository {
         projectId: n.projectId,
         taskId: n.taskId,
         taskTitle: n.taskTitle,
+        changes: n.changes,
         readAt: n.readAt,
         createdAt: n.createdAt,
       })),
@@ -135,6 +137,7 @@ export class PrismaNotificationRepository implements NotificationRepository {
       project: r.project,
       task: r.taskId ? { id: r.taskId, title: r.taskTitle } : null,
       actor: (r.actorId && actorsById.get(r.actorId)) || null,
+      changes: r.changes,
     }));
   }
 }

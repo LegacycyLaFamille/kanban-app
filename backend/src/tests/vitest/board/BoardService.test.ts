@@ -4,6 +4,9 @@ import { Board } from "../../../modules/boards/Board.js";
 import type { BoardRepository } from "../../../modules/boards/BoardRepository.js";
 import type { ProjectRepository } from "../../../modules/projects/ProjectRepository.js";
 import type { Project } from "../../../modules/projects/Project.js";
+import { ProjectMember } from "../../../modules/projects/ProjectMember.js";
+import type { ProjectMemberRepository } from "../../../modules/projects/ProjectMemberRepository.js";
+import { ProjectAccessGuard } from "../../../shared/security/ProjectAccessGuard.js";
 
 describe("BoardService", () => {
   let boardService: BoardService;
@@ -17,6 +20,10 @@ describe("BoardService", () => {
 
   let mockProjectRepository: {
     findById: Mock;
+  };
+
+  let mockProjectMemberRepository: {
+    findByProjectAndUser: Mock;
   };
 
   const mockUserId = "user-123";
@@ -48,9 +55,16 @@ describe("BoardService", () => {
       findById: vi.fn(),
     };
 
+    mockProjectMemberRepository = {
+      findByProjectAndUser: vi.fn().mockResolvedValue(null),
+    };
+
     boardService = new BoardService(
       mockBoardRepository as unknown as BoardRepository,
-      mockProjectRepository as unknown as ProjectRepository,
+      new ProjectAccessGuard(
+        mockProjectRepository as unknown as ProjectRepository,
+        mockProjectMemberRepository as unknown as ProjectMemberRepository,
+      ),
     );
   });
 
@@ -147,6 +161,48 @@ describe("BoardService", () => {
 
       const result = await boardService.update(mockUserId, { id: mockBoardId });
       expect(result.name).toBe(mockBoard.name); // Conserve le nom d'origine
+    });
+  });
+
+  describe("project members", () => {
+    const memberId = "member-1";
+    const ownedByOther = { ...mockProject, ownerId: "owner-1" };
+
+    function asMember(role: "VIEWER" | "EDITOR") {
+      mockProjectMemberRepository.findByProjectAndUser.mockResolvedValue(
+        new ProjectMember("m-1", mockProjectId, memberId, new Date(), role),
+      );
+    }
+
+    it("lets a VIEWER list the project's boards (issue #156)", async () => {
+      mockProjectRepository.findById.mockResolvedValue(ownedByOther);
+      mockBoardRepository.findByProject.mockResolvedValue([mockBoard]);
+      asMember("VIEWER");
+
+      await expect(
+        boardService.getProjectBoards(memberId, mockProjectId),
+      ).resolves.toEqual([mockBoard]);
+    });
+
+    it("forbids a VIEWER from creating a board", async () => {
+      mockProjectRepository.findById.mockResolvedValue(ownedByOther);
+      asMember("VIEWER");
+
+      await expect(
+        boardService.create(memberId, { name: "X", projectId: mockProjectId }),
+      ).rejects.toThrow("Forbidden");
+      expect(mockBoardRepository.save).not.toHaveBeenCalled();
+    });
+
+    it("lets an EDITOR create a board", async () => {
+      mockProjectRepository.findById.mockResolvedValue(ownedByOther);
+      asMember("EDITOR");
+
+      await boardService.create(memberId, {
+        name: "X",
+        projectId: mockProjectId,
+      });
+      expect(mockBoardRepository.save).toHaveBeenCalled();
     });
   });
 

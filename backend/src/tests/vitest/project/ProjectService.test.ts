@@ -23,6 +23,7 @@ describe("ProjectService", () => {
     findByUser: Mock;
     add: Mock;
     remove: Mock;
+    updateRole: Mock;
   };
   let mockUserRepository: {
     findByEmail: Mock;
@@ -53,6 +54,7 @@ describe("ProjectService", () => {
       findByUser: vi.fn(),
       add: vi.fn(),
       remove: vi.fn(),
+      updateRole: vi.fn(),
     };
     mockUserRepository = {
       findByEmail: vi.fn(),
@@ -292,6 +294,55 @@ describe("ProjectService", () => {
     });
   });
 
+  describe("updateMemberRole", () => {
+    it("lets the owner promote a member to EDITOR", async () => {
+      mockProjectRepository.findById.mockResolvedValue(project);
+      mockProjectMemberRepository.findByProjectAndUser.mockResolvedValue(
+        new ProjectMember("m-1", project.id, memberId, new Date()),
+      );
+
+      const member = await projectService.updateMemberRole(
+        project.id,
+        ownerId,
+        memberId,
+        "EDITOR",
+      );
+
+      expect(mockProjectMemberRepository.updateRole).toHaveBeenCalledWith(
+        project.id,
+        memberId,
+        "EDITOR",
+      );
+      expect(member.role).toBe("EDITOR");
+    });
+
+    it("forbids a member from changing roles", async () => {
+      mockProjectRepository.findById.mockResolvedValue(project);
+      mockProjectMemberRepository.findByProjectAndUser.mockResolvedValue(
+        new ProjectMember("m-1", project.id, memberId, new Date(), "EDITOR"),
+      );
+
+      await expect(
+        projectService.updateMemberRole(
+          project.id,
+          memberId,
+          memberId,
+          "EDITOR",
+        ),
+      ).rejects.toThrow("Forbidden");
+      expect(mockProjectMemberRepository.updateRole).not.toHaveBeenCalled();
+    });
+
+    it("reports an unknown member as not found", async () => {
+      mockProjectRepository.findById.mockResolvedValue(project);
+      mockProjectMemberRepository.findByProjectAndUser.mockResolvedValue(null);
+
+      await expect(
+        projectService.updateMemberRole(project.id, ownerId, "ghost", "EDITOR"),
+      ).rejects.toThrow("Not found");
+    });
+  });
+
   describe("removeMember", () => {
     it("allows the owner to remove a member", async () => {
       mockProjectRepository.findById.mockResolvedValue(project);
@@ -314,6 +365,54 @@ describe("ProjectService", () => {
         projectService.removeMember("proj-1", memberId, outsiderId),
       ).rejects.toThrow("Forbidden");
       expect(mockProjectMemberRepository.remove).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("getTeam", () => {
+    const joinedAt = new Date("2026-09-01T00:00:00.000Z");
+    const users: Record<string, User> = {
+      [ownerId]: new User(ownerId, "alice@example.com", "Alice", new Date()),
+      [memberId]: new User(memberId, "bob@example.com", "Bob", new Date()),
+    };
+
+    beforeEach(() => {
+      (mockUserRepository as unknown as { findById: Mock }).findById = vi.fn(
+        async (id: string) => users[id] ?? null,
+      );
+      mockProjectRepository.findById.mockResolvedValue(project);
+      mockProjectMemberRepository.findByProject.mockResolvedValue([
+        new ProjectMember("m-1", project.id, memberId, joinedAt),
+      ]);
+    });
+
+    it("returns the owner and the members with their names", async () => {
+      mockProjectMemberRepository.findByProjectAndUser.mockResolvedValue(
+        new ProjectMember("m-1", project.id, memberId, joinedAt),
+      );
+
+      const team = await projectService.getTeam(project.id, memberId);
+
+      expect(team).toEqual({
+        owner: { userId: ownerId, name: "Alice", email: "alice@example.com" },
+        members: [
+          {
+            id: "m-1",
+            userId: memberId,
+            name: "Bob",
+            email: "bob@example.com",
+            joinedAt,
+            role: "VIEWER",
+          },
+        ],
+      });
+    });
+
+    it("is forbidden to outsiders", async () => {
+      mockProjectMemberRepository.findByProjectAndUser.mockResolvedValue(null);
+
+      await expect(
+        projectService.getTeam(project.id, outsiderId),
+      ).rejects.toThrow("Forbidden");
     });
   });
 });

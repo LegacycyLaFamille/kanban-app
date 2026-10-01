@@ -12,7 +12,7 @@ function LocationProbe() {
   return <div data-testid="current-path">{location.pathname}</div>;
 }
 
-function renderSidebar(isAdmin: boolean) {
+function renderSidebar(isAdmin: boolean, notificationCount = 0) {
   return render(
     <Reshaped theme="slate" defaultColorMode="dark">
       <MemoryRouter initialEntries={["/projects"]}>
@@ -20,6 +20,7 @@ function renderSidebar(isAdmin: boolean) {
           userName="Jane Doe"
           userEmail="jane@example.com"
           isAdmin={isAdmin}
+          notificationCount={notificationCount}
         />
         <LocationProbe />
       </MemoryRouter>
@@ -69,6 +70,26 @@ describe("AppSidebar", () => {
     expect(screen.getByTestId("current-path").textContent).toBe(
       "/admin/dashboard",
     );
+  });
+
+  it("shows the unread notification count on the Notifications entry", () => {
+    renderSidebar(false, 3);
+
+    expect(screen.getByLabelText("3 unread notifications").textContent).toBe(
+      "3",
+    );
+  });
+
+  it("caps the unread notification badge at 99+", () => {
+    renderSidebar(false, 150);
+
+    expect(screen.getByText("99+")).toBeTruthy();
+  });
+
+  it("shows no notification badge when everything is read", () => {
+    renderSidebar(false, 0);
+
+    expect(screen.queryByLabelText(/unread notifications/)).toBeNull();
   });
 
   it("navigates the admin's Legacy entry to /", async () => {

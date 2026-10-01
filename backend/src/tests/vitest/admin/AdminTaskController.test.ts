@@ -162,6 +162,7 @@ describe("AdminTaskController", () => {
       expect(mockAdminTaskService.assign).toHaveBeenCalledWith(
         "task-1",
         assigneeId,
+        "admin-1",
       );
     });
 
@@ -186,7 +187,11 @@ describe("AdminTaskController", () => {
         .send({ assigneeId: null });
 
       expect(res.status).toBe(200);
-      expect(mockAdminTaskService.assign).toHaveBeenCalledWith("task-1", null);
+      expect(mockAdminTaskService.assign).toHaveBeenCalledWith(
+        "task-1",
+        null,
+        "admin-1",
+      );
     });
 
     it("rejects a malformed assigneeId with the standard validation error shape", async () => {

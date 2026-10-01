@@ -11,6 +11,7 @@ import { prisma } from "../../shared/database/prisma.js";
 import {
   addProjectMemberSchema,
   createProjectSchema,
+  updateProjectMemberSchema,
   updateProjectSchema,
 } from "./project.schema.js";
 
@@ -71,12 +72,27 @@ projectRouter.get(
     projectController.getMembers(req, res),
 );
 
+projectRouter.get(
+  "/projects/:projectId/team",
+  requireAuth,
+  (req: Request<{ projectId: string }>, res: Response) =>
+    projectController.getTeam(req, res),
+);
+
 projectRouter.post(
   "/projects/:projectId/members",
   requireAuth,
   validateSchema(addProjectMemberSchema),
   (req: Request<{ projectId: string }>, res: Response) =>
     projectController.addMember(req, res),
+);
+
+projectRouter.patch(
+  "/projects/:projectId/members/:memberUserId",
+  requireAuth,
+  validateSchema(updateProjectMemberSchema),
+  (req: Request<{ projectId: string; memberUserId: string }>, res: Response) =>
+    projectController.updateMemberRole(req, res),
 );
 
 projectRouter.delete(

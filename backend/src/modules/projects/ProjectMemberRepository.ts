@@ -1,4 +1,4 @@
-import type { ProjectMember } from "./ProjectMember.js";
+import type { ProjectMember, ProjectRole } from "./ProjectMember.js";
 
 export interface ProjectMemberRepository {
   findByProjectAndUser(
@@ -9,4 +9,9 @@ export interface ProjectMemberRepository {
   findByUser(userId: string): Promise<ProjectMember[]>;
   add(member: ProjectMember): Promise<void>;
   remove(projectId: string, userId: string): Promise<void>;
+  updateRole(
+    projectId: string,
+    userId: string,
+    role: ProjectRole,
+  ): Promise<void>;
 }

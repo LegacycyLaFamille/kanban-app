@@ -12,7 +12,10 @@ import type { ProjectRepository } from "../../../modules/projects/ProjectReposit
 import type { ProjectMemberRepository } from "../../../modules/projects/ProjectMemberRepository.js";
 import { Task } from "../../../modules/tasks/Task.js";
 import { TaskService } from "../../../modules/tasks/TaskService.js";
-import type { TaskCompletedEvent } from "../../../modules/tasks/task.events.js";
+import type {
+  TaskCompletedEvent,
+  TaskField,
+} from "../../../modules/tasks/task.events.js";
 import { ProjectAccessGuard } from "../../../shared/security/ProjectAccessGuard.js";
 import { createEvent } from "../../../shared/events/DomainEvent.js";
 import { InMemoryEventBus } from "../../../shared/events/InMemoryEventBus.js";
@@ -211,7 +214,12 @@ describe("Workflow task → Event Bus → notifications", () => {
     expect(eventBus.subscribe).toHaveBeenCalledWith(
       expect.objectContaining({
         name: NOTIFICATION_CONSUMER,
-        eventTypes: ["task.created", "task.completed"],
+        eventTypes: [
+          "task.created",
+          "task.completed",
+          "task.updated",
+          "task.assigned",
+        ],
       }),
     );
   });
@@ -286,5 +294,160 @@ describe("Idempotence du consumer (S2-29)", () => {
       BOB,
       OWNER,
     ]);
+  });
+});
+
+describe("Notifications de la personne assignée", () => {
+  it("notifie l'assignation puis chaque modification du ticket assigné", async () => {
+    const eventBus = new InMemoryEventBus();
+    const notifications = new InMemoryNotificationRepository();
+    const projectRepository = {
+      findById: vi
+        .fn()
+        .mockResolvedValue(
+          new Project("proj-1", "Kanban", "", OWNER, new Date()),
+        ),
+    } as unknown as ProjectRepository;
+    const memberRepository = {
+      findByProject: vi.fn().mockResolvedValue([member(ALICE), member(BOB)]),
+      findByProjectAndUser: vi.fn(async (_p: string, userId: string) =>
+        userId === ALICE || userId === BOB ? member(userId) : null,
+      ),
+    } as unknown as ProjectMemberRepository;
+
+    await subscribeNotificationConsumer(
+      eventBus,
+      new NotificationService(
+        notifications,
+        projectRepository,
+        memberRepository,
+      ),
+      vi.fn(),
+    );
+
+    const stored = new Map<string, Task>();
+    const taskService = new TaskService(
+      {
+        save: vi.fn(async (t: Task) => {
+          stored.set(t.id, t);
+          return t;
+        }),
+        findById: vi.fn(async (id: string) => stored.get(id) ?? null),
+        findByProjectId: vi.fn(),
+        findAssignedTo: vi.fn(),
+        delete: vi.fn(),
+      },
+      new ProjectAccessGuard(projectRepository, memberRepository),
+      eventBus,
+    );
+    const received = (userId: string) =>
+      notifications.rows
+        .filter((n) => n.userId === userId)
+        .map((n) => [n.type, n.changes]);
+
+    // Created already assigned to Alice: Alice is told she is assigned,
+    // not that a task was created; Bob gets the usual creation notice.
+    const task = await taskService.create("proj-1", OWNER, {
+      title: "Write docs",
+      description: "",
+      priority: "Medium",
+      status: "TODO",
+      assigneeId: ALICE,
+    });
+    expect(received(ALICE)).toEqual([["task.assigned", []]]);
+    expect(received(BOB)).toEqual([["task.created", []]]);
+
+    // Any change to her task reaches Alice, with the changed fields.
+    await taskService.update(task.id, OWNER, {
+      priority: "High",
+      title: "Write the docs",
+    });
+    expect(received(ALICE).at(-1)).toEqual([
+      "task.updated",
+      ["title", "priority"],
+    ]);
+    // ...and only her: Bob is not assigned.
+    expect(received(BOB)).toHaveLength(1);
+
+    // Completion: one task.completed for everyone, no extra task.updated.
+    await taskService.update(task.id, OWNER, { status: "DONE" });
+    expect(received(ALICE).at(-1)).toEqual(["task.completed", []]);
+    expect(received(ALICE)).toHaveLength(3);
+
+    // Reassigned to Bob: Bob is told, Alice gets nothing more.
+    await taskService.update(task.id, OWNER, { assigneeId: BOB });
+    expect(received(BOB).at(-1)).toEqual(["task.assigned", []]);
+    expect(received(ALICE)).toHaveLength(3);
+
+    expect(eventBus.failures).toEqual([]);
+  });
+
+  it("ne notifie pas l'assigné de ses propres modifications", async () => {
+    const notifications = new InMemoryNotificationRepository();
+    const service = new NotificationService(
+      notifications,
+      {
+        findById: vi
+          .fn()
+          .mockResolvedValue(
+            new Project("proj-1", "Kanban", "", OWNER, new Date()),
+          ),
+      } as unknown as ProjectRepository,
+      {
+        findByProject: vi.fn().mockResolvedValue([member(ALICE)]),
+      } as unknown as ProjectMemberRepository,
+    );
+
+    const result = await service.notifyTaskEvent(
+      createEvent(
+        "task.updated",
+        {
+          taskId: "task-1",
+          projectId: "proj-1",
+          title: "Write docs",
+          changes: ["title"] as TaskField[],
+          previousStatus: "TODO",
+          status: "TODO",
+          assigneeId: ALICE,
+          previousAssigneeId: ALICE,
+        },
+        { actorId: ALICE },
+      ),
+    );
+
+    expect(result).toEqual({ recipients: 0, created: 0 });
+  });
+
+  it("ne notifie pas un assigné qui n'a plus accès au projet", async () => {
+    const notifications = new InMemoryNotificationRepository();
+    const service = new NotificationService(
+      notifications,
+      {
+        findById: vi
+          .fn()
+          .mockResolvedValue(
+            new Project("proj-1", "Kanban", "", OWNER, new Date()),
+          ),
+      } as unknown as ProjectRepository,
+      {
+        findByProject: vi.fn().mockResolvedValue([]),
+      } as unknown as ProjectMemberRepository,
+    );
+
+    const result = await service.notifyTaskEvent(
+      createEvent(
+        "task.assigned",
+        {
+          taskId: "task-1",
+          projectId: "proj-1",
+          title: "Write docs",
+          assigneeId: ALICE,
+          previousAssigneeId: null,
+        },
+        { actorId: OWNER },
+      ),
+    );
+
+    expect(result).toEqual({ recipients: 0, created: 0 });
   });
 });
