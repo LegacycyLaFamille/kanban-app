@@ -294,6 +294,8 @@ Before removing legacy code:
 - `docs/quality-gate.md`: CI checks, coverage and SonarQube rules
 - `docs/team/`: team organization and onboarding
 
+The same documentation is published to the [GitHub Wiki](https://github.com/LegacycyLaFamille/kanban-app/wiki). Edit `docs/`, never the wiki: see [WIKI.md](WIKI.md).
+
 ## 13. Definition of Done
 
 A task is not complete only because its code has been written.

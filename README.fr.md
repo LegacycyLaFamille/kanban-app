@@ -127,6 +127,7 @@ Point d'entrée : [`standards/DEVELOPMENT_CONVENTIONS.fr.md`](./docs/standards/D
 
 - [`quality-gate.md`](./docs/quality-gate.md) — contrôles de CI, couverture, SonarQube (en anglais)
 - [`team/ONBOARDING.fr.md`](./docs/team/ONBOARDING.fr.md) — organisation de l'équipe et intégration
+- [`team/WIKI.fr.md`](./docs/team/WIKI.fr.md) — publication de `docs/` sur le [wiki GitHub](https://github.com/LegacycyLaFamille/kanban-app/wiki)
 - [`benchmarks/benchmarks_report.md`](./docs/benchmarks/benchmarks_report.md) — benchmarks technologiques
 
 Les documents de `adr/`, `architecture/`, `standards/` et `team/` existent en français (`.fr.md`) et en anglais.

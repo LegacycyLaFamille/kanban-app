@@ -127,6 +127,7 @@ Entry point: [`standards/DEVELOPMENT_CONVENTIONS.md`](./docs/standards/DEVELOPME
 
 - [`quality-gate.md`](./docs/quality-gate.md) — CI checks, coverage, SonarQube
 - [`team/ONBOARDING.md`](./docs/team/ONBOARDING.md) — team organization and onboarding
+- [`team/WIKI.md`](./docs/team/WIKI.md) — how `docs/` is published to the [GitHub Wiki](https://github.com/LegacycyLaFamille/kanban-app/wiki)
 - [`benchmarks/benchmarks_report.md`](./docs/benchmarks/benchmarks_report.md) — technology benchmarks
 
 Every document under `adr/`, `architecture/`, `standards/` and `team/` has a French version (`.fr.md`).
