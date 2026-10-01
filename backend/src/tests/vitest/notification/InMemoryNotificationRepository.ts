@@ -95,6 +95,7 @@ export class InMemoryNotificationRepository implements NotificationRepository {
       },
       task: r.taskId ? { id: r.taskId, title: r.taskTitle } : null,
       actor: r.actorId && actorName ? { id: r.actorId, name: actorName } : null,
+      changes: r.changes,
     };
   }
 }

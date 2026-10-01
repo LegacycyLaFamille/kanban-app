@@ -173,6 +173,8 @@ describe("ProjectController validation", () => {
         "proj-1",
         "user-1",
         "member@example.com",
+        // Default role when none is sent: read-only access.
+        "VIEWER",
       );
     });
 

@@ -1,4 +1,6 @@
 import { Router } from "express";
+import { ProjectAccessGuard } from "../../shared/security/ProjectAccessGuard.js";
+import { PrismaProjectMemberRepository } from "../projects/PrismaProjectMemberRepository.js";
 import { prisma } from "../../shared/database/prisma.js";
 import { PrismaBoardRepository } from "./PrismaBoardRepository.js";
 import { PrismaProjectRepository } from "../projects/PrismaProjectRepository.js";
@@ -11,7 +13,13 @@ export const boardRouter = Router();
 
 const boardRepository = new PrismaBoardRepository(prisma);
 const projectRepository = new PrismaProjectRepository(prisma);
-const boardService = new BoardService(boardRepository, projectRepository);
+const boardService = new BoardService(
+  boardRepository,
+  new ProjectAccessGuard(
+    projectRepository,
+    new PrismaProjectMemberRepository(prisma),
+  ),
+);
 const boardController = new BoardController(boardService);
 
 projectRouter.post(

@@ -15,8 +15,9 @@ type ColumnProps = {
   title: string;
   tasks: Task[];
   onDropTask: (taskId: string, targetColumnId: ColumnId) => void;
-  onAddTask: () => void;
-  onOpenTask: (task: Task) => void;
+  // Omitted for read-only users: no add buttons, cards are not openable.
+  onAddTask?: () => void;
+  onOpenTask?: (task: Task) => void;
   isTaskPending?: (taskId: string) => boolean;
 };
 
@@ -84,14 +85,16 @@ export function Column({
                   ({tasks.length})
                 </Text>
               </View>
-              <Button
-                variant="ghost"
-                size="small"
-                onClick={onAddTask}
-                attributes={{ "aria-label": `Add task to ${title}` }}
-              >
-                +
-              </Button>
+              {onAddTask && (
+                <Button
+                  variant="ghost"
+                  size="small"
+                  onClick={onAddTask}
+                  attributes={{ "aria-label": `Add task to ${title}` }}
+                >
+                  +
+                </Button>
+              )}
             </View>
 
             {/* Cards List */}
@@ -107,7 +110,7 @@ export function Column({
                   <DraggableTaskCard
                     key={task.id}
                     task={task}
-                    onOpen={() => onOpenTask(task)}
+                    onOpen={onOpenTask ? () => onOpenTask(task) : undefined}
                     isPending={isTaskPending?.(task.id) ?? false}
                   />
                 ))}
@@ -115,15 +118,17 @@ export function Column({
             </View.Item>
 
             {/* In-Card Add Button */}
-            <Button
-              variant="outline"
-              color="neutral"
-              size="small"
-              fullWidth
-              onClick={onAddTask}
-            >
-              Add card
-            </Button>
+            {onAddTask && (
+              <Button
+                variant="outline"
+                color="neutral"
+                size="small"
+                fullWidth
+                onClick={onAddTask}
+              >
+                Add card
+              </Button>
+            )}
           </View>
         </div>
       </Card>

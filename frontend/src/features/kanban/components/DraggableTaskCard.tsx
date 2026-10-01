@@ -9,8 +9,9 @@ type DraggableTaskCardProps = {
   /** Opens the task's edit dialog, where its column/status can also be
    * changed — the keyboard- and screen-reader-accessible equivalent to
    * dragging the card, since drag-and-drop has no built-in alternative
-   * input method (RGAA 7.3 / WCAG 2.5.7). */
-  onOpen: () => void;
+   * input method (RGAA 7.3 / WCAG 2.5.7). Omitted for read-only users: the
+   * card is then a plain, non-interactive element. */
+  onOpen?: () => void;
   /** True while this task's status update is being persisted; blocks re-dragging it. */
   isPending?: boolean;
 };
@@ -44,20 +45,26 @@ export function DraggableTaskCard({
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
-      onOpen();
+      onOpen?.();
     }
   }
+
+  const interactiveProps = onOpen
+    ? {
+        role: "button",
+        tabIndex: 0,
+        "aria-label": `Open task ${task.title}`,
+        onClick: onOpen,
+        onKeyDown: handleKeyDown,
+      }
+    : {};
 
   return (
     <div
       ref={ref}
       data-task-id={task.id}
-      role="button"
-      tabIndex={0}
-      aria-label={`Open task ${task.title}`}
       aria-busy={isPending}
-      onClick={onOpen}
-      onKeyDown={handleKeyDown}
+      {...interactiveProps}
       style={{
         opacity: isPending ? 0.6 : isDragging ? 0.4 : 1,
         cursor: isPending ? "wait" : "grab",

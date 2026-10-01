@@ -29,7 +29,11 @@ export class AdminTaskController {
       const { taskId } = req.params;
       const { assigneeId } = req.body as AssignTaskInput;
 
-      const task = await this.adminTaskService.assign(taskId, assigneeId);
+      const task = await this.adminTaskService.assign(
+        taskId,
+        assigneeId,
+        req.userId ?? null,
+      );
 
       res.status(200).json(task);
     } catch (error: unknown) {

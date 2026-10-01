@@ -2,7 +2,7 @@ import {
   PrismaClient,
   type ProjectMember as PrismaProjectMember,
 } from "../../generated/prisma/client.js";
-import { ProjectMember } from "./ProjectMember.js";
+import { ProjectMember, type ProjectRole } from "./ProjectMember.js";
 import type { ProjectMemberRepository } from "./ProjectMemberRepository.js";
 
 export class PrismaProjectMemberRepository implements ProjectMemberRepository {
@@ -14,6 +14,7 @@ export class PrismaProjectMemberRepository implements ProjectMemberRepository {
       prismaMember.projectId,
       prismaMember.userId,
       prismaMember.createdAt,
+      prismaMember.role,
     );
   }
 
@@ -50,7 +51,19 @@ export class PrismaProjectMemberRepository implements ProjectMemberRepository {
         projectId: member.projectId,
         userId: member.userId,
         createdAt: member.createdAt,
+        role: member.role,
       },
+    });
+  }
+
+  async updateRole(
+    projectId: string,
+    userId: string,
+    role: ProjectRole,
+  ): Promise<void> {
+    await this.prisma.projectMember.update({
+      where: { projectId_userId: { projectId, userId } },
+      data: { role },
     });
   }
 

@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from "express";
+import { eventBus } from "../../shared/events/index.js";
 import { AdminTaskController } from "./AdminTaskController.js";
 import { AdminTaskService } from "./AdminTaskService.js";
 import { PrismaAdminTaskRepository } from "./PrismaAdminTaskRepository.js";
@@ -29,6 +30,7 @@ const adminTaskService = new AdminTaskService(
   taskRepository,
   projectRepository,
   projectAccessGuard,
+  eventBus,
 );
 const adminTaskController = new AdminTaskController(adminTaskService);
 

@@ -13,6 +13,7 @@ import { boardRouter } from "./modules/boards/board.routes.js";
 import { exportRouter } from "./modules/exports/export.routes.js";
 import { adminRouter } from "./modules/admin/admin.routes.js";
 import { notificationRouter } from "./modules/notifications/notification.routes.js";
+import { invitationRouter } from "./modules/invitations/invitation.routes.js";
 import { rabbitMq } from "./shared/events/rabbitmq/index.js";
 import { createHealthRouter } from "./shared/http/health.routes.js";
 import { eventBus } from "./shared/events/index.js";
@@ -49,6 +50,7 @@ app.use("/api/v1", boardRouter);
 app.use("/api/v1", exportRouter);
 app.use("/api/v1", adminRouter);
 app.use("/api/v1", notificationRouter);
+app.use("/api/v1", invitationRouter);
 app.use(
   "/api/v1",
   createHealthRouter({

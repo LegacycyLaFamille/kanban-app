@@ -10,6 +10,7 @@ export interface Task {
   deadline?: string | null;
   projectId: string;
   boardId?: string | null;
+  assigneeId?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -21,6 +22,8 @@ export interface CreateTaskDto {
   status?: TaskStatus | string;
   deadline?: string | null;
   boardId?: string | null;
+  // Owner or member of the project; null leaves the task unassigned.
+  assigneeId?: string | null;
 }
 
 export interface UpdateTaskDto {
@@ -30,4 +33,6 @@ export interface UpdateTaskDto {
   status?: TaskStatus | string;
   deadline?: string | null;
   boardId?: string | null;
+  // null clears the assignment.
+  assigneeId?: string | null;
 }

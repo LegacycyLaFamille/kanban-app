@@ -1,0 +1,151 @@
+/* Same look as the member/board rows of ProjectDetailsPage. */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.member {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.avatar {
+  display: grid;
+  place-items: center;
+
+  width: 34px;
+  height: 34px;
+
+  flex-shrink: 0;
+
+  color: #ffffff;
+
+  font-size: 11px;
+  font-weight: 700;
+
+  background: linear-gradient(135deg, #334155, #475569);
+
+  border-radius: 50%;
+}
+
+.ownerAvatar {
+  background: linear-gradient(135deg, #4f46e5, #8b5cf6);
+}
+
+.pendingAvatar {
+  color: #94a3b8;
+  background: transparent;
+
+  border: 1px dashed #475569;
+}
+
+.details {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+
+  min-width: 0;
+}
+
+.details strong {
+  overflow: hidden;
+
+  color: #e2e8f0;
+
+  font-size: 12px;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.details span {
+  overflow: hidden;
+
+  color: #64748b;
+
+  font-size: 10px;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.role {
+  flex-shrink: 0;
+
+  padding: 3px 8px;
+
+  color: #cbd5e1;
+  background-color: rgba(100, 116, 139, 0.15);
+
+  border-radius: 999px;
+
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.ownerRole {
+  color: #c4b5fd;
+  background-color: rgba(79, 70, 229, 0.18);
+}
+
+.editorRole {
+  color: #86efac;
+  background-color: rgba(22, 163, 74, 0.15);
+}
+
+.pendingRole {
+  color: #fcd34d;
+  background-color: rgba(217, 119, 6, 0.15);
+}
+
+.sectionTitle {
+  margin: 0;
+
+  color: #94a3b8;
+
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.inviteForm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.inviteRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.roleToggle {
+  display: flex;
+  gap: 6px;
+}
+
+.roleSelect {
+  flex-shrink: 0;
+  width: 110px;
+}
+
+.message {
+  margin: 0;
+
+  font-size: 12px;
+}
+
+.error {
+  color: #fca5a5;
+}
+
+.success {
+  color: #86efac;
+}

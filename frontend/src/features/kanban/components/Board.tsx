@@ -6,6 +6,7 @@ import {
   Card,
   FormControl,
   Modal,
+  Select,
   Skeleton,
   Text,
   TextArea,
@@ -18,6 +19,9 @@ import {
   ErrorState,
   LoadingState,
 } from "../../../shared/components/Feedback";
+import { getPermission } from "../../projects/api/team.api";
+import { useProjectTeam } from "../../projects/hooks/useProjectTeam";
+import type { TeamUser } from "../../projects/types/team.types";
 
 import type { ColumnId, Task as FrontendTask } from "../types";
 import { Column } from "./Column";
@@ -34,6 +38,9 @@ import type {
 
 interface BoardProps {
   projectId: string;
+  // Used to hide editing controls from VIEWER members. When omitted, the
+  // board is editable (the API still enforces permissions).
+  currentUserId?: string;
 }
 
 type FrontendPriority = NonNullable<FrontendTask["priority"]>;
@@ -132,7 +139,14 @@ function toIsoDeadline(value: string): string | undefined {
   return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
 }
 
-function toFrontendTask(task: BackendTask): FrontendTask {
+function toFrontendTask(
+  task: BackendTask,
+  teamUsers: TeamUser[],
+): FrontendTask {
+  const assignee = task.assigneeId
+    ? teamUsers.find((user) => user.userId === task.assigneeId)
+    : undefined;
+
   return {
     id: task.id,
     title: task.title,
@@ -141,7 +155,9 @@ function toFrontendTask(task: BackendTask): FrontendTask {
     columnId: toColumnId(task.status),
     priority: toFrontendPriority(task.priority),
     deadline: task.deadline ?? undefined,
-    assignee: { id: "", name: "" },
+    assignee: task.assigneeId
+      ? { id: task.assigneeId, name: assignee?.name ?? "" }
+      : undefined,
   };
 }
 
@@ -152,10 +168,10 @@ const EMPTY_TASK: FrontendTask = {
   projectId: "",
   columnId: "todo",
   priority: "medium",
-  assignee: { id: "", name: "" },
+  assignee: undefined,
 };
 
-export function Board({ projectId }: BoardProps) {
+export function Board({ projectId, currentUserId }: BoardProps) {
   // API Hooks
   const {
     tasks: backendTasks,
@@ -164,6 +180,13 @@ export function Board({ projectId }: BoardProps) {
     error: fetchError,
     refetch,
   } = useGetTasks(projectId);
+  // Owner and members: the people a task can be assigned to.
+  const { team, users: teamUsers } = useProjectTeam(projectId);
+  const permission =
+    team && currentUserId ? getPermission(team, currentUserId) : undefined;
+  // Read-only only once the team says so, to avoid hiding controls while
+  // it loads.
+  const readOnly = permission === "viewer" || permission === null;
   const {
     submit: createTask,
     isSubmitting: isCreating,
@@ -199,18 +222,19 @@ export function Board({ projectId }: BoardProps) {
 
   // Map API items to frontend tasks, applying any in-flight optimistic status
   const tasks: FrontendTask[] = backendTasks.map((task) =>
-    toFrontendTask({ ...task, status: getEffectiveStatus(task) }),
+    toFrontendTask({ ...task, status: getEffectiveStatus(task) }, teamUsers),
   );
 
   // Drag and drop task status update: optimistic, with rollback on failure
   // and a per-task pending lock, both handled by useTaskDragAndDrop.
   const handleDropTask = useCallback(
     (taskId: string, targetColumnId: ColumnId) => {
+      if (readOnly) return;
       const task = backendTasks.find((t) => t.id === taskId);
       if (!task) return;
       void moveTask(task, toBackendStatus(targetColumnId));
     },
-    [backendTasks, moveTask],
+    [backendTasks, moveTask, readOnly],
   );
 
   const handleOpenCreate = (columnId: ColumnId = "todo") => {
@@ -247,6 +271,7 @@ export function Board({ projectId }: BoardProps) {
       priority: toBackendPriority(activeTask.priority),
       status: toBackendStatus(activeTask.columnId),
       deadline: activeTask.deadline ?? null,
+      assigneeId: activeTask.assignee?.id || null,
     };
 
     if (isEditing) {
@@ -284,7 +309,7 @@ export function Board({ projectId }: BoardProps) {
           flexDirection: "column",
           gap: "24px",
           width: "100%",
-          minHeight: "100vh",
+          flex: 1,
           boxSizing: "border-box",
         }}
       >
@@ -308,13 +333,19 @@ export function Board({ projectId }: BoardProps) {
               </View>
             </View>
 
-            <Button
-              color="primary"
-              size="medium"
-              onClick={() => handleOpenCreate()}
-            >
-              + Add Task
-            </Button>
+            {readOnly ? (
+              <Text variant="caption-1" color="neutral-faded">
+                Read-only access
+              </Text>
+            ) : (
+              <Button
+                color="primary"
+                size="medium"
+                onClick={() => handleOpenCreate()}
+              >
+                + Add Task
+              </Button>
+            )}
           </View>
         </Card>
 
@@ -355,11 +386,17 @@ export function Board({ projectId }: BoardProps) {
             <EmptyState
               size="page"
               title="No tasks yet"
-              description="Create your first task to get this board started."
+              description={
+                readOnly
+                  ? "No task has been created on this project yet."
+                  : "Create your first task to get this board started."
+              }
               action={
-                <Button color="primary" onClick={() => handleOpenCreate()}>
-                  Create a task
-                </Button>
+                !readOnly && (
+                  <Button color="primary" onClick={() => handleOpenCreate()}>
+                    Create a task
+                  </Button>
+                )
               }
             />
           </Card>
@@ -381,8 +418,10 @@ export function Board({ projectId }: BoardProps) {
                 title={column.title}
                 tasks={tasks.filter((task) => task.columnId === column.id)}
                 onDropTask={handleDropTask}
-                onAddTask={() => handleOpenCreate(column.id)}
-                onOpenTask={handleOpenEdit}
+                onAddTask={
+                  readOnly ? undefined : () => handleOpenCreate(column.id)
+                }
+                onOpenTask={readOnly ? undefined : handleOpenEdit}
                 isTaskPending={isTaskPending}
               />
             ))}
@@ -435,20 +474,30 @@ export function Board({ projectId }: BoardProps) {
                 {/* Assignee */}
                 <FormControl>
                   <FormControl.Label>Assignee</FormControl.Label>
-                  <TextField
+                  <Select
                     name="assignee"
-                    placeholder="Assignee name"
-                    value={activeTask.assignee?.name ?? ""}
+                    value={activeTask.assignee?.id ?? ""}
                     onChange={({ value }) =>
-                      setActiveTask((prev) => ({
-                        ...prev,
-                        assignee: {
-                          id: prev.assignee?.id || "user",
-                          name: value,
-                        },
-                      }))
+                      setActiveTask((prev) => {
+                        const user = teamUsers.find((u) => u.userId === value);
+                        return {
+                          ...prev,
+                          assignee: user
+                            ? { id: user.userId, name: user.name }
+                            : undefined,
+                        };
+                      })
                     }
-                  />
+                  >
+                    <Select.Option value="">Unassigned</Select.Option>
+                    {teamUsers.map((user) => (
+                      <Select.Option key={user.userId} value={user.userId}>
+                        {user.role === "owner"
+                          ? `${user.name} (owner)`
+                          : user.name}
+                      </Select.Option>
+                    ))}
+                  </Select>
                 </FormControl>
 
                 {/* Priority */}

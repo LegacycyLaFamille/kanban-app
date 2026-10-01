@@ -167,6 +167,8 @@ describe("TaskService - événements", () => {
         changes: ["title", "status"],
         previousStatus: "TODO",
         status: "IN_PROGRESS",
+        assigneeId: null,
+        previousAssigneeId: null,
       });
     });
 

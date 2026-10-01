@@ -80,18 +80,50 @@ export class ProjectController {
     }
   }
 
+  async getTeam(req: Request<{ projectId: string }>, res: Response) {
+    try {
+      const team = await this.projectService.getTeam(
+        req.params.projectId,
+        req.userId!,
+      );
+      return res.status(200).json(team);
+    } catch (error: unknown) {
+      return this.handleServiceError(error, res);
+    }
+  }
+
   async addMember(req: Request<{ projectId: string }>, res: Response) {
     try {
       const { projectId } = req.params;
       const userId = req.userId!;
-      const { email } = req.body;
+      const { email, role } = req.body;
 
       const member = await this.projectService.addMember(
         projectId,
         userId,
         email,
+        role,
       );
       return res.status(201).json(member);
+    } catch (error: unknown) {
+      return this.handleServiceError(error, res);
+    }
+  }
+
+  async updateMemberRole(
+    req: Request<{ projectId: string; memberUserId: string }>,
+    res: Response,
+  ) {
+    try {
+      const { projectId, memberUserId } = req.params;
+
+      const member = await this.projectService.updateMemberRole(
+        projectId,
+        req.userId!,
+        memberUserId,
+        req.body.role,
+      );
+      return res.status(200).json(member);
     } catch (error: unknown) {
       return this.handleServiceError(error, res);
     }

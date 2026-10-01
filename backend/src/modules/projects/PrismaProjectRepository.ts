@@ -1,20 +1,28 @@
 import {
   PrismaClient,
+  type Board as PrismaBoard,
   type Project as PrismaProject,
 } from "../../generated/prisma/client.js";
+import { Board } from "../boards/Board.js";
 import { Project } from "./Project.js";
 import type { ProjectRepository } from "./ProjectRepository.js";
 
 export class PrismaProjectRepository implements ProjectRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  private toDomain(prismaProject: PrismaProject): Project {
+  private toDomain(
+    prismaProject: PrismaProject & { Board?: PrismaBoard[] },
+  ): Project {
     return new Project(
       prismaProject.id,
       prismaProject.name,
       prismaProject.description,
       prismaProject.ownerId,
       prismaProject.createdAt,
+      (prismaProject.Board ?? []).map(
+        (board) =>
+          new Board(board.id, board.name, board.projectId, board.createdAt),
+      ),
     );
   }
 
