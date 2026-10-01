@@ -80,7 +80,9 @@ export function Column({
             {/* Header with Title, Count, and + button */}
             <View direction="row" align="center" justify="space-between">
               <View direction="row" align="center" gap={2}>
-                <Text weight="bold">{title}</Text>
+                <Text as="h2" weight="bold">
+                  {title}
+                </Text>
                 <Text variant="caption-1" color="neutral-faded">
                   ({tasks.length})
                 </Text>

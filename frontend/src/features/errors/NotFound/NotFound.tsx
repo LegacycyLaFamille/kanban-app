@@ -7,7 +7,7 @@ export default function NotFound() {
       <div className="not-found__glow" />
 
       <div className="not-found__content">
-        <div className="not-found__code">
+        <div className="not-found__code" aria-hidden="true">
           <span>4</span>
 
           <div className="not-found__zero">
@@ -46,11 +46,17 @@ export default function NotFound() {
         </div>
       </div>
 
-      <div className="not-found__corner not-found__corner--top">
+      <div
+        className="not-found__corner not-found__corner--top"
+        aria-hidden="true"
+      >
         SYS_404 // PAGE_NOT_FOUND
       </div>
 
-      <div className="not-found__corner not-found__corner--bottom">
+      <div
+        className="not-found__corner not-found__corner--bottom"
+        aria-hidden="true"
+      >
         STATUS: <span>NOT FOUND</span>
       </div>
     </main>

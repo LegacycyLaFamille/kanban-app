@@ -142,7 +142,6 @@ export function AdminDashboardPage() {
                                     <Select
                                       name={`assignee-${task.id}`}
                                       size="small"
-                                      placeholder="Unassigned"
                                       disabled={pending}
                                       value={effectiveAssigneeId ?? ""}
                                       inputAttributes={{
@@ -156,16 +155,11 @@ export function AdminDashboardPage() {
                                         )
                                       }
                                     >
-                                      <Select.Option value="">
-                                        Unassigned
-                                      </Select.Option>
+                                      <option value="">Unassigned</option>
                                       {group.assignableUsers.map((user) => (
-                                        <Select.Option
-                                          key={user.id}
-                                          value={user.id}
-                                        >
+                                        <option key={user.id} value={user.id}>
                                           {user.name}
-                                        </Select.Option>
+                                        </option>
                                       ))}
                                     </Select>
                                   </div>

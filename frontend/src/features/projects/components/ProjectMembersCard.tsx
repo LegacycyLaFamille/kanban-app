@@ -158,9 +158,9 @@ export function ProjectMembersCard({
                         }}
                       >
                         {ROLES.map((role) => (
-                          <Select.Option key={role} value={role}>
+                          <option key={role} value={role}>
                             {ROLE_LABELS[role]}
-                          </Select.Option>
+                          </option>
                         ))}
                       </Select>
                     </div>

@@ -42,6 +42,7 @@ This is a working baseline established by a code-level pass (branch `feat/rgaa`)
 - Every text input must have a **programmatically associated label** — either reshaped's `FormControl` / `FormControl.Label` (see `LoginPage.tsx`, `RegisterPage.tsx`, the kanban task modal in `Board.tsx`), or a native `<label htmlFor={id}>` paired with a matching `id` via `useId()` (see `ProjectForm.tsx`, `BoardForm.tsx`). A `<Text>` sitting visually above a field is **not** a label — a screen reader has no way to connect the two.
 - Validation/server errors are linked to their field with `aria-describedby` and surfaced with `aria-invalid` + `role="alert"`, not color alone.
 - Groups of mutually-exclusive toggle buttons (e.g. the Priority/Status pickers in the task modal) are wrapped in `role="group"` with an `aria-label`, and each button carries `aria-pressed` — the selected state is not conveyed by color alone.
+- reshaped `Select`: always pass native `<option>` children, never `Select.Option`. With `Select.Option`, reshaped renders a custom dropdown button that neither `FormControl.Label` nor `inputAttributes` can name (`inputAttributes` lands on a hidden `<input>`), so a screen reader only hears the selected value. With `<option>`, it renders a native `<select>` that is labelled correctly.
 
 ### 3.4 Dialogs (theme 7 / 12)
 
@@ -106,13 +107,25 @@ Before opening a PR that adds or changes frontend UI, check:
 ### 4.6 Color and contrast
 
 - [ ] Never use color as the only way to convey state (selected/error/success) — pair it with text, an icon, or an ARIA state attribute.
-- [ ] If you introduce a new color pairing (new text/background combination), check it against at least 4.5:1 contrast (normal text) / 3:1 (large text) — e.g. with the browser's dev tools contrast checker. This project has not run a full contrast audit (see [§6](#6-known-gaps--not-done)); don't assume an existing pairing is already verified.
+- [ ] If you introduce a new color pairing (new text/background combination), check it against at least 4.5:1 contrast (normal text) / 3:1 (large text) — e.g. with the browser's dev tools contrast checker. The automated audit ([§5](#5-automated-audit-and-why-it-isnt-enough)) checks default states only: check hover/focus/disabled states by hand.
 
 ---
 
-## 5. Why not just use an automated linter for all of this?
+## 5. Automated audit, and why it isn't enough
 
-Automated tools (axe-core, Lighthouse, eslint-plugin-jsx-a11y) catch a meaningful slice of RGAA/WCAG criteria — missing labels, missing `alt`, invalid ARIA — and are worth adding to CI as a future improvement (see [§6](#6-known-gaps--not-done)). They cannot catch everything in this checklist: whether a keyboard alternative to a drag gesture actually reaches the same outcome, whether a heading hierarchy makes sense, whether an `aria-label` describes the right thing. Automated tooling is a floor, not a substitute for the checklist above.
+`frontend/e2e/accessibility.e2e.test.ts` runs axe-core (WCAG 2.1 A + AA rules) on every page of the running app, in the real theme, with test data it creates itself: login, register, 404, 403, projects, project details, kanban board, task dialog, my tasks, notifications, profile. It also checks that focus stays trapped in the task dialog and returns to the card when it closes.
+
+```bash
+# backend (API + Postgres) running, then from frontend/
+npx playwright test e2e/accessibility.e2e.test.ts
+# also print what needs a human eye: the accessibility tree of each page
+# and a pixel-based contrast measurement for text over gradients
+A11Y_REPORT=1 npx playwright test e2e/accessibility.e2e.test.ts
+```
+
+Run it before opening a PR that touches the UI. A new page should get its own test there.
+
+Automated tools catch a meaningful slice of RGAA/WCAG criteria — missing labels, missing `alt`, invalid ARIA, contrast — but they cannot catch everything in this checklist: whether a keyboard alternative to a drag gesture actually reaches the same outcome, whether a heading hierarchy makes sense, whether an `aria-label` describes the right thing. Automated tooling is a floor, not a substitute for the checklist above.
 
 ---
 
@@ -120,9 +133,13 @@ Automated tools (axe-core, Lighthouse, eslint-plugin-jsx-a11y) catch a meaningfu
 
 Being explicit about this so nobody mistakes "a pass was done" for "this is RGAA-certified":
 
-- **No color contrast audit** was run against the actual rendered theme (reshaped `slate`, dark mode). Pairings should be spot-checked with a contrast tool before this is trusted at AA level. Only the unread-notification badge and the project search placeholder have been checked and fixed so far.
-- **No screen-reader testing campaign** (NVDA, JAWS, VoiceOver) was performed — the fixes here are based on correct ARIA/semantic HTML usage, not on listening to how each one actually sounds.
-- **No automated accessibility linting in CI** (axe-core, `eslint-plugin-jsx-a11y`, Lighthouse CI) — would be the natural next step to prevent regressions on new PRs.
+- **Color contrast** of every page's default state is checked by the automated audit ([§5](#5-automated-audit-and-why-it-isnt-enough)), including text over gradients. Not covered: hover, focus and disabled states, error states not triggered by the test, and the admin dashboard (the audit has no admin user).
+- **No screen-reader testing campaign** (NVDA, JAWS, VoiceOver) was performed. The accessibility tree each page exposes has been reviewed, but nobody has listened to how it actually sounds.
+- **The automated audit doesn't run in CI**: e2e tests need the backend and a database, which the CI workflows don't start yet.
+- **Known reshaped defects** (library code, not fixable from ours; worth reporting upstream):
+  - The modal backdrop (`Overlay`) hardcodes `role="button"` around the whole dialog: a screen reader may announce a button wrapping the dialog (axe `nested-interactive`; the audit ignores only that exact node).
+  - `FormControl.Helper` always renders `role="alert"`, so static help text (e.g. the email hint on the profile page) can be announced as an alert when it reappears.
+  - `Modal.Title` renders an `<h6>`, which skips heading levels inside dialogs.
 - **`frontend/src/app/legacy/**`** and **`backend/src/legacy/**`** are explicitly out of scope (same exclusion as the quality gate and SonarQube — see `docs/quality-gate.md`): pre-migration legacy code is not touched for this.
 - The admin dashboard's and "My Tasks" page's tables are simple (no merged cells, one header row, `<th>` headings). Each one is named after its project via `aria-labelledby` (RGAA 5.4), set by `shared/utils/labelTable.ts`: reshaped's `Table` doesn't forward attributes to its `<table>`, and a `<caption>` child breaks its `<thead>`/`<tbody>` detection. Reuse that helper for any new table.
 - This document itself has not been through a legal/compliance review — treat it as engineering guidance, not a certification deliverable.

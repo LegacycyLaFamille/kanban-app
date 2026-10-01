@@ -319,6 +319,7 @@ export function Board({ projectId, currentUserId }: BoardProps) {
             <View direction="row" align="center" gap={3}>
               <div
                 className="auth-logo"
+                aria-hidden="true"
                 style={{ width: 36, height: 36, fontSize: 16 }}
               >
                 K
@@ -489,13 +490,13 @@ export function Board({ projectId, currentUserId }: BoardProps) {
                       })
                     }
                   >
-                    <Select.Option value="">Unassigned</Select.Option>
+                    <option value="">Unassigned</option>
                     {teamUsers.map((user) => (
-                      <Select.Option key={user.userId} value={user.userId}>
+                      <option key={user.userId} value={user.userId}>
                         {user.role === "owner"
                           ? `${user.name} (owner)`
                           : user.name}
-                      </Select.Option>
+                      </option>
                     ))}
                   </Select>
                 </FormControl>

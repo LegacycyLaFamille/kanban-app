@@ -42,6 +42,7 @@ Il s'agit d'une base de travail établie par une revue au niveau du code (branch
 - Chaque champ de texte doit avoir un **label associé programmatiquement** — soit via `FormControl` / `FormControl.Label` de reshaped (voir `LoginPage.tsx`, `RegisterPage.tsx`, la modale de tâche dans `Board.tsx`), soit via un `<label htmlFor={id}>` natif couplé à un `id` généré par `useId()` (voir `ProjectForm.tsx`, `BoardForm.tsx`). Un `<Text>` placé visuellement au-dessus d'un champ n'est **pas** un label — un lecteur d'écran n'a aucun moyen de relier les deux.
 - Les erreurs de validation/serveur sont liées à leur champ via `aria-describedby` et signalées avec `aria-invalid` + `role="alert"`, pas seulement par la couleur.
 - Les groupes de boutons à choix exclusif (ex. les sélecteurs Priorité/Statut dans la modale de tâche) sont encapsulés dans `role="group"` avec un `aria-label`, et chaque bouton porte `aria-pressed` — l'état sélectionné n'est pas transmis uniquement par la couleur.
+- `Select` de reshaped : toujours passer des enfants `<option>` natifs, jamais `Select.Option`. Avec `Select.Option`, reshaped affiche un bouton de liste déroulante personnalisé que ni `FormControl.Label` ni `inputAttributes` ne peuvent nommer (`inputAttributes` arrive sur un `<input>` caché) : un lecteur d'écran n'entend que la valeur sélectionnée. Avec `<option>`, il affiche un `<select>` natif correctement étiqueté.
 
 ### 3.4 Boîtes de dialogue (thématique 7 / 12)
 
@@ -106,13 +107,25 @@ Avant d'ouvrir une PR qui ajoute ou modifie une interface frontend, vérifier :
 ### 4.6 Couleur et contraste
 
 - [ ] Ne jamais utiliser la couleur comme seul moyen de transmettre un état (sélectionné/erreur/succès) — l'associer à du texte, une icône, ou un attribut d'état ARIA.
-- [ ] En cas de nouvelle association de couleurs (nouvelle combinaison texte/fond), vérifier un contraste d'au moins 4.5:1 (texte normal) / 3:1 (grand texte) — par exemple avec le vérificateur de contraste des outils de développement du navigateur. Ce projet n'a pas fait l'objet d'un audit de contraste complet (voir [§6](#6-manques-connus--non-traité)) ; ne pas supposer qu'une association existante est déjà vérifiée.
+- [ ] En cas de nouvelle association de couleurs (nouvelle combinaison texte/fond), vérifier un contraste d'au moins 4.5:1 (texte normal) / 3:1 (grand texte) — par exemple avec le vérificateur de contraste des outils de développement du navigateur. L'audit automatisé ([§5](#5-audit-automatisé-et-pourquoi-il-ne-suffit-pas)) ne vérifie que les états par défaut : vérifier à la main les états survol/focus/désactivé.
 
 ---
 
-## 5. Pourquoi ne pas simplement tout automatiser avec un linter ?
+## 5. Audit automatisé, et pourquoi il ne suffit pas
 
-Les outils automatisés (axe-core, Lighthouse, eslint-plugin-jsx-a11y) détectent une part significative des critères RGAA/WCAG — labels manquants, `alt` manquant, ARIA invalide — et méritent d'être ajoutés à la CI comme amélioration future (voir [§6](#6-manques-connus--non-traité)). Ils ne peuvent pas tout détecter de cette checklist : si une alternative clavier à un geste de glisser atteint réellement le même résultat, si une hiérarchie de titres a du sens, si un `aria-label` décrit la bonne chose. L'outillage automatisé est un plancher, pas un substitut à la checklist ci-dessus.
+`frontend/e2e/accessibility.e2e.test.ts` lance axe-core (règles WCAG 2.1 A + AA) sur chaque page de l'application en fonctionnement, dans le vrai thème, avec des données de test qu'il crée lui-même : connexion, inscription, 404, 403, projets, détail d'un projet, tableau kanban, modale de tâche, mes tâches, notifications, profil. Il vérifie aussi que le focus reste piégé dans la modale de tâche et revient sur la carte à sa fermeture.
+
+```bash
+# backend (API + Postgres) démarré, puis depuis frontend/
+npx playwright test e2e/accessibility.e2e.test.ts
+# affiche aussi ce qui demande un œil humain : l'arbre d'accessibilité de
+# chaque page et une mesure du contraste au pixel pour le texte sur dégradé
+A11Y_REPORT=1 npx playwright test e2e/accessibility.e2e.test.ts
+```
+
+À lancer avant d'ouvrir une PR qui touche à l'interface. Une nouvelle page doit y avoir son propre test.
+
+Les outils automatisés détectent une part significative des critères RGAA/WCAG — labels manquants, `alt` manquant, ARIA invalide, contraste — mais ils ne peuvent pas tout détecter de cette checklist : si une alternative clavier à un geste de glisser atteint réellement le même résultat, si une hiérarchie de titres a du sens, si un `aria-label` décrit la bonne chose. L'outillage automatisé est un plancher, pas un substitut à la checklist ci-dessus.
 
 ---
 
@@ -120,9 +133,13 @@ Les outils automatisés (axe-core, Lighthouse, eslint-plugin-jsx-a11y) détecten
 
 Pour être explicite, afin que personne ne confonde « une passe a été faite » avec « ceci est certifié RGAA » :
 
-- **Aucun audit de contraste des couleurs** n'a été réalisé sur le thème réellement affiché (reshaped `slate`, mode sombre). Les associations devraient être vérifiées ponctuellement avec un outil de contraste avant d'être considérées comme fiables au niveau AA. Seuls le badge de notifications non lues et le placeholder de la recherche de projets ont été vérifiés et corrigés à ce jour.
-- **Aucune campagne de test avec lecteur d'écran** (NVDA, JAWS, VoiceOver) n'a été menée — les corrections ici s'appuient sur un usage correct d'ARIA/HTML sémantique, pas sur une écoute réelle du rendu.
-- **Aucun linting d'accessibilité automatisé en CI** (axe-core, `eslint-plugin-jsx-a11y`, Lighthouse CI) — ce serait la prochaine étape naturelle pour éviter les régressions sur les futures PR.
+- **Le contraste des couleurs** de l'état par défaut de chaque page est vérifié par l'audit automatisé ([§5](#5-audit-automatisé-et-pourquoi-il-ne-suffit-pas)), y compris le texte sur dégradé. Non couverts : les états survol, focus et désactivé, les états d'erreur que le test ne déclenche pas, et le tableau de bord admin (l'audit n'a pas d'utilisateur admin).
+- **Aucune campagne de test avec lecteur d'écran** (NVDA, JAWS, VoiceOver) n'a été menée. L'arbre d'accessibilité exposé par chaque page a été relu, mais personne n'a écouté le rendu réel.
+- **L'audit automatisé ne tourne pas en CI** : les tests e2e ont besoin du backend et d'une base de données, que les workflows de CI ne démarrent pas encore.
+- **Défauts connus de reshaped** (code de la bibliothèque, non corrigeable depuis le nôtre ; à signaler en amont) :
+  - Le fond des modales (`Overlay`) impose `role="button"` autour de toute la boîte de dialogue : un lecteur d'écran peut annoncer un bouton qui englobe la modale (axe `nested-interactive` ; l'audit ignore uniquement ce nœud précis).
+  - `FormControl.Helper` pose toujours `role="alert"` : un texte d'aide statique (ex. l'indication sous l'email de la page profil) peut être annoncé comme une alerte quand il réapparaît.
+  - `Modal.Title` rend un `<h6>`, ce qui saute des niveaux de titre dans les modales.
 - **`frontend/src/app/legacy/**`** et **`backend/src/legacy/**`** sont explicitement hors périmètre (même exclusion que la porte de qualité et SonarQube — voir `docs/quality-gate.md`) : le code legacy pré-migration n'est pas touché pour ce chantier.
 - Les tableaux du tableau de bord admin et de la page « My Tasks » sont simples (pas de cellules fusionnées, une seule ligne d'en-tête, des `<th>`). Chacun porte le nom de son projet via `aria-labelledby` (RGAA 5.4), posé par `shared/utils/labelTable.ts` : le `Table` de reshaped ne transmet pas d'attributs à son `<table>`, et un enfant `<caption>` casse sa détection du `<thead>`/`<tbody>`. Réutiliser cet utilitaire pour tout nouveau tableau.
 - Ce document lui-même n'a fait l'objet d'aucune relecture juridique/conformité — à considérer comme un guide d'ingénierie, pas un livrable de certification.

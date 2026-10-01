@@ -295,13 +295,9 @@ describe("Board", () => {
     await user.type(screen.getByPlaceholderText("Task title..."), "Write docs");
     // Wait for the team to load, then open the dropdown and pick Bob.
     await waitFor(() => expect(getProjectTeam).toHaveBeenCalled());
-    // The modal itself is also a "button": target the dropdown trigger.
-    const trigger = screen
-      .getAllByRole("button", { name: /Unassigned/ })
-      .find((element) => element.getAttribute("aria-haspopup") === "menu");
-    await user.click(trigger!);
-    expect(await screen.findByText("Alice (owner)")).toBeTruthy();
-    await user.click(await screen.findByText("Bob"));
+    const assignee = screen.getByRole("combobox", { name: "Assignee" });
+    expect(await within(assignee).findByText("Alice (owner)")).toBeTruthy();
+    await user.selectOptions(assignee, "Bob");
     await user.click(
       within(screen.getByRole("dialog")).getByRole("button", {
         name: "Create Task",

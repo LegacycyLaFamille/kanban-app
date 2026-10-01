@@ -168,6 +168,9 @@ export function AppSidebar({
               <div key={item.path} className={styles.navigationItem}>
                 <MenuItem
                   selected={isActive(item.path)}
+                  attributes={{
+                    "aria-current": isActive(item.path) ? "page" : undefined,
+                  }}
                   startSlot={item.icon}
                   onClick={() => navigate(item.path)}
                 >
@@ -200,7 +203,7 @@ export function AppSidebar({
         </View>
 
         <div className={styles.user}>
-          <div className={styles.avatar}>
+          <div className={styles.avatar} aria-hidden="true">
             {userName.charAt(0).toUpperCase()}
           </div>
 
