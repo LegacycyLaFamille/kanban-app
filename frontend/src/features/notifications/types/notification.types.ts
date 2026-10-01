@@ -8,6 +8,9 @@ export type AppNotification = {
   task: { id: string; title: string | null } | null;
   // null for system events or when the acting user was deleted.
   actor: { id: string; name: string } | null;
+  // task.updated only: fields that changed, e.g. ["status", "priority"].
+  // Optional for responses from an older backend.
+  changes?: string[];
 };
 
 export type NotificationPage = {

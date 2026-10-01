@@ -5,16 +5,43 @@ function taskLabel(notification: AppNotification): string {
   return title ? `"${title}"` : "a task";
 }
 
+// Backend task field names, as shown to the user.
+const FIELD_LABELS: Record<string, string> = {
+  title: "title",
+  description: "description",
+  status: "status",
+  priority: "priority",
+  deadline: "deadline",
+  boardId: "board",
+  assigneeId: "assignee",
+};
+
+// ["status"] -> "status", ["a", "b", "c"] -> "a, b and c".
+function formatFields(changes: string[]): string {
+  const labels = changes.map((field) => FIELD_LABELS[field] ?? field);
+  if (labels.length <= 1) return labels.join("");
+  return `${labels.slice(0, -1).join(", ")} and ${labels.at(-1)}`;
+}
+
 export function notificationMessage(notification: AppNotification): string {
   const actor = notification.actor?.name ?? "Someone";
+  const task = taskLabel(notification);
 
   switch (notification.type) {
     case "task.created":
-      return `${actor} created ${taskLabel(notification)}`;
+      return `${actor} created ${task}`;
     case "task.completed":
-      return `${actor} completed ${taskLabel(notification)}`;
+      return `${actor} completed ${task}`;
+    case "task.assigned":
+      return `${actor} assigned you to ${task}`;
+    case "task.updated": {
+      const changes = notification.changes ?? [];
+      return changes.length > 0
+        ? `${actor} changed the ${formatFields(changes)} of ${task}`
+        : `${actor} updated ${task}`;
+    }
     default:
-      return `${actor} updated ${taskLabel(notification)}`;
+      return `${actor} updated ${task}`;
   }
 }
 

@@ -7,10 +7,13 @@ import type {
 
 export const NOTIFICATION_CONSUMER = "notifications.task-events";
 
-// task.updated is not notified: every drag-and-drop would create one.
+// task.updated only notifies the task's assignee (see
+// NotificationService.notifyTaskEvent), not the whole project.
 export const NOTIFIED_EVENT_TYPES = [
   "task.created",
   "task.completed",
+  "task.updated",
+  "task.assigned",
 ] as const satisfies NotifiableTaskEvent["type"][];
 
 export function subscribeNotificationConsumer(

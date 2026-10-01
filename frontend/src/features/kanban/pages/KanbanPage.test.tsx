@@ -6,6 +6,10 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 
 import { KanbanPage } from "./KanbanPage";
 
+vi.mock("../../auth/hooks/useAuth", () => ({
+  useAuth: () => ({ user: { id: "user-1" } }),
+}));
+
 vi.mock("../components/Board", () => ({
   Board: ({ projectId }: { projectId: string }) => (
     <div>{`board:${projectId}`}</div>

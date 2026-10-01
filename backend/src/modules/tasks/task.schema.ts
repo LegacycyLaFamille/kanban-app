@@ -33,6 +33,7 @@ export const createTaskSchema = z.strictObject({
   priority: prioritySchema.default("Medium"),
   deadline: isoDateString.nullable().optional(),
   boardId: boardIdSchema.nullable().optional(),
+  assigneeId: assigneeIdSchema.nullable().optional(),
 });
 
 export const updateTaskSchema = z

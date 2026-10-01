@@ -29,6 +29,35 @@ describe("notificationMessage", () => {
     );
   });
 
+  it("tells the user they were assigned", () => {
+    expect(notificationMessage({ ...base, type: "task.assigned" })).toBe(
+      'Jane Doe assigned you to "Write copy"',
+    );
+  });
+
+  it("lists the fields changed on an assigned task", () => {
+    expect(
+      notificationMessage({
+        ...base,
+        type: "task.updated",
+        changes: ["status"],
+      }),
+    ).toBe('Jane Doe changed the status of "Write copy"');
+    expect(
+      notificationMessage({
+        ...base,
+        type: "task.updated",
+        changes: ["title", "priority", "deadline"],
+      }),
+    ).toBe('Jane Doe changed the title, priority and deadline of "Write copy"');
+  });
+
+  it("falls back to a generic update without the changed fields", () => {
+    expect(notificationMessage({ ...base, type: "task.updated" })).toBe(
+      'Jane Doe updated "Write copy"',
+    );
+  });
+
   it("falls back when the actor or task title is unknown", () => {
     expect(
       notificationMessage({

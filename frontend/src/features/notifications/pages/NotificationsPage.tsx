@@ -74,7 +74,7 @@ export function NotificationsPage() {
       ) : (
         <EmptyState
           title="No notifications yet"
-          description="You will be notified when tasks are created or completed in your projects."
+          description="You will be notified when tasks are created or completed in your projects, and when a task assigned to you changes."
         />
       );
     }

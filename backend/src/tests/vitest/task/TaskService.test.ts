@@ -113,6 +113,43 @@ describe("TaskService", () => {
       expect(mockTaskRepository.save).toHaveBeenCalled();
     });
 
+    it("creates the task already assigned to a project member", async () => {
+      mockProjectRepository.findById.mockResolvedValue(project);
+      mockProjectMemberRepository.findByProjectAndUser.mockImplementation(
+        async (_projectId: string, userId: string) =>
+          userId === memberId
+            ? new ProjectMember("m-1", "proj-1", memberId, new Date())
+            : null,
+      );
+      mockTaskRepository.save.mockImplementation(async (task: Task) => task);
+
+      const result = await taskService.create("proj-1", ownerId, {
+        title: "Test",
+        description: "",
+        priority: "Medium",
+        status: "TODO",
+        assigneeId: memberId,
+      });
+
+      expect(result.assigneeId).toBe(memberId);
+    });
+
+    it("rejects an assignee outside the project at creation", async () => {
+      mockProjectRepository.findById.mockResolvedValue(project);
+      mockProjectMemberRepository.findByProjectAndUser.mockResolvedValue(null);
+
+      await expect(
+        taskService.create("proj-1", ownerId, {
+          title: "Test",
+          description: "",
+          priority: "Medium",
+          status: "TODO",
+          assigneeId: outsiderId,
+        }),
+      ).rejects.toThrow("Assignee is not a member of this project");
+      expect(mockTaskRepository.save).not.toHaveBeenCalled();
+    });
+
     it("rejects task creation from a member (read-only access)", async () => {
       mockProjectRepository.findById.mockResolvedValue(project);
       mockProjectMemberRepository.findByProjectAndUser.mockResolvedValue(
@@ -128,6 +165,29 @@ describe("TaskService", () => {
         }),
       ).rejects.toThrow("Forbidden");
       expect(mockTaskRepository.save).not.toHaveBeenCalled();
+    });
+
+    it("lets an EDITOR member create a task", async () => {
+      mockProjectRepository.findById.mockResolvedValue(project);
+      mockProjectMemberRepository.findByProjectAndUser.mockResolvedValue(
+        new ProjectMember(
+          randomUUID(),
+          project.id,
+          memberId,
+          new Date(),
+          "EDITOR",
+        ),
+      );
+      mockTaskRepository.save.mockImplementation(async (t: Task) => t);
+
+      const result = await taskService.create("proj-1", memberId, {
+        title: "By an editor",
+        description: "",
+        priority: "Medium",
+        status: "TODO",
+      });
+
+      expect(result.title).toBe("By an editor");
     });
   });
 

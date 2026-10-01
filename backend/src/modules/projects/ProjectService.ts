@@ -2,7 +2,7 @@ import type { ProjectRepository } from "./ProjectRepository.js";
 import type { ProjectMemberRepository } from "./ProjectMemberRepository.js";
 import type { UserRepository } from "../users/UserRepository.js";
 import { Project } from "./Project.js";
-import { ProjectMember } from "./ProjectMember.js";
+import { ProjectMember, type ProjectRole } from "./ProjectMember.js";
 import { ProjectAccessGuard } from "../../shared/security/ProjectAccessGuard.js";
 import { randomUUID } from "node:crypto";
 
@@ -14,6 +14,22 @@ export interface CreateProjectDto {
 export interface UpdateProjectDto {
   name?: string;
   description?: string;
+}
+
+export interface ProjectTeamMember {
+  // ProjectMember id.
+  id: string;
+  userId: string;
+  name: string;
+  email: string;
+  joinedAt: Date;
+  role: ProjectRole;
+}
+
+export interface ProjectTeam {
+  // null only if the owner account no longer exists.
+  owner: { userId: string; name: string; email: string } | null;
+  members: ProjectTeamMember[];
 }
 
 export class ProjectService {
@@ -108,11 +124,54 @@ export class ProjectService {
     return this.projectMemberRepository.findByProject(projectId);
   }
 
-  /** Owner only: grant another user read-only access to the project. */
+  /**
+   * Owner or member: the owner and the members with their display names,
+   * e.g. to show the team or pick a task assignee.
+   */
+  async getTeam(projectId: string, userId: string): Promise<ProjectTeam> {
+    const project = await this.projectAccessGuard.assertCanView(
+      projectId,
+      userId,
+    );
+
+    const [owner, memberships] = await Promise.all([
+      this.userRepository.findById(project.ownerId),
+      this.projectMemberRepository.findByProject(projectId),
+    ]);
+    const memberUsers = await Promise.all(
+      memberships.map((membership) =>
+        this.userRepository.findById(membership.userId),
+      ),
+    );
+
+    const members: ProjectTeamMember[] = [];
+    memberships.forEach((membership, index) => {
+      const user = memberUsers[index];
+      if (!user) return;
+      members.push({
+        id: membership.id,
+        userId: user.id,
+        name: user.name,
+        email: user.email,
+        joinedAt: membership.createdAt,
+        role: membership.role,
+      });
+    });
+
+    return {
+      owner: owner
+        ? { userId: owner.id, name: owner.name, email: owner.email }
+        : null,
+      members,
+    };
+  }
+
+  /** Owner only: grant another user access to the project (read-only by default). */
   async addMember(
     projectId: string,
     userId: string,
     memberEmail: string,
+    role: ProjectRole = "VIEWER",
   ): Promise<ProjectMember> {
     const project = await this.projectAccessGuard.assertIsOwner(
       projectId,
@@ -136,9 +195,39 @@ export class ProjectService {
       projectId,
       userToAdd.id,
       new Date(),
+      role,
     );
     await this.projectMemberRepository.add(member);
     return member;
+  }
+
+  /** Owner only: switch a member between VIEWER and EDITOR. */
+  async updateMemberRole(
+    projectId: string,
+    userId: string,
+    memberUserId: string,
+    role: ProjectRole,
+  ): Promise<ProjectMember> {
+    await this.projectAccessGuard.assertIsOwner(projectId, userId);
+
+    const member = await this.projectMemberRepository.findByProjectAndUser(
+      projectId,
+      memberUserId,
+    );
+    if (!member) throw new Error("Not found");
+
+    await this.projectMemberRepository.updateRole(
+      projectId,
+      memberUserId,
+      role,
+    );
+    return new ProjectMember(
+      member.id,
+      member.projectId,
+      member.userId,
+      member.createdAt,
+      role,
+    );
   }
 
   /** Owner only: revoke a member's access to the project. */

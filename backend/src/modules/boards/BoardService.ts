@@ -1,5 +1,5 @@
 import type { BoardRepository } from "./BoardRepository.js";
-import type { ProjectRepository } from "../projects/ProjectRepository.js";
+import type { ProjectAccessGuard } from "../../shared/security/ProjectAccessGuard.js";
 import { Board } from "./Board.js";
 import { randomUUID } from "crypto";
 
@@ -15,8 +15,10 @@ export interface UpdateBoardDto {
 export class BoardService {
   constructor(
     private readonly boardRepository: BoardRepository,
-    private readonly projectRepository: ProjectRepository,
+    private readonly projectAccessGuard: ProjectAccessGuard,
   ) {}
+
+  // Reads: owner or any member. Writes: owner or EDITOR member.
   async create(userId: string, data: CreateBoardDto): Promise<Board> {
     const boardToCreate = new Board(
       randomUUID(),
@@ -24,7 +26,7 @@ export class BoardService {
       data.projectId,
       new Date(),
     );
-    await this.checkOwnerShip(userId, data.projectId);
+    await this.projectAccessGuard.assertCanEdit(data.projectId, userId);
     await this.boardRepository.save(boardToCreate);
     return boardToCreate;
   }
@@ -33,11 +35,11 @@ export class BoardService {
     if (!board) {
       throw new Error("Board not found");
     }
-    await this.checkOwnerShip(userid, board.projectId);
+    await this.projectAccessGuard.assertCanView(board.projectId, userid);
     return board;
   }
   async getProjectBoards(userId: string, projectId: string): Promise<Board[]> {
-    await this.checkOwnerShip(userId, projectId);
+    await this.projectAccessGuard.assertCanView(projectId, userId);
     const boards = await this.boardRepository.findByProject(projectId);
     if (!boards) {
       throw new Error("Project Not found");
@@ -49,7 +51,7 @@ export class BoardService {
     if (!oldBoard) {
       throw new Error("Board not found");
     }
-    await this.checkOwnerShip(userId, oldBoard.projectId);
+    await this.projectAccessGuard.assertCanEdit(oldBoard.projectId, userId);
     const newBoard = new Board(
       data.id,
       data.name ?? oldBoard.name,
@@ -65,20 +67,7 @@ export class BoardService {
     if (!board) {
       throw new Error("Board not found");
     }
-    await this.checkOwnerShip(userid, board.projectId);
+    await this.projectAccessGuard.assertCanEdit(board.projectId, userid);
     await this.boardRepository.delete(board);
-  }
-
-  private async checkOwnerShip(
-    userId: string,
-    projectId: string,
-  ): Promise<void> {
-    const project = await this.projectRepository.findById(projectId);
-    if (!project) {
-      throw new Error("Not found");
-    }
-    if (project.ownerId != userId) {
-      throw new Error("Forbidden");
-    }
   }
 }

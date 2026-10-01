@@ -13,9 +13,12 @@ import { useAuth } from "../../auth/hooks/useAuth";
 
 import { BoardForm } from "../components/BoardForm";
 import { ProjectForm } from "../components/ProjectForm";
+import { ProjectMembersCard } from "../components/ProjectMembersCard";
 
+import { getPermission } from "../api/team.api";
 import { useBoards } from "../hooks/useBoards";
 import { useProjectDetails } from "../hooks/useProjectDetails";
+import { useProjectTeam } from "../hooks/useProjectTeam";
 
 import type {
   CreateBoardPayload,
@@ -71,6 +74,11 @@ export function ProjectDetailsPage() {
     deleteBoard,
     resetMutationError: resetBoardMutationError,
   } = useBoards(projectId);
+
+  // Pending invitations are only listed for the owner.
+  const teamState = useProjectTeam(projectId, {
+    withInvitations: Boolean(project && user?.id === project.ownerId),
+  });
 
   const [isEditing, setIsEditing] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
@@ -133,6 +141,11 @@ export function ProjectDetailsPage() {
   }
 
   const isOwner = user?.id === project.ownerId;
+  // Owner or EDITOR member: may manage boards (project settings and members
+  // stay owner-only).
+  const permission =
+    teamState.team && user ? getPermission(teamState.team, user.id) : null;
+  const canEditBoards = isOwner || permission === "editor";
 
   function openEditProject() {
     resetMutationError();
@@ -378,7 +391,7 @@ export function ProjectDetailsPage() {
                       </Text>
                     )}
 
-                    {isOwner && !boardForm && (
+                    {canEditBoards && !boardForm && (
                       <Button
                         variant="ghost"
                         disabled={boardsLoading || isMutatingBoard}
@@ -390,7 +403,7 @@ export function ProjectDetailsPage() {
                   </div>
                 </div>
 
-                {isOwner && boardForm && (
+                {canEditBoards && boardForm && (
                   <BoardForm
                     key={
                       boardForm.kind === "create"
@@ -420,7 +433,7 @@ export function ProjectDetailsPage() {
                   />
                 )}
 
-                {isOwner && boardToDelete && (
+                {canEditBoards && boardToDelete && (
                   <div
                     role="group"
                     aria-label={`Delete board ${boardToDelete.name}`}
@@ -490,12 +503,12 @@ export function ProjectDetailsPage() {
                   <EmptyState
                     title="No boards yet."
                     description={
-                      isOwner
+                      canEditBoards
                         ? "Create a board to start adding tasks."
                         : "The project owner has not created any boards yet."
                     }
                     action={
-                      isOwner &&
+                      canEditBoards &&
                       !boardForm && (
                         <Button
                           variant="outline"
@@ -528,7 +541,7 @@ export function ProjectDetailsPage() {
                           </div>
                         </Link>
 
-                        {isOwner && (
+                        {canEditBoards && (
                           <div className={styles.actions}>
                             <Button
                               variant="ghost"
@@ -564,7 +577,10 @@ export function ProjectDetailsPage() {
                 <div className={styles.information}>
                   <div>
                     <span>Owner</span>
-                    <strong>{isOwner ? user?.name : project.ownerId}</strong>
+                    <strong>
+                      {teamState.team?.owner?.name ??
+                        (isOwner ? user?.name : project.ownerId)}
+                    </strong>
                   </div>
 
                   <div>
@@ -579,6 +595,8 @@ export function ProjectDetailsPage() {
                 </div>
               </View>
             </Card>
+
+            <ProjectMembersCard isOwner={isOwner} teamState={teamState} />
           </aside>
         </div>
       </View>

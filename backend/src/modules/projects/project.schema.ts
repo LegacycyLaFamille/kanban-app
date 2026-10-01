@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { PROJECT_ROLES } from "./ProjectMember.js";
+
+export const projectRoleSchema = z.enum(PROJECT_ROLES);
 
 export const createProjectSchema = z.strictObject({
   name: z.string().trim().min(1, "Name is required").max(200),
@@ -19,6 +22,11 @@ export const updateProjectSchema = z
 
 export const addProjectMemberSchema = z.strictObject({
   email: z.email(),
+  role: projectRoleSchema.default("VIEWER"),
+});
+
+export const updateProjectMemberSchema = z.strictObject({
+  role: projectRoleSchema,
 });
 
 export type CreateProjectInput = z.infer<typeof createProjectSchema>;

@@ -541,6 +541,48 @@ paths:
                 $ref: '#/components/schemas/StandardError'
 
   /api/v1/projects/{projectId}/members/{memberUserId}:
+    patch:
+      summary: Change le rôle d'un membre (VIEWER ou EDITOR)
+      description: Réservé au propriétaire du projet.
+      tags:
+        - Projects
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: memberUserId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role:
+                  $ref: '#/components/schemas/ProjectRole'
+      responses:
+        '200':
+          description: Rôle mis à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectMember'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
     delete:
       summary: Retire un membre du projet
       description: Réservé au propriétaire du projet.
@@ -568,6 +610,205 @@ paths:
           $ref: '#/components/responses/ForbiddenError'
         '404':
           $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/projects/{projectId}/team:
+    get:
+      summary: Propriétaire et membres du projet avec nom et email
+      description: Propriétaire ou membre. Sert à afficher l'équipe et à choisir l'assigné d'une tâche.
+      tags:
+        - Projects
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Équipe du projet
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectTeam'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/v1/projects/{projectId}/invitations:
+    get:
+      summary: Invitations en attente du projet
+      description: Réservé au propriétaire du projet.
+      tags:
+        - Invitations
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Invitations en attente, plus anciennes en premier
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProjectInvitation'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    post:
+      summary: Invite un utilisateur (par email) à rejoindre le projet
+      description: >
+        Réservé au propriétaire. L'utilisateur devient membre (lecture seule)
+        seulement après avoir accepté l'invitation.
+      tags:
+        - Invitations
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+                role:
+                  $ref: '#/components/schemas/ProjectRole'
+      responses:
+        '201':
+          description: Invitation créée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectInvitation'
+        '400':
+          description: Email invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: Projet introuvable (NOT_FOUND) ou aucun utilisateur avec cet email (USER_NOT_FOUND)
+        '409':
+          description: Déjà propriétaire (ALREADY_OWNER), déjà membre (ALREADY_MEMBER) ou déjà invité (ALREADY_INVITED)
+
+  /api/v1/projects/{projectId}/invitations/{invitationId}:
+    delete:
+      summary: Annule une invitation en attente
+      description: Réservé au propriétaire du projet.
+      tags:
+        - Invitations
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: invitationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Invitation annulée
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: Projet ou invitation introuvable
+
+  /api/v1/invitations:
+    get:
+      summary: Invitations reçues par l'utilisateur connecté
+      tags:
+        - Invitations
+      security:
+        - CookieAuth: []
+      responses:
+        '200':
+          description: Invitations en attente, plus récentes en premier
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProjectInvitation'
+
+  /api/v1/invitations/{invitationId}/accept:
+    post:
+      summary: Accepte une invitation et rejoint le projet comme membre
+      tags:
+        - Invitations
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: invitationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Invitation acceptée
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  projectId:
+                    type: string
+                    format: uuid
+        '404':
+          description: Invitation introuvable ou adressée à un autre utilisateur (INVITATION_NOT_FOUND)
+
+  /api/v1/invitations/{invitationId}/decline:
+    post:
+      summary: Refuse une invitation
+      tags:
+        - Invitations
+      security:
+        - CookieAuth: []
+      parameters:
+        - name: invitationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Invitation refusée
+        '404':
+          description: Invitation introuvable ou adressée à un autre utilisateur (INVITATION_NOT_FOUND)
 
   # ==========================================
   # MODULE BOARDS
@@ -1182,7 +1423,11 @@ components:
           format: uuid
         type:
           type: string
-          enum: [task.created, task.completed]
+          enum: [task.created, task.completed, task.assigned, task.updated]
+          description: >
+            task.created / task.completed : tout le projet ; task.assigned :
+            la personne assignée ; task.updated : la personne assignée à la
+            tâche modifiée (jamais l'auteur de l'action).
         readAt:
           type: string
           format: date-time
@@ -1220,6 +1465,12 @@ components:
               format: uuid
             name:
               type: string
+        changes:
+          type: array
+          items:
+            type: string
+            enum: [title, description, status, priority, deadline, boardId, assigneeId]
+          description: Champs modifiés (task.updated uniquement, vide sinon).
 
     NotificationPage:
       type: object
@@ -1350,12 +1601,22 @@ components:
             $ref: '#/components/schemas/Board'
           description: Liste des tableaux liés (peut être omis si non peuplé)
 
+    ProjectRole:
+      type: string
+      enum: [VIEWER, EDITOR]
+      default: VIEWER
+      description: >
+        VIEWER lit le projet ; EDITOR gère aussi ses boards et ses tâches.
+        Le propriétaire a toujours tous les droits.
+
     ProjectMember:
       type: object
       description: >
-        Read-only access grant; the owner is not duplicated here (see
+        Access grant with a role; the owner is not duplicated here (see
         Project.ownerId).
       properties:
+        role:
+          $ref: '#/components/schemas/ProjectRole'
         id:
           type: string
           format: uuid
@@ -1368,6 +1629,83 @@ components:
         createdAt:
           type: string
           format: date-time
+
+    ProjectTeam:
+      type: object
+      properties:
+        owner:
+          type: object
+          nullable: true
+          properties:
+            userId:
+              type: string
+              format: uuid
+            name:
+              type: string
+            email:
+              type: string
+              format: email
+        members:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+                description: Id du ProjectMember
+              userId:
+                type: string
+                format: uuid
+              name:
+                type: string
+              email:
+                type: string
+                format: email
+              joinedAt:
+                type: string
+                format: date-time
+              role:
+                $ref: '#/components/schemas/ProjectRole'
+
+    ProjectInvitation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        role:
+          $ref: '#/components/schemas/ProjectRole'
+        project:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+        invitee:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+            email:
+              type: string
+              format: email
+        inviter:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
 
     Board:
       type: object
@@ -1586,6 +1924,11 @@ components:
           type: string
           format: uuid
           nullable: true
+        assigneeId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Propriétaire ou membre du projet.
 
     UpdateTaskDto:
       type: object
