@@ -134,6 +134,15 @@ export class TaskController {
       });
     }
 
+    if (message === "Board is not part of this project") {
+      return res.status(400).json({
+        error: {
+          code: "BOARD_NOT_IN_PROJECT",
+          message: "The selected board does not belong to this task's project.",
+        },
+      });
+    }
+
     if (message === "Not found" || message === "Project not found") {
       return res.status(404).json({
         error: {

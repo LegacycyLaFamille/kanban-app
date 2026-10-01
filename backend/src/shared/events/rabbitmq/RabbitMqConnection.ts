@@ -114,6 +114,29 @@ export class RabbitMqConnection {
     return channel;
   }
 
+  /**
+   * Messages waiting in a queue and its consumer count, read without
+   * consuming anything (passive check). Null when the broker is not
+   * connected or the queue does not exist.
+   */
+  async inspectQueue(
+    name: string,
+  ): Promise<{ messages: number; consumers: number } | null> {
+    if (this.model === null || !this.isConnected()) return null;
+    const channel = await this.model.createChannel();
+    // A missing queue makes the broker close the channel with an error
+    // event; without a listener it would crash the process.
+    channel.on("error", () => {});
+    try {
+      const { messageCount, consumerCount } = await channel.checkQueue(name);
+      return { messages: messageCount, consumers: consumerCount };
+    } catch {
+      return null;
+    } finally {
+      await channel.close().catch(() => {});
+    }
+  }
+
   // Runs after every successful (re)connection, once the topology exists.
   // Consumers use it to re-open their channels after a connection loss.
   onConnected(listener: () => Promise<void> | void): void {

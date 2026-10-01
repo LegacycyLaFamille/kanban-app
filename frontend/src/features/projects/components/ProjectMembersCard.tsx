@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useId, useState, type FormEvent } from "react";
 import {
   Button,
   Card,
@@ -58,6 +58,8 @@ export function ProjectMembersCard({
   const [inviteRole, setInviteRole] = useState<ProjectRole>("VIEWER");
   const [emailError, setEmailError] = useState<string | null>(null);
   const [sentTo, setSentTo] = useState<string | null>(null);
+  const emailId = useId();
+  const emailErrorId = useId();
 
   const memberCount = team ? team.members.length + (team.owner ? 1 : 0) : 0;
 
@@ -84,7 +86,9 @@ export function ProjectMembersCard({
     <Card padding={5}>
       <View gap={4}>
         <div className={styles.member}>
-          <Text weight="bold">Members</Text>
+          <Text as="h2" weight="bold">
+            Members
+          </Text>
           <View.Item grow />
           {team && <Text color="neutral-faded">{memberCount}</Text>}
         </div>
@@ -154,9 +158,9 @@ export function ProjectMembersCard({
                         }}
                       >
                         {ROLES.map((role) => (
-                          <Select.Option key={role} value={role}>
+                          <option key={role} value={role}>
                             {ROLE_LABELS[role]}
-                          </Select.Option>
+                          </option>
                         ))}
                       </Select>
                     </div>
@@ -195,7 +199,7 @@ export function ProjectMembersCard({
 
         {isOwner && invitations.length > 0 && (
           <View gap={3}>
-            <p className={styles.sectionTitle}>Pending invitations</p>
+            <h3 className={styles.sectionTitle}>Pending invitations</h3>
             <ul className={styles.list} aria-label="Pending invitations">
               {invitations.map((invitation) => (
                 <li key={invitation.id} className={styles.member}>
@@ -241,15 +245,19 @@ export function ProjectMembersCard({
             onSubmit={(event) => void handleInvite(event)}
             noValidate
           >
-            <p className={styles.sectionTitle}>Invite a member</p>
+            <label htmlFor={emailId} className={styles.sectionTitle}>
+              Email address to invite
+            </label>
             <TextField
+              id={emailId}
               name="invite-email"
               placeholder="colleague@example.com"
               value={email}
               hasError={Boolean(emailError)}
               inputAttributes={{
                 type: "email",
-                "aria-label": "Email address to invite",
+                "aria-invalid": Boolean(emailError),
+                "aria-describedby": emailError ? emailErrorId : undefined,
               }}
               onChange={({ value }) => {
                 setEmail(value);
@@ -284,7 +292,11 @@ export function ProjectMembersCard({
             </div>
 
             {emailError && (
-              <p role="alert" className={`${styles.message} ${styles.error}`}>
+              <p
+                id={emailErrorId}
+                role="alert"
+                className={`${styles.message} ${styles.error}`}
+              >
                 {emailError}
               </p>
             )}

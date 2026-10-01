@@ -124,7 +124,7 @@ export function NotificationsPage() {
       <View gap={6}>
         <header className={styles.header}>
           <div>
-            <Text variant="featured-2" weight="bold">
+            <Text as="h1" variant="featured-2" weight="bold">
               Notifications
             </Text>
             <Text color="neutral-faded">

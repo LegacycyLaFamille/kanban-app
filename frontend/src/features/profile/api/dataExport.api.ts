@@ -18,3 +18,7 @@ export function downloadDataExport(options: DataExportOptions): Promise<Blob> {
 
   return httpClient.getFile(`/auth/me/export?${params.toString()}`);
 }
+
+export function downloadPersonalData(): Promise<Blob> {
+  return httpClient.getFile("/auth/me/personal-data");
+}

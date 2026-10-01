@@ -105,6 +105,23 @@ Unexpected errors go through `recordError`
 span, the span is marked as failed and an `error` log with the stack is
 written.
 
+Errors no controller catches end in the global handler
+(`src/shared/http/errorHandler.ts`, registered last in `main.ts`):
+
+- malformed JSON answers **400** `INVALID_JSON`, a body over the size limit
+  **413** `PAYLOAD_TOO_LARGE`, logged as a `warn` "Rejected malformed request";
+- anything else (a middleware that throws, an async handler without
+  try/catch) answers **500** `INTERNAL_SERVER_ERROR`, is recorded on the span
+  and logged as an `error` "Unhandled request error";
+- both logs carry `method`, `route` (the pattern, e.g.
+  `/api/v1/tasks/:taskId`), `status`, `userId` when signed in, and
+  `trace_id`; never the body, the query string or the headers. The client
+  never gets a stack trace or an HTML page.
+
+An unhandled promise rejection or uncaught exception is logged as a `fatal`
+log before the process exits (`logFatalProcessErrors`), instead of a raw
+stack trace on stderr.
+
 ### Event workflow
 
 | Metric                                      | Labels                                                                   | Description           |
@@ -130,6 +147,23 @@ JSON on stdout, with `trace_id` and `span_id` when a span is active, and sent
 to Loki. Event workflow logs carry `component`, `eventId`, `eventType`,
 `consumer` and `attempt`.
 
+### Checking the instrumentation
+
+What was checked against the running stack (development, 2026-10-02):
+
+- a `POST /api/v1/projects/:projectId/tasks` produces **one** trace of 28
+  spans: HTTP server span (route, status 201), Express middlewares,
+  PostgreSQL queries, `publish kanban.events` (producer), then
+  `notifications.task-events process` (consumer, with `kanban.event.*`
+  attributes) and its own PostgreSQL queries;
+- the backend logs of that request carry the same `trace_id`;
+- the traces and logs of a registration and a login contain neither the
+  password, nor the email, nor any token or cookie.
+
+To repeat it: create a task, then in Grafana open the dashboard's **Event
+workflow traces** panel, or Explore → Tempo with
+`{ resource.service.name = "kanban-backend" && span.kanban.consumer != nil }`.
+
 ### Sensitive data
 
 - pino replaces `password`, `passwordHash`, `token`, `accessToken` and
@@ -144,13 +178,81 @@ to Loki. Event workflow logs carry `component`, `eventId`, `eventType`,
 
 **Kanban - Backend observability** (Grafana → Dashboards → Kanban) is
 provisioned from `docker/observability/grafana/dashboards/kanban-backend.json`,
-in four rows: API, Event workflow, Logs and Traces. It is read-only in
+in five rows: Alerts, API, Event workflow, Logs and Traces. It is read-only in
 Grafana: to change it, edit it in the UI, export it as JSON (Export → Export as
 JSON, "Export the dashboard to use in another instance" off) and replace the
 file.
 
 The demonstration scenario is described in
 [OBSERVABILITY_DEMO.md](OBSERVABILITY_DEMO.md).
+
+## Alerts
+
+Six alert rules are provisioned from
+`docker/observability/grafana/provisioning/alerting/kanban-alerts.yaml`
+(Grafana → Alerting → Alert rules, folder **Kanban**), and listed in the
+**Alerts** panel at the top of the dashboard:
+
+| Rule | Fires when | Severity |
+| --- | --- | --- |
+| API 5xx error rate above 5% | more than 5% of requests fail with a 5xx, for 5 min | critical |
+| API p95 latency above 1 s | p95 latency above 1 s, for 10 min | warning |
+| Events dead-lettered | an event was dead-lettered or unreadable in the last 15 min | warning |
+| Events could not be published | a publish to RabbitMQ failed in the last 15 min | warning |
+| Dead-letter queue not empty | messages wait in `kanban.events.dead-letter`, for 5 min | info |
+| No consumer on the notification queue | nobody consumes `notifications.task-events`, for 5 min | critical |
+
+No traffic is not an error: rules on request metrics stay OK without data.
+The last rule fires on missing data too, since a missing queue is the same
+problem as a missing consumer.
+
+**No contact point is provisioned**: alerts are visible in Grafana but nobody
+is notified. To be notified, add a contact point (email, Discord, Slack…) in
+Grafana → Alerting → Contact points and point the default notification policy
+at it. Contact points hold secrets (webhook URLs, SMTP passwords): keep them
+out of the repository.
+
+To change a rule, edit the YAML file and restart Grafana
+(`docker compose restart grafana`); rules provisioned from files cannot be
+edited in the UI.
+
+## Admin system page
+
+Application admins (`User.role = ADMIN`) have a **System** page in the app
+(`/admin/system`, sidebar entry "System"), backed by `GET /api/v1/admin/system`.
+It answers "is everything working right now?" without Grafana access:
+
+- overall status (`ok`, `degraded`, `down`) and the reasons behind it;
+- database (with the latency of a `SELECT 1`) and RabbitMQ connection state;
+- the notification workflow queues (`notifications.task-events`, its
+  `.retry` queue, `kanban.events.dead-letter`): waiting messages and
+  consumers, read with a passive `checkQueue` that consumes nothing;
+- events published / processed / retried / dead-lettered since the backend
+  started;
+- activity: users, projects, tasks by status, overdue tasks, unread
+  notifications;
+- the last 20 warnings and errors logged by the backend;
+- a link to this dashboard.
+
+The page refreshes every 15 s (can be turned off) and only while the tab is
+visible. Its status is `degraded` when the broker is not connected, when no
+consumer listens on the notification queue, or when events wait in the
+dead-letter queue; `down` when the database is unreachable.
+
+What it does **not** replace: everything here is the backend's view of the
+present moment. Counters reset when the backend restarts, the warnings list
+lives in memory, and there is no history: that is what Grafana is for. Set
+`GRAFANA_URL` on the backend (default in `compose.yaml`: `GRAFANA_ROOT_URL`,
+in `backend/.env.example`: `http://localhost:3001`) to show the dashboard
+link. Being an app admin does not give access to Grafana: Grafana has its own
+login (see below).
+
+Code: `backend/src/modules/admin/AdminSystemService.ts` (status rules),
+`PrismaAdminStatsRepository.ts` (activity counts),
+`RabbitMqConnection.inspectQueue`, `eventTotals()` in
+`shared/observability/eventMetrics.ts`, `recentWarningsAndErrors()` in
+`shared/observability/logger.ts`; frontend
+`frontend/src/features/admin/pages/AdminSystemPage.tsx`.
 
 ## Deployed stacks
 

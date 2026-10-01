@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Badge, MenuItem, Text, View } from "reshaped";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AppLogo } from "../../shared/components/AppLogo/AppLogo.tsx";
 
 import styles from "./AppSidebar.module.css";
@@ -94,14 +94,11 @@ const adminNavigationItems: NavigationItem[] = [
     ),
   },
   {
-    label: "Legacy",
-    path: "/",
+    label: "System",
+    path: "/admin/system",
     icon: (
       <SidebarIcon>
-        <rect x="3" y="3" width="7" height="7" rx="1" />
-        <rect x="14" y="3" width="7" height="7" rx="1" />
-        <rect x="3" y="14" width="7" height="7" rx="1" />
-        <rect x="14" y="14" width="7" height="7" rx="1" />
+        <path d="M3 12h4l3-8 4 16 3-8h4" />
       </SidebarIcon>
     ),
   },
@@ -132,10 +129,6 @@ export function AppSidebar({
     : navigationItems;
 
   const isActive = (path: string) => {
-    if (path === "/") {
-      return location.pathname === "/";
-    }
-
     return (
       location.pathname === path || location.pathname.startsWith(`${path}/`)
     );
@@ -168,17 +161,25 @@ export function AppSidebar({
               <div key={item.path} className={styles.navigationItem}>
                 <MenuItem
                   selected={isActive(item.path)}
+                  attributes={{
+                    "aria-current": isActive(item.path) ? "page" : undefined,
+                  }}
                   startSlot={item.icon}
                   onClick={() => navigate(item.path)}
                 >
                   <span className={styles.navigationLabel}>{item.label}</span>
                   {item.path === "/notifications" && notificationCount > 0 && (
-                    <span
-                      className={styles.notificationBadge}
-                      aria-label={`${notificationCount} unread notifications`}
-                    >
-                      {notificationCount > 99 ? "99+" : notificationCount}
-                    </span>
+                    <>
+                      <span
+                        className={styles.notificationBadge}
+                        aria-hidden="true"
+                      >
+                        {notificationCount > 99 ? "99+" : notificationCount}
+                      </span>
+                      <span className="sr-only">
+                        {`, ${notificationCount} unread notifications`}
+                      </span>
+                    </>
                   )}
                 </MenuItem>
               </div>
@@ -195,7 +196,7 @@ export function AppSidebar({
         </View>
 
         <div className={styles.user}>
-          <div className={styles.avatar}>
+          <div className={styles.avatar} aria-hidden="true">
             {userName.charAt(0).toUpperCase()}
           </div>
 
@@ -211,6 +212,11 @@ export function AppSidebar({
             <span>{userEmail}</span>
           </div>
         </div>
+
+        <nav className={styles.legalLinks} aria-label="Legal">
+          <Link to="/privacy">Privacy</Link>
+          <Link to="/legal-notice">Legal notice</Link>
+        </nav>
       </View>
     </aside>
   );

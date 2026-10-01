@@ -4,6 +4,7 @@ import type { UserRepository } from "../../../modules/users/UserRepository.js";
 import { AuthService } from "../../../modules/auth/AuthService.js";
 import jwt from "jsonwebtoken";
 import { User } from "../../../modules/users/User.js";
+import { sessionIdOf } from "../../../shared/security/tokens.js";
 
 vi.mock("bcrypt", () => ({
   default: {
@@ -92,9 +93,10 @@ describe("AuthService", () => {
         passwordHash: fakeHash,
       });
       vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
+      // The refresh token is signed first: the access token carries its hash.
       vi.mocked(jwt.sign)
-        .mockReturnValueOnce("fake_access_token" as never)
-        .mockReturnValueOnce("fake_refresh_token" as never);
+        .mockReturnValueOnce("fake_refresh_token" as never)
+        .mockReturnValueOnce("fake_access_token" as never);
 
       // Act
       const result = await authService.login(
@@ -106,9 +108,10 @@ describe("AuthService", () => {
       expect(result.accessToken).toBe("fake_access_token");
       expect(result.refreshToken).toBe("fake_refresh_token");
       expect(result.user.id).toBe(user.id);
+      // Only the session id (hash of the refresh token) is stored.
       expect(mockUserRepository.updateRefreshToken).toHaveBeenCalledWith(
         user.id,
-        "fake_refresh_token",
+        sessionIdOf("fake_refresh_token"),
       );
     });
 
@@ -140,19 +143,38 @@ describe("AuthService", () => {
       const validRefreshToken = "valid_refresh_token";
 
       mockUserRepository.findByRefreshToken.mockResolvedValue(user);
-      vi.mocked(jwt.verify).mockReturnValue({ userId: user.id } as never);
+      vi.mocked(jwt.verify).mockReturnValue({
+        userId: user.id,
+        typ: "refresh",
+      } as never);
       vi.mocked(jwt.sign)
-        .mockReturnValueOnce("new_access_token" as never)
-        .mockReturnValueOnce("new_refresh_token" as never);
+        .mockReturnValueOnce("new_refresh_token" as never)
+        .mockReturnValueOnce("new_access_token" as never);
 
       const result = await authService.refreshSession(validRefreshToken);
 
+      expect(mockUserRepository.findByRefreshToken).toHaveBeenCalledWith(
+        sessionIdOf(validRefreshToken),
+      );
       expect(result.accessToken).toBe("new_access_token");
       expect(result.refreshToken).toBe("new_refresh_token");
       expect(mockUserRepository.updateRefreshToken).toHaveBeenCalledWith(
         user.id,
-        "new_refresh_token",
+        sessionIdOf("new_refresh_token"),
       );
+    });
+
+    it("refuses an access token presented as a refresh token", async () => {
+      vi.mocked(jwt.verify).mockReturnValue({
+        userId: "user-1",
+        typ: "access",
+        sid: "s",
+      } as never);
+
+      await expect(
+        authService.refreshSession("an_access_token"),
+      ).rejects.toThrow(/expirée/i);
+      expect(mockUserRepository.findByRefreshToken).not.toHaveBeenCalled();
     });
 
     it("doit rejeter si le refresh token est introuvable en base ou invalide", async () => {

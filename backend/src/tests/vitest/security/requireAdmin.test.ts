@@ -6,9 +6,15 @@ import jwt from "jsonwebtoken";
 import cookieParser from "cookie-parser";
 
 import { requireAdmin } from "../../../shared/security/requireAdmin.js";
-import { requireAuth } from "../../../shared/security/requireAuth.js";
+import { createRequireAuth } from "../../../shared/security/createRequireAuth.js";
 import { User } from "../../../modules/users/User.js";
 import type { UserRepository } from "../../../modules/users/UserRepository.js";
+
+// jsonwebtoken is mocked: every token decodes to the mocked claims, and
+// their session is always the active one.
+const requireAuth = createRequireAuth({
+  activeSessionId: async () => "session-1",
+});
 
 vi.mock("jsonwebtoken", () => ({
   default: {
@@ -136,7 +142,11 @@ describe("requireAdmin middleware", () => {
 
     it("rejects an authenticated non-admin with 403", async () => {
       process.env.JWT_SECRET = "test_secret";
-      vi.mocked(jwt.verify).mockReturnValue({ userId: "user_1" } as never);
+      vi.mocked(jwt.verify).mockReturnValue({
+        userId: "user_1",
+        typ: "access",
+        sid: "session-1",
+      } as never);
 
       const findById = vi
         .fn()
@@ -155,7 +165,11 @@ describe("requireAdmin middleware", () => {
 
     it("allows an authenticated admin through", async () => {
       process.env.JWT_SECRET = "test_secret";
-      vi.mocked(jwt.verify).mockReturnValue({ userId: "user_1" } as never);
+      vi.mocked(jwt.verify).mockReturnValue({
+        userId: "user_1",
+        typ: "access",
+        sid: "session-1",
+      } as never);
 
       const findById = vi
         .fn()

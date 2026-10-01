@@ -95,6 +95,7 @@
 }
 
 .details,
+.accessibility,
 .overview,
 .data,
 .danger {
@@ -123,12 +124,16 @@
     order: 2;
   }
 
-  .data {
+  .accessibility {
     order: 3;
   }
 
-  .danger {
+  .data {
     order: 4;
+  }
+
+  .danger {
+    order: 5;
   }
 }
 

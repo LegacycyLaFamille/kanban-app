@@ -108,7 +108,7 @@ export function ProjectsPage() {
       <View gap={7}>
         <header className={styles.header}>
           <div>
-            <Text weight="bold">
+            <Text as="h1" weight="bold">
               <span className={styles.pageTitle}>Projects</span>
             </Text>
 

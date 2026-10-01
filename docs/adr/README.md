@@ -24,6 +24,8 @@ ADRs document important architectural decisions, why they were made, the alterna
 | ADR-007 | Do Not Automatically Migrate Legacy Todo Data | Accepted |
 | ADR-008 | RabbitMQ for Event-Driven Workflows | Accepted |
 | ADR-009 | Reshaped as the Frontend UI Foundation | Accepted |
+| ADR-010 | Landing Page on `/`, Legacy App Moved to `/legacy` | Proposed (`/legacy` part superseded by ADR-011) |
+| ADR-011 | Remove the Legacy TodoList Application | Proposed |
 
 ## Naming convention
 

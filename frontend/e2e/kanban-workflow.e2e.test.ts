@@ -300,7 +300,10 @@ test.describe("Kanban end-to-end flow", () => {
       await expect(page).toHaveURL(
         new RegExp(`/projects/${projectId}/kanban\\?boardId=${boardId}$`),
       );
-      await expect(page.getByText("Project Board")).toBeVisible();
+      // The Kanban is titled after the board it shows.
+      await expect(
+        page.getByRole("heading", { level: 1, name: boardName }),
+      ).toBeVisible();
     });
   });
 

@@ -6,6 +6,13 @@ import {
 import { User } from "./User.js";
 import type { UserActivityStats, UserRepository } from "./UserRepository.js";
 
+// Emails are compared without case: "Alice@x.com" and "alice@x.com" are the
+// same account. New emails are stored lowercase (auth.schema.ts); this also
+// finds accounts created before that.
+function sameEmail(email: string) {
+  return { email: { equals: email, mode: "insensitive" as const } };
+}
+
 export class PrismaUserRepository implements UserRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
@@ -25,11 +32,24 @@ export class PrismaUserRepository implements UserRepository {
   }
 
   async findByEmail(email: string): Promise<User | null> {
-    const user = await this.prisma.user.findUnique({ where: { email } });
+    const user = await this.prisma.user.findFirst({ where: sameEmail(email) });
     return user ? this.toDomain(user) : null;
   }
 
+  private async emailTaken(email: string, exceptUserId?: string) {
+    const existing = await this.prisma.user.findFirst({
+      where: { ...sameEmail(email), NOT: { id: exceptUserId ?? "" } },
+      select: { id: true },
+    });
+    return existing !== null;
+  }
+
   async createWithPassword(user: User, passwordHash: string): Promise<void> {
+    if (await this.emailTaken(user.email)) {
+      throw new Error(
+        "Conflit de données : L'identifiant ou l'email existe déjà.",
+      );
+    }
     try {
       await this.prisma.user.create({
         data: {
@@ -59,6 +79,11 @@ export class PrismaUserRepository implements UserRepository {
   }
 
   async updateProfile(user: User): Promise<void> {
+    if (await this.emailTaken(user.email, user.id)) {
+      throw new Error(
+        "Conflit de données : Cet email est déjà utilisé par un autre compte.",
+      );
+    }
     try {
       await this.prisma.user.update({
         where: { id: user.id },
@@ -85,10 +110,31 @@ export class PrismaUserRepository implements UserRepository {
     }
   }
 
+  async updatePassword(userId: string, passwordHash: string): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash },
+    });
+  }
+
+  async findPasswordHash(userId: string): Promise<string | null> {
+    const record = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { passwordHash: true },
+    });
+    return record?.passwordHash ?? null;
+  }
+
+  async deleteById(userId: string): Promise<void> {
+    await this.prisma.user.delete({ where: { id: userId } });
+  }
+
   async getCredentials(
     email: string,
   ): Promise<{ user: User; passwordHash: string } | null> {
-    const record = await this.prisma.user.findUnique({ where: { email } });
+    const record = await this.prisma.user.findFirst({
+      where: sameEmail(email),
+    });
     if (!record) return null;
 
     const user = User.create(
@@ -99,6 +145,14 @@ export class PrismaUserRepository implements UserRepository {
       record.role,
     );
     return { user, passwordHash: record.passwordHash };
+  }
+
+  async activeSessionId(userId: string): Promise<string | null> {
+    const record = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { refreshToken: true },
+    });
+    return record?.refreshToken ?? null;
   }
 
   async updateRefreshToken(

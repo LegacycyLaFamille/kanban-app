@@ -183,3 +183,30 @@ Les données propres à une fonctionnalité restent autant que possible dans cet
 - débarrassé progressivement du code legacy devenu inutile.
 
 La migration doit démontrer une modernisation maîtrisée du système existant, et non la création d’une nouvelle application indépendante.
+
+---
+
+## 8. État actuel (2026-10-01)
+
+Les étapes de migration ci-dessus sont en grande partie réalisées. Le
+frontend est organisé par fonctionnalité et entièrement en TypeScript hors
+`app/legacy/` :
+
+| Fonctionnalité (`src/features/`) | État                                                          |
+| -------------------------------- | ------------------------------------------------------------- |
+| `auth`                           | Fait : session, connexion/inscription, garde des routes       |
+| `projects`                       | Fait : CRUD, boards, membres, invitations avec rôles          |
+| `kanban`                         | Fait : un board par page, glisser-déposer, cartes colorées    |
+| `tasks`                          | Fait : My Tasks                                               |
+| `notifications`                  | Fait : page et badge des non-lues                             |
+| `profile`                        | Fait : informations, changement de mot de passe, suppression du compte, accessibilité, export |
+| `admin`                          | Fait : tableau de bord, assignation                           |
+| `landing`                        | Fait : landing page sur `/`                                   |
+| `users`                          | Vide : les besoins sont couverts par `auth`, `profile` et `admin` |
+
+L'étape 6 est faite : la TodoList legacy et `app/legacy/` ont été retirées
+([ADR-011](../adr/ADR-011-remove-legacy-todolist.fr.md)). Le frontend est entièrement en
+TypeScript.
+
+Routes et comportement de chaque fonctionnalité :
+[docs/frontend/FEATURES.md](../frontend/FEATURES.md).

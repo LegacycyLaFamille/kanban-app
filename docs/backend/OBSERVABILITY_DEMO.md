@@ -17,6 +17,9 @@ npm run dev          # in a second terminal
 
 - Open <http://localhost:3001>, then Dashboards → Kanban →
   Kanban - Backend observability.
+- For step 6, an admin account in the app: register, then
+  `npx tsx src/scripts/promote-admin.ts --email=<your email>` in `backend/`
+  (see [ADMIN_ROLE.md](ADMIN_ROLE.md)).
 
 ## 1. API activity
 
@@ -37,8 +40,8 @@ per route.
 ## 2. Event workflow
 
 The same traffic publishes `task.created`, `task.updated` and
-`task.completed`. The `notifications.task-events` consumer handles
-`task.created` and `task.completed`.
+`task.completed`. The `notifications.task-events` consumer handles every one
+of them (and `task.assigned`), see [NOTIFICATIONS.md](NOTIFICATIONS.md).
 
 Show in the **Event workflow** row: events published per type, events
 consumed with the `success` outcome, the processing p95 and queue depths
@@ -80,6 +83,34 @@ The consumer span carries `kanban.event.id`, `kanban.event.type`,
 `kanban.consumer` and `kanban.event.attempt`.
 
 **Failed traces** lists the failed attempts of step 3.
+
+## 6. Alerts
+
+The **Alerts** panel at the top of the dashboard lists the six rules (see
+[OBSERVABILITY.md](OBSERVABILITY.md#alerts)). After step 3, **Events
+dead-lettered** fires within a minute, and **Dead-letter queue not empty**
+after 5 minutes while the message stays there. Open Grafana → Alerting →
+Alert rules to show the rule, its query and its state history.
+
+To show the consumer alert: stop the backend (`Ctrl+C` on `npm run dev`).
+**No consumer on the notification queue** goes *pending* within a minute and
+*firing* after 5. Restart the backend: it resolves.
+
+## 7. Admin system page
+
+Sign in to the app with the admin account and open **System** in the
+sidebar (<http://localhost:5173/admin/system>). Show, for the same moment:
+
+- the overall status and its reasons: after step 3 it says **Degraded**,
+  "1 event(s) failed for good and wait in kanban.events.dead-letter";
+- the **Event queues** table with that message in "Failed for good";
+- the **Events** counters (retried, dead-lettered) and the **Recent warnings
+  and errors** list with the retry and dead-letter warnings;
+- the **Open the Grafana dashboard** link, which leads back to the dashboard.
+
+The point to make: the System page answers "is it working now?" for any app
+admin, Grafana answers "what happened, when and why" with history, logs and
+traces.
 
 ## Reset
 

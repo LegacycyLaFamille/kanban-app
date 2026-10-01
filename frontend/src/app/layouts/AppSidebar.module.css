@@ -64,7 +64,7 @@
   font-weight: 700;
   line-height: 1;
 
-  background: #ef4444;
+  background: #dc2626;
 }
 
 .icon {
@@ -136,7 +136,9 @@
   white-space: nowrap;
 }
 
-.userInformation span {
+/* The email only: a descendant selector would also grey out the text of
+   the Admin badge (1.96:1 on its blue background). */
+.userInformation > span {
   overflow: hidden;
 
   margin-top: 2px;
@@ -153,7 +155,31 @@
  * Compact sidebar on medium screens.
  * A mobile drawer can be implemented later if required.
  */
+.legalLinks {
+  display: flex;
+  gap: 12px;
+
+  padding: 0 8px;
+
+  font-size: 12px;
+}
+
+.legalLinks a {
+  color: rgba(255, 255, 255, 0.5);
+  text-decoration: none;
+}
+
+.legalLinks a:hover,
+.legalLinks a:focus-visible {
+  color: rgba(255, 255, 255, 0.85);
+  text-decoration: underline;
+}
+
 @media (max-width: 900px) {
+  .legalLinks {
+    display: none;
+  }
+
   .sidebar {
     width: 76px;
     min-width: 76px;

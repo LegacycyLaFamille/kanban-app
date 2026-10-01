@@ -169,6 +169,8 @@
 
 .sectionAction {
   display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .fieldset {
@@ -316,4 +318,16 @@
   .stat dd {
     font-size: 22px;
   }
+}
+
+.palettePreview {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.previewCards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
 }

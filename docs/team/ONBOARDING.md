@@ -8,7 +8,7 @@ This guide contains the essential information a new team member needs to underst
 
 The project progressively modernizes a legacy TodoList application into a maintainable Kanban application.
 
-The migration is incremental: the legacy application must remain operational while old components are isolated, replaced, validated, and eventually removed.
+The migration was incremental: the legacy application stayed operational while old components were isolated, replaced and validated. It has now been removed ([ADR-011](../adr/ADR-011-remove-legacy-todolist.md)).
 
 ### Main technologies
 
@@ -101,6 +101,9 @@ Long-term technical information belongs under `docs/`.
 Main areas:
 - `docs/audit/`
 - `docs/architecture/`
+- `docs/adr/`
+- `docs/backend/`
+- `docs/frontend/`
 - `docs/standards/`
 - `docs/team/`
 
@@ -270,9 +273,10 @@ Project conventions take precedence over personal coding preferences.
 
 Legacy code must not be rewritten simply because it is old.
 
-Current legacy boundaries:
-- `frontend/src/app/legacy/`
-- `backend/src/legacy/`
+The legacy TodoList (`frontend/src/app/legacy/`, `backend/src/legacy/`) has
+been removed ([ADR-011](../adr/ADR-011-remove-legacy-todolist.md)). Its data is archived by
+`scripts/migrate-legacy-data.sh` ([LEGACY_DATA_MIGRATION.md](../backend/LEGACY_DATA_MIGRATION.md)).
+The rules below still apply to any code being replaced.
 
 Before removing legacy code:
 1. Its replacement must exist.
@@ -284,8 +288,14 @@ Before removing legacy code:
 
 - `docs/audit/`: legacy analysis and technical debt
 - `docs/architecture/`: target architecture and migration strategies
-- `docs/standards/`: development, naming, Git, testing, API, and quality conventions
+- `docs/standards/`: development, naming, Git, testing, API, quality and accessibility (RGAA) conventions
+- `docs/backend/`: backend modules (projects and access, events, notifications, RabbitMQ, observability, admin, data export, integration tests)
+- `docs/frontend/`: frontend routes and features, frontend testing
+- `docs/adr/`: architecture decision records
+- `docs/quality-gate.md`: CI checks, coverage and SonarQube rules
 - `docs/team/`: team organization and onboarding
+
+The same documentation is published to the [GitHub Wiki](https://github.com/LegacycyLaFamille/kanban-app/wiki). Edit `docs/`, never the wiki: see [WIKI.md](WIKI.md).
 
 ## 13. Definition of Done
 
@@ -316,7 +326,7 @@ Depending on the issue, completion includes:
 - [ ] Install project dependencies
 - [ ] Start the frontend locally
 - [ ] Start the backend locally
-- [ ] Verify the legacy application works
+- [ ] Open the app (`http://localhost:5173/`), create an account from the landing page
 - [ ] Identify your assigned issue
 - [ ] Check its dependencies
 - [ ] Read its acceptance criteria

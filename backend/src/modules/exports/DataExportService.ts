@@ -10,7 +10,8 @@ import type {
 } from "./DataExport.js";
 import type { DataExportRepository } from "./DataExportRepository.js";
 
-export type DataExportErrorCode = "PROJECT_NOT_FOUND" | "NOTHING_TO_EXPORT";
+export type DataExportErrorCode =
+  "PROJECT_NOT_FOUND" | "NOTHING_TO_EXPORT" | "USER_NOT_FOUND";
 
 export class DataExportError extends Error {
   constructor(
@@ -206,6 +207,25 @@ export class DataExportService {
       filename: `${basename}.zip`,
       contentType: "application/zip",
       content: zipSync(entries, { level: 6, mtime: now }),
+    };
+  }
+
+  // Unlike exportUserData (project content, people redacted), this is the
+  // user's own personal data (GDPR art. 15 and 20), always one JSON file.
+  async exportPersonalData(
+    userId: string,
+    now: Date = new Date(),
+  ): Promise<ExportFile> {
+    const data = await this.repository.findPersonalData(userId);
+
+    if (!data) {
+      throw new DataExportError("USER_NOT_FOUND", "User not found");
+    }
+
+    return {
+      filename: `kanban-personal-data-${now.toISOString().slice(0, 10)}.json`,
+      contentType: CONTENT_TYPES.json,
+      content: strToU8(JSON.stringify({ exportedAt: now, ...data }, null, 2)),
     };
   }
 

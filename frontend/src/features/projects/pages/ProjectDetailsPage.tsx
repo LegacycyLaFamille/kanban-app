@@ -250,13 +250,9 @@ export function ProjectDetailsPage() {
   return (
     <section className={styles.page}>
       <View gap={7}>
-        <button
-          type="button"
-          className={styles.back}
-          onClick={() => navigate("/projects")}
-        >
-          ← Back to projects
-        </button>
+        <Link to="/projects" className={styles.back}>
+          <span aria-hidden="true">←</span> Back to projects
+        </Link>
 
         <header className={styles.header}>
           <div className={styles.projectHeading}>
@@ -370,7 +366,9 @@ export function ProjectDetailsPage() {
           <div className={styles.mainColumn}>
             <Card padding={5}>
               <View gap={4}>
-                <Text weight="bold">Project overview</Text>
+                <Text as="h2" weight="bold">
+                  Project overview
+                </Text>
 
                 <p className={styles.description}>
                   {project.description || "No description provided."}
@@ -381,7 +379,9 @@ export function ProjectDetailsPage() {
             <Card padding={5}>
               <View gap={4}>
                 <div className={styles.sectionHeader}>
-                  <Text weight="bold">Boards</Text>
+                  <Text as="h2" weight="bold">
+                    Boards
+                  </Text>
 
                   <div className={styles.actions}>
                     {!boardsLoading && !boardsError && (
@@ -572,7 +572,9 @@ export function ProjectDetailsPage() {
           <aside className={styles.sideColumn}>
             <Card padding={5}>
               <View gap={4}>
-                <Text weight="bold">Project information</Text>
+                <Text as="h2" weight="bold">
+                  Project information
+                </Text>
 
                 <div className={styles.information}>
                   <div>

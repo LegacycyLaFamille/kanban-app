@@ -179,6 +179,7 @@ describe("Workflow task → Event Bus → notifications", () => {
       },
       new ProjectAccessGuard(projectRepository, memberRepository),
       eventBus,
+      { findbyId: vi.fn() },
     );
 
     const task = await taskService.create("proj-1", OWNER, {
@@ -339,6 +340,7 @@ describe("Notifications de la personne assignée", () => {
       },
       new ProjectAccessGuard(projectRepository, memberRepository),
       eventBus,
+      { findbyId: vi.fn() },
     );
     const received = (userId: string) =>
       notifications.rows

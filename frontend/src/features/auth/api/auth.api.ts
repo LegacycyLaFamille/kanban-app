@@ -33,3 +33,7 @@ export function logout(): Promise<unknown> {
     skipAuthRefresh: true,
   });
 }
+
+export function deleteCurrentUser(): Promise<void> {
+  return httpClient.delete("/auth/me");
+}

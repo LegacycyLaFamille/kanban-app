@@ -43,6 +43,9 @@ for the `/admin/tasks` endpoints, and the frontend at
   on every route. `Task.assigneeId` (nullable `User` relation, migration
   `add_task_assignee`) backs assignment; a task can only be assigned to its
   project's owner or an existing member — see API_CONVENTIONS.md for why.
+- `/admin/system` (same guards): system status for the admin **System**
+  page — dependencies, event queues, activity, recent errors, Grafana link.
+  See [OBSERVABILITY.md](OBSERVABILITY.md#admin-system-page).
 
 ## Promoting the first admin
 

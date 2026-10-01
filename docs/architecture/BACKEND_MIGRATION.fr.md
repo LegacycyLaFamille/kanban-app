@@ -455,21 +455,28 @@ L’utilisateur A ne doit pas pouvoir consulter ou modifier les ressources priv�
 
 Chaque projet a exactement un propriétaire (`Project.ownerId`), qui dispose
 de tous les droits (lecture/écriture/suppression) et gère les membres. Une
-table de jointure `ProjectMember` accorde à d'autres utilisateurs un accès
-en lecture seule au projet, sans en faire des propriétaires :
+table de jointure `ProjectMember` donne accès au projet à d'autres
+utilisateurs sans en faire des propriétaires, avec un rôle : les membres
+**EDITOR** peuvent aussi gérer les boards et les tâches, les membres
+**VIEWER** ont un accès en lecture seule. On rejoint normalement un projet en
+acceptant une invitation (`ProjectInvitation`) :
 
 ```text
 Project
- ├── owner         (User, requis — accès complet, gère les membres)
- └── ProjectMember (User, accès en lecture seule)
+ ├── owner             (User, requis — accès complet, gère les membres)
+ ├── ProjectMember     (User + rôle EDITOR | VIEWER)
+ ├── ProjectInvitation (en attente, devient un ProjectMember une fois acceptée)
+ └── Board ── Task     (une tâche appartient à un board du même projet)
 ```
 
-L'accès à une tâche n'est jamais vérifié indépendamment : il découle
-toujours de l'accès de l'utilisateur au projet parent de la tâche
-(propriétaire ou membre peuvent lire ; seul le propriétaire peut
-créer/modifier/supprimer). Cette règle est centralisée dans un unique
-`ProjectAccessGuard` partagé (`backend/src/shared/security/`), utilisé à la
-fois par les modules projects et tasks.
+L'accès à une tâche ou à un board n'est jamais vérifié indépendamment : il
+découle toujours de l'accès de l'utilisateur au projet parent
+(propriétaire ou n'importe quel membre peuvent lire ; propriétaire ou EDITOR
+peuvent créer/modifier/supprimer). Détails :
+[`docs/backend/PROJECTS_AND_ACCESS.md`](../backend/PROJECTS_AND_ACCESS.md).
+Cette règle est centralisée dans un unique
+`ProjectAccessGuard` partagé (`backend/src/shared/security/`), utilisé
+par les modules projects, boards, tasks et invitations.
 
 Conformément à l'[ADR-007](../adr/ADR-007-no-legacy-data-migration.md), les
 anciennes données Todo ne sont jamais migrées vers ce domaine : `ProjectMember`

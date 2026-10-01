@@ -5,7 +5,8 @@ import type { LegacyTodoRow, LegacyTodoSource } from "./LegacyTodo.js";
 
 const LEGACY_TABLE = "todo_items";
 
-// Same env contract as src/legacy/persistence/mysql.js: every MYSQL_* value
+// Same env contract as the former legacy app (src/legacy/persistence/mysql.js,
+// removed with ADR-011): every MYSQL_* value
 // can also be given as a file path through MYSQL_*_FILE (Docker secrets).
 function readEnv(name: string): string | undefined {
   const file = process.env[`${name}_FILE`];

@@ -9,6 +9,7 @@ import {
 import { ProjectAccessGuard } from "../../shared/security/ProjectAccessGuard.js";
 import { TaskService } from "../../modules/tasks/TaskService.js";
 import { PrismaTaskRepository } from "../../modules/tasks/PrismaTaskRepository.js";
+import { PrismaBoardRepository } from "../../modules/boards/PrismaBoardRepository.js";
 import { PrismaProjectRepository } from "../../modules/projects/PrismaProjectRepository.js";
 import { PrismaProjectMemberRepository } from "../../modules/projects/PrismaProjectMemberRepository.js";
 import { NotificationService } from "../../modules/notifications/NotificationService.js";
@@ -68,6 +69,7 @@ describe("Workflow notifications (PostgreSQL + RabbitMQ réels)", () => {
       new PrismaTaskRepository(prisma),
       new ProjectAccessGuard(projects, members),
       broker.bus,
+      new PrismaBoardRepository(prisma),
     );
   });
 

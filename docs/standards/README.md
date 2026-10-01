@@ -13,6 +13,8 @@ This directory contains the engineering standards used by the Kanban rework proj
 - [Code Quality Standards](CODE_QUALITY.md)
 - [Testing Conventions](TESTING_CONVENTIONS.md)
 - [API and Backend Conventions](API_CONVENTIONS.md)
+- [Accessibility (RGAA) Standard](ACCESSIBILITY_RGAA.md)
+- [Accessibility statement (draft)](ACCESSIBILITY_STATEMENT.md)
 
 ## Architecture and Migration
 

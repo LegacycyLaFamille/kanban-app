@@ -8,11 +8,17 @@ import { AdminTaskController } from "../../../modules/admin/AdminTaskController.
 import type { AdminTaskService } from "../../../modules/admin/AdminTaskService.js";
 import { assignTaskSchema } from "../../../modules/admin/admin.schema.js";
 import { validateSchema } from "../../../shared/http/validateSchema.js";
-import { requireAuth } from "../../../shared/security/requireAuth.js";
+import { createRequireAuth } from "../../../shared/security/createRequireAuth.js";
 import { requireAdmin } from "../../../shared/security/requireAdmin.js";
 import { Task } from "../../../modules/tasks/Task.js";
 import { User } from "../../../modules/users/User.js";
 import type { UserRepository } from "../../../modules/users/UserRepository.js";
+
+// jsonwebtoken is mocked: every token decodes to the mocked claims, and
+// their session is always the active one.
+const requireAuth = createRequireAuth({
+  activeSessionId: async () => "session-1",
+});
 
 vi.mock("jsonwebtoken", () => ({
   default: {
@@ -74,7 +80,11 @@ describe("AdminTaskController", () => {
     });
 
     it("rejects an authenticated non-admin with the standard 403 shape", async () => {
-      vi.mocked(jwt.verify).mockReturnValue({ userId: "user-1" } as never);
+      vi.mocked(jwt.verify).mockReturnValue({
+        userId: "user-1",
+        typ: "access",
+        sid: "session-1",
+      } as never);
       mockUserRepository.findById.mockResolvedValue(
         User.create("user@example.com", "Regular User", "user-1", createdAt),
       );
@@ -94,7 +104,11 @@ describe("AdminTaskController", () => {
     });
 
     it("returns the grouped task list for an admin", async () => {
-      vi.mocked(jwt.verify).mockReturnValue({ userId: "admin-1" } as never);
+      vi.mocked(jwt.verify).mockReturnValue({
+        userId: "admin-1",
+        typ: "access",
+        sid: "session-1",
+      } as never);
       mockUserRepository.findById.mockResolvedValue(
         User.create(
           "admin@example.com",
@@ -125,7 +139,11 @@ describe("AdminTaskController", () => {
 
   describe("PATCH /admin/tasks/:taskId/assignee", () => {
     beforeEach(() => {
-      vi.mocked(jwt.verify).mockReturnValue({ userId: "admin-1" } as never);
+      vi.mocked(jwt.verify).mockReturnValue({
+        userId: "admin-1",
+        typ: "access",
+        sid: "session-1",
+      } as never);
       mockUserRepository.findById.mockResolvedValue(
         User.create(
           "admin@example.com",

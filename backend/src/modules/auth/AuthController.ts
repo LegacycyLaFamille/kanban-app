@@ -2,6 +2,7 @@ import { recordError } from "../../shared/observability/recordError.js";
 import type { Request, Response } from "express";
 import { AuthService } from "./AuthService.js";
 import type {
+  ChangePasswordInput,
   LoginInput,
   RegisterInput,
   UpdateProfileInput,
@@ -189,20 +190,75 @@ export class AuthController {
     }
   };
 
+  changePassword = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { currentPassword, newPassword } = req.body as ChangePasswordInput;
+
+      const tokens = await this.authService.changePassword(
+        req.userId!,
+        currentPassword,
+        newPassword,
+      );
+      this.setCookies(res, tokens.accessToken, tokens.refreshToken);
+
+      res.status(204).send();
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "";
+
+      if (message === "Mot de passe actuel invalide") {
+        res.status(400).json({
+          error: {
+            code: "INVALID_CURRENT_PASSWORD",
+            message: "The current password is incorrect.",
+            details: { currentPassword: ["The current password is incorrect"] },
+          },
+        });
+        return;
+      }
+
+      if (message === "Utilisateur introuvable") {
+        res.status(404).json({
+          error: { code: "USER_NOT_FOUND", message: "User not found" },
+        });
+        return;
+      }
+
+      recordError(error, "Password change failed");
+      res.status(500).json({
+        error: { code: "INTERNAL_ERROR", message: "Unexpected server error" },
+      });
+    }
+  };
+
+  deleteAccount = async (req: Request, res: Response): Promise<void> => {
+    try {
+      await this.authService.deleteAccount(req.userId!);
+      this.clearCookies(res);
+      res.status(204).send();
+    } catch (error) {
+      recordError(error, "Account deletion failed");
+      res.status(500).json({
+        error: { code: "INTERNAL_ERROR", message: "Unexpected server error" },
+      });
+    }
+  };
+
   logout = async (req: Request, res: Response): Promise<void> => {
     await this.authService.logout(req.userId!);
-    res.clearCookie("refreshToken", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-    });
-    res.clearCookie("accessToken", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-    });
+    this.clearCookies(res);
     res.status(200).json({ message: "Déconnexion réussie" });
   };
+
+  private clearCookies(res: Response) {
+    const options = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+    } as const;
+
+    res.clearCookie("refreshToken", options);
+    res.clearCookie("accessToken", options);
+  }
 
   private setCookies(res: Response, accessToken: string, refreshToken: string) {
     const isProd = process.env.NODE_ENV === "production";

@@ -4,7 +4,13 @@ import { ApiError, httpClient } from "../../../shared/api";
 
 import type { ProjectBoard } from "../types/project-api.types";
 
-import { createBoard, deleteBoard, getBoards, updateBoard } from "./boards.api";
+import {
+  createBoard,
+  deleteBoard,
+  getBoard,
+  getBoards,
+  updateBoard,
+} from "./boards.api";
 
 const board: ProjectBoard = {
   id: "board-1",
@@ -25,6 +31,15 @@ describe("boards.api", () => {
 
     expect(getSpy).toHaveBeenCalledWith("/projects/project-1/boards");
     expect(result).toEqual([board]);
+  });
+
+  it("loads a single board", async () => {
+    const getSpy = vi.spyOn(httpClient, "get").mockResolvedValue(board);
+
+    const result = await getBoard("board-1");
+
+    expect(getSpy).toHaveBeenCalledWith("/boards/board-1");
+    expect(result).toEqual(board);
   });
 
   it("creates a board in a project", async () => {

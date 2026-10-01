@@ -1,8 +1,9 @@
 import { z } from "zod";
+import { emailSchema } from "../../shared/http/schemas.js";
 import { projectRoleSchema } from "../projects/project.schema.js";
 
 export const inviteProjectMemberSchema = z.strictObject({
-  email: z.email(),
+  email: emailSchema,
   role: projectRoleSchema.default("VIEWER"),
 });
 

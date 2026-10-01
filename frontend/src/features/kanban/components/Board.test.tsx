@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Reshaped } from "reshaped";
 
@@ -261,7 +261,11 @@ describe("Board", () => {
     await screen.findByRole("button", { name: "+ Add Task" });
 
     await user.click(screen.getByRole("button", { name: "+ Add Task" }));
-    await user.click(screen.getByRole("button", { name: "Create Task" }));
+
+    const dialog = screen.getByRole("dialog");
+    await user.click(
+      within(dialog).getByRole("button", { name: "Create Task" }),
+    );
 
     expect(await screen.findByText("Task title is required.")).toBeTruthy();
     expect(createTask).not.toHaveBeenCalled();
@@ -291,14 +295,14 @@ describe("Board", () => {
     await user.type(screen.getByPlaceholderText("Task title..."), "Write docs");
     // Wait for the team to load, then open the dropdown and pick Bob.
     await waitFor(() => expect(getProjectTeam).toHaveBeenCalled());
-    // The modal itself is also a "button": target the dropdown trigger.
-    const trigger = screen
-      .getAllByRole("button", { name: /Unassigned/ })
-      .find((element) => element.getAttribute("aria-haspopup") === "menu");
-    await user.click(trigger!);
-    expect(await screen.findByText("Alice (owner)")).toBeTruthy();
-    await user.click(await screen.findByText("Bob"));
-    await user.click(screen.getByRole("button", { name: "Create Task" }));
+    const assignee = screen.getByRole("combobox", { name: "Assignee" });
+    expect(await within(assignee).findByText("Alice (owner)")).toBeTruthy();
+    await user.selectOptions(assignee, "Bob");
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Create Task",
+      }),
+    );
 
     await waitFor(() => {
       expect(createTask).toHaveBeenCalledWith(
@@ -310,6 +314,67 @@ describe("Board", () => {
       );
     });
     // Types text and drives a dropdown: slow under a full parallel run.
+  }, 15_000);
+
+  it("lists each column by priority: high, then medium, then low", async () => {
+    vi.mocked(getTasksByProject).mockResolvedValue([
+      { ...task, id: "low", title: "Low task", priority: "Low" },
+      { ...task, id: "high", title: "High task", priority: "High" },
+      { ...task, id: "medium", title: "Medium task", priority: "Medium" },
+    ]);
+
+    renderBoard();
+    await screen.findByText("High task");
+
+    const titles = Array.from(
+      screen.getByTestId("column-todo").querySelectorAll("[data-task-id]"),
+    ).map((card) => card.querySelector("span")?.textContent);
+    expect(titles).toEqual(["High task", "Medium task", "Low task"]);
+  });
+
+  it("shows only the tasks of the opened board, under its name", async () => {
+    vi.mocked(getTasksByProject).mockResolvedValue([
+      { ...task, boardId: "board-1" },
+      { ...task, id: "task-2", title: "Other board task", boardId: "board-2" },
+      { ...task, id: "task-3", title: "Task without board", boardId: null },
+    ]);
+
+    render(
+      <Reshaped theme="slate" defaultColorMode="dark">
+        <Board projectId="project-1" boardId="board-1" boardName="Sprint 1" />
+      </Reshaped>,
+    );
+
+    expect(await screen.findByText(task.title)).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Sprint 1" })).toBeTruthy();
+    expect(screen.queryByText("Other board task")).toBeNull();
+    expect(screen.queryByText("Task without board")).toBeNull();
+  });
+
+  it("creates the task on the opened board", async () => {
+    const user = userEvent.setup();
+    vi.mocked(getTasksByProject).mockResolvedValue([]);
+    vi.mocked(createTask).mockResolvedValue(task);
+
+    render(
+      <Reshaped theme="slate" defaultColorMode="dark">
+        <Board projectId="project-1" boardId="board-1" />
+      </Reshaped>,
+    );
+    await user.click(await screen.findByRole("button", { name: "+ Add Task" }));
+    await user.type(screen.getByPlaceholderText("Task title..."), "Write docs");
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Create Task",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(createTask).toHaveBeenCalledWith(
+        "project-1",
+        expect.objectContaining({ title: "Write docs", boardId: "board-1" }),
+      );
+    });
   }, 15_000);
 
   it("hides editing controls from a VIEWER member", async () => {

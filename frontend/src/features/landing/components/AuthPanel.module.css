@@ -1,0 +1,90 @@
+.panel {
+  width: 100%;
+  max-width: 460px;
+
+  box-shadow:
+    0 30px 80px rgb(0 0 0 / 45%),
+    0 0 0 1px rgb(129 140 248 / 12%);
+}
+
+.tabs {
+  position: relative;
+
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+
+  padding: 4px;
+  border-radius: 12px;
+
+  background: rgb(255 255 255 / 6%);
+}
+
+.tab {
+  position: relative;
+  z-index: 1;
+
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 9px;
+
+  background: transparent;
+  color: #a1a1aa;
+
+  font-weight: 600;
+  cursor: pointer;
+
+  transition: color 0.2s ease;
+}
+
+.tab[aria-selected="true"] {
+  color: #ffffff;
+}
+
+.tab:hover {
+  color: #e4e4e7;
+}
+
+/* Slides under the selected tab. The selected state is also carried by
+   aria-selected and the text color, not by this pill alone. */
+.indicator {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+
+  width: calc(50% - 4px);
+  border-radius: 9px;
+
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  box-shadow: 0 6px 20px rgb(79 70 229 / 40%);
+
+  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.indicator[data-tab="register"] {
+  transform: translateX(100%);
+}
+
+.tabPanel {
+  animation: panel-in 0.4s ease both;
+}
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .indicator,
+  .tabPanel {
+    transition: none;
+    animation: none;
+  }
+}

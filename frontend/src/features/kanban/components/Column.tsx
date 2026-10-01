@@ -15,8 +15,9 @@ type ColumnProps = {
   title: string;
   tasks: Task[];
   onDropTask: (taskId: string, targetColumnId: ColumnId) => void;
-  // Omitted for read-only users: no "Add card" button.
+  // Omitted for read-only users: no add buttons, cards are not openable.
   onAddTask?: () => void;
+  onOpenTask?: (task: Task) => void;
   isTaskPending?: (taskId: string) => boolean;
 };
 
@@ -26,6 +27,7 @@ export function Column({
   tasks,
   onDropTask,
   onAddTask,
+  onOpenTask,
   isTaskPending,
 }: ColumnProps) {
   const ref = useRef<HTMLDivElement>(null);
@@ -55,6 +57,8 @@ export function Column({
     <div
       ref={ref}
       data-testid={`column-${columnId}`}
+      role="region"
+      aria-label={`${title} column`}
       style={{ height: "100%" }}
     >
       <Card padding={4}>
@@ -76,14 +80,32 @@ export function Column({
             {/* Header with Title, Count, and + button */}
             <View direction="row" align="center" justify="space-between">
               <View direction="row" align="center" gap={2}>
-                <Text weight="bold">{title}</Text>
+                <span
+                  aria-hidden="true"
+                  style={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: "50%",
+                    background: `var(--status-${columnId})`,
+                  }}
+                />
+                <Text as="h2" weight="bold">
+                  {title}
+                </Text>
                 <Text variant="caption-1" color="neutral-faded">
                   ({tasks.length})
                 </Text>
               </View>
-              <Button variant="ghost" size="small" onClick={onAddTask}>
-                +
-              </Button>
+              {onAddTask && (
+                <Button
+                  variant="ghost"
+                  size="small"
+                  onClick={onAddTask}
+                  attributes={{ "aria-label": `Add task to ${title}` }}
+                >
+                  +
+                </Button>
+              )}
             </View>
 
             {/* Cards List */}
@@ -99,6 +121,7 @@ export function Column({
                   <DraggableTaskCard
                     key={task.id}
                     task={task}
+                    onOpen={onOpenTask ? () => onOpenTask(task) : undefined}
                     isPending={isTaskPending?.(task.id) ?? false}
                   />
                 ))}

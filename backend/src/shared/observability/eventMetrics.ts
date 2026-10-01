@@ -13,6 +13,13 @@ export interface EventMetrics {
   ): void;
 }
 
+/** Totals since this process started, for the admin system page. */
+export interface EventTotals {
+  since: string;
+  published: Record<PublishOutcome, number>;
+  consumed: Record<ConsumeOutcome, number>;
+}
+
 const meter = metrics.getMeter("kanban-backend");
 
 const publishedCounter = meter.createCounter("kanban.events.published", {
@@ -26,10 +33,21 @@ const processingDuration = meter.createHistogram(
   { unit: "s", description: "Duration of an event handler" },
 );
 
+// OpenTelemetry counters cannot be read back in-process: these mirror them
+// so the backend can report its own figures without querying Prometheus.
+const totals: EventTotals = {
+  since: new Date().toISOString(),
+  published: { success: 0, failure: 0 },
+  consumed: { success: 0, retry: 0, dead_letter: 0, unreadable: 0 },
+};
+
 export const eventMetrics: EventMetrics = {
-  published: (eventType, outcome) =>
-    publishedCounter.add(1, { event_type: eventType, outcome }),
+  published: (eventType, outcome) => {
+    totals.published[outcome] += 1;
+    publishedCounter.add(1, { event_type: eventType, outcome });
+  },
   consumed: (consumer, eventType, outcome, durationSeconds) => {
+    totals.consumed[outcome] += 1;
     const attributes = { consumer, event_type: eventType, outcome };
     consumedCounter.add(1, attributes);
     if (durationSeconds !== undefined) {
@@ -37,3 +55,11 @@ export const eventMetrics: EventMetrics = {
     }
   },
 };
+
+export function eventTotals(): EventTotals {
+  return {
+    since: totals.since,
+    published: { ...totals.published },
+    consumed: { ...totals.consumed },
+  };
+}

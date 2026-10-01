@@ -3,6 +3,7 @@ import { TaskService } from "../../../modules/tasks/TaskService.js";
 import { Task } from "../../../modules/tasks/Task.js";
 import { Project } from "../../../modules/projects/Project.js";
 import { ProjectMember } from "../../../modules/projects/ProjectMember.js";
+import { Board } from "../../../modules/boards/Board.js";
 import { ProjectAccessGuard } from "../../../shared/security/ProjectAccessGuard.js";
 import { randomUUID } from "node:crypto";
 import type { ProjectRepository } from "../../../modules/projects/ProjectRepository.js";
@@ -23,6 +24,9 @@ describe("TaskService", () => {
   };
   let mockProjectMemberRepository: {
     findByProjectAndUser: Mock;
+  };
+  let mockBoardRepository: {
+    findbyId: Mock;
   };
 
   const ownerId = "user-1";
@@ -57,6 +61,9 @@ describe("TaskService", () => {
     mockProjectMemberRepository = {
       findByProjectAndUser: vi.fn(),
     };
+    mockBoardRepository = {
+      findbyId: vi.fn(),
+    };
 
     const projectAccessGuard = new ProjectAccessGuard(
       mockProjectRepository as unknown as ProjectRepository,
@@ -67,6 +74,7 @@ describe("TaskService", () => {
       mockTaskRepository,
       projectAccessGuard,
       new InMemoryEventBus(),
+      mockBoardRepository,
     );
   });
 
@@ -147,6 +155,46 @@ describe("TaskService", () => {
           assigneeId: outsiderId,
         }),
       ).rejects.toThrow("Assignee is not a member of this project");
+      expect(mockTaskRepository.save).not.toHaveBeenCalled();
+    });
+
+    it("creates the task on a board of the same project", async () => {
+      mockProjectRepository.findById.mockResolvedValue(project);
+      mockBoardRepository.findbyId.mockResolvedValue(
+        new Board("board-1", "Sprint", "proj-1", new Date()),
+      );
+      mockTaskRepository.save.mockImplementation(async (task: Task) => task);
+
+      const result = await taskService.create("proj-1", ownerId, {
+        title: "Test",
+        description: "",
+        priority: "Medium",
+        status: "TODO",
+        boardId: "board-1",
+      });
+
+      expect(result.boardId).toBe("board-1");
+    });
+
+    it.each([
+      [
+        "a board of another project",
+        new Board("board-2", "X", "proj-2", new Date()),
+      ],
+      ["an unknown board", null],
+    ])("rejects creation on %s", async (_label, board) => {
+      mockProjectRepository.findById.mockResolvedValue(project);
+      mockBoardRepository.findbyId.mockResolvedValue(board);
+
+      await expect(
+        taskService.create("proj-1", ownerId, {
+          title: "Test",
+          description: "",
+          priority: "Medium",
+          status: "TODO",
+          boardId: "board-2",
+        }),
+      ).rejects.toThrow("Board is not part of this project");
       expect(mockTaskRepository.save).not.toHaveBeenCalled();
     });
 
@@ -351,6 +399,19 @@ describe("TaskService", () => {
       });
 
       expect(result.assigneeId).toBe(ownerId);
+    });
+
+    it("rejects moving the task to a board of another project", async () => {
+      mockTaskRepository.findById.mockResolvedValue(task);
+      mockProjectRepository.findById.mockResolvedValue(project);
+      mockBoardRepository.findbyId.mockResolvedValue(
+        new Board("board-2", "X", "proj-2", new Date()),
+      );
+
+      await expect(
+        taskService.update("task-1", ownerId, { boardId: "board-2" }),
+      ).rejects.toThrow("Board is not part of this project");
+      expect(mockTaskRepository.save).not.toHaveBeenCalled();
     });
 
     it("rejects an assignee who has no access to the project", async () => {
