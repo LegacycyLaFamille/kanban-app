@@ -298,7 +298,7 @@ export function Board({ projectId }: BoardProps) {
           flexDirection: "column",
           gap: "24px",
           width: "100%",
-          minHeight: "100vh",
+          flex: 1,
           boxSizing: "border-box",
         }}
       >

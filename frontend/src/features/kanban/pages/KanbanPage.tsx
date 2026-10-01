@@ -1,7 +1,10 @@
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { Board } from "../components/Board";
 
+import styles from "./KanbanPage.module.css";
+
 export function KanbanPage() {
+  const navigate = useNavigate();
   const { projectId } = useParams<{ projectId: string }>();
 
   // Fallback that should NEVER happen
@@ -9,5 +12,17 @@ export function KanbanPage() {
     return <div>No project selected.</div>;
   }
 
-  return <Board projectId={projectId} />;
+  return (
+    <div className={styles.page}>
+      <button
+        type="button"
+        className={styles.back}
+        onClick={() => navigate(`/projects/${projectId}`)}
+      >
+        ← Back to project
+      </button>
+
+      <Board projectId={projectId} />
+    </div>
+  );
 }
