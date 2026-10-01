@@ -94,12 +94,10 @@ describe("AuthController - account management", () => {
     });
 
     it("rejects a new password identical to the current one", async () => {
-      const res = await request(app)
-        .patch("/me/password")
-        .send({
-          currentPassword: "same-password",
-          newPassword: "same-password",
-        });
+      const res = await request(app).patch("/me/password").send({
+        currentPassword: "same-password",
+        newPassword: "same-password",
+      });
 
       expect(res.status).toBe(400);
       expect(mockAuthService.changePassword).not.toHaveBeenCalled();
